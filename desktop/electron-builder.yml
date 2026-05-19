@@ -68,8 +68,11 @@ mac:
   icon: assets/icon.icns
   hardenedRuntime: true
   gatekeeperAssess: false
-  # identity: null → ad-hoc by default. electron-builder will switch to
-  # Developer ID automatically if CSC_LINK / a keychain identity is present.
+  # Ad-hoc signed by default: the `package` npm script sets
+  # CSC_IDENTITY_AUTO_DISCOVERY=false so a code-signing cert already in the
+  # contributor's keychain is never picked up (it would fail distribution
+  # signing). Real Developer ID signing activates only when CSC_LINK (an
+  # explicit .p12) is provided — that path is unaffected by the flag.
   target:
     - target: dmg
       arch:

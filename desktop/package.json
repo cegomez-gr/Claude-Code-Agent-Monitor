@@ -10,7 +10,7 @@
     "build": "npm run prebuild && tsc -p tsconfig.json",
     "build:icons": "bash scripts/build-icons.sh",
     "dev": "npm run build && electron out/main.js",
-    "package": "npm run build && electron-builder --mac --universal --publish never",
+    "package": "npm run build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac --universal --publish never",
     "dmg": "npm run package",
     "test": "npm run build && node --test --test-reporter=spec tests/smoke.test.mjs",
     "postinstall": "electron-builder install-app-deps"
