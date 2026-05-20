@@ -1,5 +1,6 @@
 /**
  * @file Shared constants for the desktop shell.
+ * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
 export const APP_NAME = "Claude Code Monitor";

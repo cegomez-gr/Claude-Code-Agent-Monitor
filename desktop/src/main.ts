@@ -10,6 +10,7 @@
  *
  * The macOS single-instance guarantee is enforced via `requestSingleInstanceLock`
  * so double-launching just focuses the existing window.
+ * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
 import { BrowserWindow, Notification, app, dialog, shell } from "electron";
@@ -18,7 +19,12 @@ import { APP_NAME } from "./constants";
 import { isOpenAtLogin, launchedAtLogin, toggleOpenAtLogin } from "./login-item";
 import { log } from "./logger";
 import { focusOrCreateWindow, installApplicationMenu } from "./menu";
-import { closeEmbeddedDatabase, startEmbeddedServer, type ServerHandle } from "./server-host";
+import {
+  closeEmbeddedDatabase,
+  getServerSnapshot,
+  startEmbeddedServer,
+  type ServerHandle,
+} from "./server-host";
 import { ensureUserPath } from "./shell-path";
 import { createTray } from "./tray";
 import { createDashboardWindow } from "./window";
@@ -29,6 +35,9 @@ interface AppState {
   // Hold a reference to the tray so the GC doesn't collect it (electron quirk).
   tray: Electron.Tray | null;
   quitting: boolean;
+  /** True while the quit-confirmation dialog is open; a second ⌘Q in this
+   * window bypasses the dialog and lets macOS quit immediately. */
+  confirmingQuit: boolean;
 }
 
 const state: AppState = {
@@ -36,7 +45,44 @@ const state: AppState = {
   win: null,
   tray: null,
   quitting: false,
+  confirmingQuit: false,
 };
+
+/**
+ * Show the "Quit Claude Code Monitor?" confirmation dialog. Clicking Quit
+ * runs the synchronous teardown and exits. Pressing ⌘Q again while the
+ * dialog is open is caught by `before-quit` below and skips this prompt.
+ */
+function requestQuit(): void {
+  if (state.quitting || state.confirmingQuit) return;
+  state.confirmingQuit = true;
+  const opts: Electron.MessageBoxOptions = {
+    type: "question",
+    buttons: ["Quit", "Cancel"],
+    defaultId: 0,
+    cancelId: 1,
+    title: APP_NAME,
+    message: "Quit Claude Code Monitor?",
+    detail:
+      "The embedded server will stop and your dashboard window will close. " +
+      "Press ⌘Q again to skip this prompt and quit immediately.",
+    noLink: true,
+  };
+  const parent = state.win && !state.win.isDestroyed() ? state.win : undefined;
+  const promise = parent ? dialog.showMessageBox(parent, opts) : dialog.showMessageBox(opts);
+  void promise
+    .then((result) => {
+      state.confirmingQuit = false;
+      if (result.response === 0) {
+        state.quitting = true;
+        if (state.serverHandle?.ownedByUs) closeEmbeddedDatabase();
+        app.exit(0);
+      }
+    })
+    .catch(() => {
+      state.confirmingQuit = false;
+    });
+}
 
 function ensureWindow(): BrowserWindow {
   if (!state.serverHandle) {
@@ -48,12 +94,15 @@ function ensureWindow(): BrowserWindow {
     win.on("close", (event) => {
       if (state.quitting) return;
       // On macOS, "close" means "hide" — the tray stays, the server stays.
+      // We deliberately do NOT call `app.dock.hide()` here. With the red
+      // close button leaving the app running, the user needs a visible
+      // indication that it is still alive. The dock icon (clickable to
+      // re-open the window) is exactly that signal; the menu-bar tray
+      // icon backs it up. Login-launched startup is the only path that
+      // hides the dock, since that user explicitly asked for unobtrusive
+      // background behaviour.
       event.preventDefault();
       win.hide();
-      if (process.platform === "darwin") app.dock?.hide();
-    });
-    win.on("show", () => {
-      if (process.platform === "darwin") app.dock?.show();
     });
     return win;
   });
@@ -125,14 +174,6 @@ async function boot(): Promise<void> {
   });
 
   state.tray = createTray({
-    toggleWindow: () => {
-      if (state.win && state.win.isVisible()) {
-        state.win.hide();
-        if (process.platform === "darwin") app.dock?.hide();
-      } else {
-        ensureWindow();
-      }
-    },
     showDashboard: () => ensureWindow(),
     restartServer: () => {
       void restartServer().catch((err) =>
@@ -144,6 +185,8 @@ async function boot(): Promise<void> {
     toggleOpenAtLogin: () => toggleOpenAtLogin(),
     isOpenAtLogin,
     serverPort: () => state.serverHandle?.port ?? null,
+    getSnapshot: () => getServerSnapshot(),
+    requestQuit,
   });
 
   // Skip the dashboard window when macOS launched us at login — the user just
@@ -175,20 +218,19 @@ function wireLifecycle(): void {
     // Stay alive: tray + server keep running on every platform.
   });
 
-  app.on("before-quit", async (event) => {
+  app.on("before-quit", (event) => {
+    // Second ⌘Q while the confirm dialog is up — bypass the prompt and let
+    // macOS quit. We still close the SQLite handle on the way out so WAL is
+    // checkpointed cleanly.
+    if (state.confirmingQuit) {
+      state.quitting = true;
+      if (state.serverHandle?.ownedByUs) closeEmbeddedDatabase();
+      return;
+    }
     if (state.quitting) return;
-    state.quitting = true;
     if (state.serverHandle?.ownedByUs) {
       event.preventDefault();
-      try {
-        await state.serverHandle.stop();
-      } catch (err) {
-        log.warn("server stop errored during quit", err);
-      }
-      // Close the SQLite handle once, here — not in stop(), which also runs on
-      // "Restart Server" where the cached db module must stay usable.
-      closeEmbeddedDatabase();
-      app.exit(0);
+      requestQuit();
     }
   });
 }

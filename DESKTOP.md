@@ -65,18 +65,20 @@ open desktop/release/ClaudeCodeMonitor-*-arm64.dmg   # …-x64.dmg / …-univers
 3. Otherwise it `require()`s `server/index.js` directly in-process — same Node runtime as the main process, same memory. Boot is typically under two seconds.
 4. On startup the server records its **live port** to `~/.claude/.agent-dashboard.json`. The Claude Code hook handler reads that file, so events still reach the dashboard when the app bound a fallback port instead of 4820.
 5. The dashboard window opens (unless macOS launched the app at login, in which case it stays tray-only).
-6. A menu-bar icon appears with: *Open Dashboard, Open in Browser, Restart Server, Show Logs, Open at Login (toggle), Quit*.
+6. A menu-bar (tray) icon appears. One click opens a dropdown with a **live status snapshot** (server port, active sessions, working agents, events today — all clickable to jump into the dashboard) plus *Open Dashboard*, *Open in Browser*, *Restart Server*, *Show Logs*, *Open at Login* (toggle), and *Quit*.
 
 ## Lifecycle semantics
 
-- **Closing the window hides it.** The server keeps running, the tray icon stays. Click the tray to bring the window back.
-- **Quit (⌘Q, or tray → Quit)** shuts the embedded server down gracefully and exits.
+- **Closing the window hides it.** The server keeps running, the tray icon stays, and the **dock icon stays too** — clicking it re-opens the window. Three independent signals that the app is still alive.
+- **Quitting** (⌘Q, *Quit* in the application menu, or *Quit* in the tray menu) pops a confirmation modal — *"Quit Claude Code Monitor? Press ⌘Q again to skip this prompt and quit immediately."* Press **Quit** in the dialog, or **press ⌘Q a second time** to bypass the prompt. Either way the SQLite handle is checkpointed cleanly before the process exits.
+- **Menu-bar tray** — a single click (left or right) opens the dropdown. The dropdown shows a **live status snapshot** pulled straight from the embedded SQLite handle each time it opens: server port, active sessions, working agents, and events today. Snapshot rows are clickable — they open the dashboard.
 - **Login Items toggle:** flip *Open at Login* in the tray menu (or the app menu). It registers via macOS's `SMAppService` API — you'll see the entry under  → *System Settings → General → Login Items*.
 - **Single-instance:** double-launching just focuses the existing window. No second server, no port collision.
 - **Logs** live at `~/Library/Logs/Claude Code Monitor/desktop.log` (use *Show Logs* in the menu to open the folder).
 - **Your data** (the SQLite database and VAPID keys) lives in `~/Library/Application Support/Claude Code Monitor/data/` — outside the app bundle, so it **survives app reinstalls and updates**.
 - **The `claude` CLI** is resolved using your login-shell `PATH`, recovered at startup — so "Run Claude" works even though a Finder/Dock-launched app would otherwise only inherit a minimal `PATH`.
 - **Notifications** (including the in-dashboard *Send test notification* button) are delivered as **native macOS notifications** when running inside the `.app` — the embedded server calls Electron's `Notification` API directly. Web Push doesn't work reliably inside Electron (Chromium-in-Electron ships without Firebase Cloud Messaging credentials, so `pushManager.subscribe` returns endpoints nothing can deliver to), and this path bypasses it entirely. The web dashboard at `npm start` continues to use Web Push as before.
+- **Coexists with the web dashboard.** You can run the desktop app and `npm run dev` (or `npm start`) at the same time. Each server writes its `{port, pid, startedAt}` entry to a shared discovery file at `~/.claude/.agent-dashboard.json`, and the Claude Code hook handler **fan-outs each event to every live entry**. Both UIs stay real-time; the two SQLite databases (`~/Library/Application Support/Claude Code Monitor/data/dashboard.db` and the repo's `data/dashboard.db`) each record the same events independently.
 
 ## File layout (for contributors)
 

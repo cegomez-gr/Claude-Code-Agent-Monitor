@@ -6,6 +6,7 @@
  * it does not exercise the BrowserWindow (which requires a display) so it
  * runs on headless CI without xvfb. The window itself is covered by manual
  * QA in the PR description.
+ * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
 import { describe, it, before, after } from "node:test";

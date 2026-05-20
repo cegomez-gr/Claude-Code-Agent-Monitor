@@ -101,14 +101,20 @@ Container-specific behavior:
 | `MCP_HTTP_PORT` | `8819` | Port for the MCP HTTP+SSE server (only when `MCP_TRANSPORT=http`) |
 | `MCP_HTTP_HOST` | `127.0.0.1` | Bind address for the MCP HTTP server |
 
-Example with custom port:
+Example with a custom port:
 
 ```bash
 DASHBOARD_PORT=9000 npm run dev
 ```
 
-> [!IMPORTANT]
-> If you change the dashboard port, update `client/vite.config.ts` so the dev client proxies to the same port. Claude Code hooks reach the server through `CLAUDE_DASHBOARD_PORT`, so start Claude Code with that environment variable set to the new port, or change the default in `scripts/hook-handler.js`.
+> [!NOTE]
+> You usually do **not** need to set `DASHBOARD_PORT` manually. `npm run dev` is wrapped by `scripts/dev.js`, which probes both `127.0.0.1` and `::1` (so an SSH `LocalForward` bound to one loopback can't slip past) and picks the first free port in `4820–4859` automatically. The chosen port is propagated to the Vite dev proxy via `DASHBOARD_PORT`, and the Express server writes it to `~/.claude/.agent-dashboard.json` so the Claude Code hook handler discovers it without any env var.
+>
+> Multiple dashboards can run side by side — for example `npm run dev` and the macOS desktop app at the same time. Each one appends its `{port, pid, startedAt}` entry to the discovery file, and `scripts/hook-handler.js` fan-outs every hook event to every live entry, so both UIs keep their real-time stream.
+>
+> Setting `CLAUDE_DASHBOARD_PORT=N` overrides discovery entirely and forces the hook handler to a single port — useful for tests and container setups where the in-process discovery file isn't reachable from the host.
+>
+> If you bypass the picker (e.g. `npm run dev:raw`, container builds, or anything else that calls `node server/index.js` directly), make sure your client is built / proxied against the port the server actually bound.
 
 ### MCP server (optional)
 

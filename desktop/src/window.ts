@@ -3,6 +3,7 @@
  *
  * We persist size/position to a JSON file under `app.getPath('userData')`.
  * Avoids the `electron-window-state` dependency for ~30 lines of code.
+ * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
 import { BrowserWindow, app, shell } from "electron";

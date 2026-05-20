@@ -7,6 +7,7 @@
  * minimal. Renderer-side desktop helpers (e.g. native notification routing)
  * can be added here later via `contextBridge.exposeInMainWorld` if the
  * dashboard ever wants to call them.
+ * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
 export {};

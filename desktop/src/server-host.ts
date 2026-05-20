@@ -11,6 +11,7 @@
  * process answers `/api/health` with `{ status: "ok" }`, we adopt it instead
  * of starting a second server. This covers the case where the user already
  * runs `npm start` in a terminal — we should not double-bind.
+ * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
 import * as fs from "node:fs";
@@ -116,6 +117,50 @@ function bootstrapOwnedServer(appRoot: string, serverModule: ServerModule): void
 }
 
 /**
+ * Synchronous status snapshot for the tray menu — pulled straight from the
+ * embedded SQLite handle (sub-millisecond). Returns `null` if the DB is not
+ * yet available so the caller can render an "(unavailable)" row instead of
+ * crashing on a fresh launch.
+ */
+export interface ServerSnapshot {
+  activeSessions: number;
+  workingAgents: number;
+  eventsToday: number;
+}
+
+export function getServerSnapshot(): ServerSnapshot | null {
+  try {
+    const dbModule = require(path.join(resolveAppRoot(), "server", "db.js")) as {
+      db?: { open?: boolean; prepare: (sql: string) => { get: (...args: unknown[]) => unknown } };
+    };
+    const db = dbModule.db;
+    if (!db || db.open === false) return null;
+    const startOfDayIso = (() => {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      return d.toISOString();
+    })();
+    const sessions = db
+      .prepare("SELECT COUNT(*) AS c FROM sessions WHERE status = 'active'")
+      .get() as { c: number };
+    const agents = db
+      .prepare("SELECT COUNT(*) AS c FROM agents WHERE status IN ('working','spawning')")
+      .get() as { c: number };
+    const events = db
+      .prepare("SELECT COUNT(*) AS c FROM events WHERE created_at >= ?")
+      .get(startOfDayIso) as { c: number };
+    return {
+      activeSessions: sessions.c,
+      workingAgents: agents.c,
+      eventsToday: events.c,
+    };
+  } catch (err) {
+    log.warn("getServerSnapshot failed", err);
+    return null;
+  }
+}
+
+/**
  * Close the embedded SQLite handle so WAL is checkpointed cleanly. Call once on
  * application quit — never between restarts, since `server/db.js` is a cached
  * singleton and a closed handle would break a subsequent server start.
@@ -131,6 +176,18 @@ export function closeEmbeddedDatabase(): void {
     }
   } catch (err) {
     log.warn("failed to close embedded database", err);
+  }
+  // Remove our entry from the multi-server discovery file so the hook
+  // handler doesn't try to POST to this PID after the process is gone.
+  // (Stale entries also self-prune via the liveness check on read, but the
+  // explicit removal closes the window between quit and the next reader.)
+  try {
+    const serverInfo = require(path.join(resolveAppRoot(), "server", "lib", "server-info.js")) as {
+      removeServerInfo: () => void;
+    };
+    serverInfo.removeServerInfo();
+  } catch (err) {
+    log.warn("failed to remove discovery file entry", err);
   }
 }
 

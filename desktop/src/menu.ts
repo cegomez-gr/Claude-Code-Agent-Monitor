@@ -1,5 +1,6 @@
 /**
  * @file Native application menu (the macOS top-bar menu).
+ * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
 import { BrowserWindow, Menu, app, shell, type MenuItemConstructorOptions } from "electron";

@@ -866,35 +866,38 @@ stateDiagram-v2
 
 ### Hook Handler Design
 
-`scripts/hook-handler.js` is designed to be a minimal, fail-safe forwarder:
+`scripts/hook-handler.js` is designed to be a minimal, fail-safe forwarder
+that **fans out to every live dashboard** on the machine in parallel:
 
 ```mermaid
 flowchart TD
     START[Claude Code fires hook] --> STDIN[Read stdin to EOF]
-    STDIN --> PARSE{Parse JSON?}
-    PARSE -->|Success| POST["POST to 127.0.0.1:4820<br/>/api/hooks/event"]
+    STDIN --> RESOLVE["resolveAllDashboardPorts()<br/>via server/lib/server-info.js"]
+    RESOLVE --> PARSE{Parse JSON?}
+    PARSE -->|Success| POST["POST to 127.0.0.1:{port}/api/hooks/event<br/>(one request per live server, parallel)"]
     PARSE -->|Failure| WRAP["Wrap raw input as<br/>#123;raw: ...#125;"]
     WRAP --> POST
-    POST --> RESP{Response?}
-    RESP -->|200| EXIT0[exit = 0]
-    RESP -->|Error| EXIT0_ERR[exit = 0]
-    RESP -->|Timeout 3s| DESTROY[Destroy request]
-    DESTROY --> EXIT0_TO[exit = 0]
+    POST --> AGG{Promise.all settled}
+    AGG -->|All resolved or rejected| EXIT0[exit = 0]
+    AGG -->|Any single timeout 3s| DESTROY[Destroy that request only]
+    DESTROY --> AGG
 
     SAFETY[Safety net: setTimeout 5s] --> EXIT0_SAFETY[exit = 0]
 
     style EXIT0 fill:#10b981,stroke:#34d399,color:#fff
-    style EXIT0_ERR fill:#10b981,stroke:#34d399,color:#fff
-    style EXIT0_TO fill:#10b981,stroke:#34d399,color:#fff
     style EXIT0_SAFETY fill:#10b981,stroke:#34d399,color:#fff
 ```
 
 **Key design decisions:**
 
-- Always exits 0 -- never blocks Claude Code regardless of server state
-- 3-second HTTP timeout + 5-second process safety net
-- Uses Node.js `http` module directly -- no dependencies
-- Reads `CLAUDE_DASHBOARD_PORT` env var for port override
+- Always exits 0 — never blocks Claude Code regardless of any server's state.
+- 3-second HTTP timeout per target + 5-second process-wide safety net.
+- Uses Node.js `http` module directly — no dependencies.
+- Resolution order is **env override → discovery file → default**:
+  - `CLAUDE_DASHBOARD_PORT` forces a single target (no fan-out, no discovery).
+  - Otherwise `server/lib/server-info.js` reads `~/.claude/.agent-dashboard.json`, prunes dead-PID entries, and returns every live `port` for the handler to POST to in parallel.
+  - If neither yields anything, the handler falls back to `4820`.
+- Per-target promises never reject — a dead listener can't starve the others, and the handler can wait on `Promise.all` for clean exit timing.
 
 ### Hook Installation
 
@@ -1851,7 +1854,7 @@ flowchart LR
 | **`main.ts`** | Main-process entry. Single-instance lock, app menu + tray wiring, dashboard window, `Restart Server`, lifecycle (`window-all-closed`, `before-quit`). |
 | **`server-host.ts`** | In-process Express boot: port discovery, adoption, `better-sqlite3` ABI patch, `startBackgroundServices()` + hook bootstrap, clean DB close. Returns a `ServerHandle`. |
 | **`window.ts`** | `BrowserWindow` with persisted geometry (`userData/window-state.json`). External links open in the system browser. |
-| **`menu.ts` / `tray.ts`** | Native application menu and menu-bar (tray) icon. The tray menu is rebuilt on each open so the port label and `Open at Login` checkbox stay current. |
+| **`menu.ts` / `tray.ts`** | Native application menu and menu-bar (tray) icon. Tray uses a single-click dropdown (left or right) with a **live status snapshot** queried straight from SQLite at click time — server port, active sessions, working agents, events today — followed by *Open Dashboard* (⌘O), *Open in Browser*, *Restart Server*, *Show Logs*, *Open at Login* (toggle), and *Quit*. The menu is rebuilt on each open so every value stays current. Snapshot rows are enabled and click-to-open-dashboard rather than disabled (which the OS dims). |
 | **`login-item.ts`** | macOS Login Items toggle via Electron's first-party `app.setLoginItemSettings` (wraps `SMAppService`) -- not a `LaunchAgent` plist. |
 | **`shell-path.ts`** | Recovers the user's login-shell `PATH` at startup and merges it onto `process.env.PATH`, so the embedded server (and the `claude` CLI it spawns) is not limited to launchd's minimal `PATH`. |
 | **`logger.ts`** | File logger to `~/Library/Logs/Claude Code Monitor/desktop.log` (the main process has no console when launched from Finder). |

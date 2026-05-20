@@ -57,6 +57,15 @@ extraResources:
       # install-app-deps). The root copy is built for the system Node and
       # would trip @electron/universal's identical-file detector.
       - "!**/better-sqlite3/**"
+  # Tray icon PNGs need to live OUTSIDE the asar archive: `nativeImage` can't
+  # always read them from an asar path, and `files` here (out/**, package.json)
+  # would otherwise leave them out of the bundle entirely. Ship them as plain
+  # files at `Resources/assets/`; `trayImagePath()` reads them via
+  # `process.resourcesPath` in production.
+  - from: "assets"
+    to: "assets"
+    filter:
+      - "tray-icon-Template*.png"
 
 asar: true
 asarUnpack:

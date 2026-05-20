@@ -17,6 +17,7 @@
  * We run the user's login shell once at startup, capture its `PATH`, and merge
  * it into `process.env.PATH`. The embedded server runs in this same process,
  * so it (and every `claude` it spawns) inherits the corrected `PATH`.
+ * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
 import { spawnSync } from "node:child_process";

@@ -461,6 +461,38 @@
         word-break: break-word;
         overflow-wrap: anywhere;
       }
+
+      /* Inline accent-chip used for download / CI-run links. Inline styles
+         can't express :hover, so a real class is needed for the interactive
+         states. Uses color-mix() for an accent-tinted hover fill that
+         adapts to whatever --accent the theme defines. */
+      .dl-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 2px 10px;
+        border-radius: 6px;
+        border: 1px solid var(--accent);
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.92em;
+        vertical-align: baseline;
+        transition: background-color 120ms ease, box-shadow 120ms ease, transform 80ms ease;
+      }
+      .dl-chip:hover,
+      .dl-chip:focus-visible {
+        background-color: color-mix(in srgb, var(--accent) 16%, transparent);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 28%, transparent);
+        text-decoration: none;
+        outline: none;
+      }
+      .dl-chip:active {
+        transform: translateY(1px);
+      }
+      .dl-chip svg {
+        flex: 0 0 auto;
+      }
     </style>
 
     <!-- Mermaid: deferred (3.2 MB bundle) so it doesn't render-block first
@@ -680,6 +712,21 @@
                 <span class="tech-badge badge-vscode">VS Code Extension</span>
                 <span class="tech-badge badge-claude">Claude Code</span>
                 <span class="tech-badge badge-claude">Claude Plugins</span>
+                <span class="tech-badge badge-claude">Claude CLI</span>
+                <span class="tech-badge badge-node">Electron 35</span>
+                <span class="tech-badge badge-node">electron-builder</span>
+                <span class="tech-badge badge-node">web-push (VAPID)</span>
+                <span class="tech-badge badge-node">multer</span>
+                <span class="tech-badge badge-node">swagger-ui-express</span>
+                <span class="tech-badge badge-node">adm-zip</span>
+                <span class="tech-badge badge-node">tar</span>
+                <span class="tech-badge badge-node">cors</span>
+                <span class="tech-badge badge-node">ws</span>
+                <span class="tech-badge badge-node">uuid</span>
+                <span class="tech-badge badge-node">concurrently</span>
+                <span class="tech-badge badge-node">SMAppService</span>
+                <span class="tech-badge badge-node">macOS native APIs</span>
+                <span class="tech-badge badge-node">Chromium (Electron)</span>
                 <span class="tech-badge badge-mit">MIT License</span>
               </div>
               <div class="marquee-content" aria-hidden="true">
@@ -729,6 +776,21 @@
                 <span class="tech-badge badge-vscode">VS Code Extension</span>
                 <span class="tech-badge badge-claude">Claude Code</span>
                 <span class="tech-badge badge-claude">Claude Plugins</span>
+                <span class="tech-badge badge-claude">Claude CLI</span>
+                <span class="tech-badge badge-node">Electron 35</span>
+                <span class="tech-badge badge-node">electron-builder</span>
+                <span class="tech-badge badge-node">web-push (VAPID)</span>
+                <span class="tech-badge badge-node">multer</span>
+                <span class="tech-badge badge-node">swagger-ui-express</span>
+                <span class="tech-badge badge-node">adm-zip</span>
+                <span class="tech-badge badge-node">tar</span>
+                <span class="tech-badge badge-node">cors</span>
+                <span class="tech-badge badge-node">ws</span>
+                <span class="tech-badge badge-node">uuid</span>
+                <span class="tech-badge badge-node">concurrently</span>
+                <span class="tech-badge badge-node">SMAppService</span>
+                <span class="tech-badge badge-node">macOS native APIs</span>
+                <span class="tech-badge badge-node">Chromium (Electron)</span>
                 <span class="tech-badge badge-mit">MIT License</span>
               </div>
             </div>
@@ -1270,10 +1332,6 @@
             <div class="screenshot-card" id="ss-settings">
               <img src="../images/settings.png" alt="Settings Overview" width="100%" loading="lazy" decoding="async" />
               <div class="screenshot-caption"><span class="caption-icon">⚙️</span> <span><strong>Settings</strong> — model pricing editor with per-token rates, hook installation status, JSON data export, session cleanup controls, browser notification toggles, and system info panel with DB stats</span></div>
-            </div>
-            <div class="screenshot-card" id="ss-macos">
-              <img src="../images/macos.png" alt="macOS desktop app" width="100%" loading="lazy" decoding="async" />
-              <div class="screenshot-caption"><span class="caption-icon">🍎</span> <span><strong>macOS Desktop App</strong> — native <code>.app</code> shell with a menu-bar (tray) icon, Open-at-Login, and a single-instance lock. Embeds the same Express server in-process and renders the dashboard in a real macOS window. Distributed as a universal DMG via GitHub Releases — see <a href="https://github.com/hoangsonww/Claude-Code-Agent-Monitor/blob/master/DESKTOP.md"><code>DESKTOP.md</code></a></span></div>
             </div>
           </div>
 
@@ -3936,6 +3994,11 @@ ccam-export all --output backup.json</code></pre>
             on top.
           </p>
 
+          <div class="screenshot-card" style="margin: 8px 0 32px;">
+            <img src="../images/macos.png" alt="Claude Code Monitor running as a native macOS desktop app" width="100%" loading="lazy" decoding="async" />
+            <div class="screenshot-caption"><span class="caption-icon">🍎</span> <span>The dashboard as a native macOS <code>.app</code> — menu-bar (tray) icon, Open-at-Login, single-instance lock, and the same Express server embedded in-process. Distributed as a universal DMG via GitHub Releases — see <a href="https://github.com/hoangsonww/Claude-Code-Agent-Monitor/blob/master/DESKTOP.md"><code>DESKTOP.md</code></a></span></div>
+          </div>
+
           <div class="callout callout-info">
             <div class="callout-icon">ℹ</div>
             <div class="callout-body">
@@ -3987,12 +4050,14 @@ ccam-export all --output backup.json</code></pre>
               <div class="feature-icon ic-cyan">📍</div>
               <h3>Menu-Bar (Tray) Icon</h3>
               <p>
-                An always-on menu-bar icon. Left-click toggles the dashboard window;
-                right-click opens a context menu with <strong>Open Dashboard</strong>,
-                <strong>Open in Browser</strong>, <strong>Restart Server</strong>,
-                <strong>Show Logs</strong>, <strong>Open at Login</strong> (toggle), and
-                <strong>Quit</strong>. The menu is rebuilt on each open so the port label and
-                login checkbox are always current.
+                An always-on menu-bar icon. A single click (left or right) opens a dropdown
+                with a <strong>live status snapshot</strong> queried straight from SQLite at
+                click time — server port, active sessions, working agents, events today —
+                followed by <strong>Open Dashboard</strong>, <strong>Open in Browser</strong>,
+                <strong>Restart Server</strong>, <strong>Show Logs</strong>,
+                <strong>Open at Login</strong> (toggle), and <strong>Quit</strong>. The
+                snapshot rows are clickable — they open the dashboard. The menu is rebuilt on
+                each open so every value is current.
               </p>
             </div>
             <div class="feature-card">
@@ -4020,10 +4085,25 @@ ccam-export all --output backup.json</code></pre>
               <div class="feature-icon ic-amber">🪟</div>
               <h3>Close Hides, Server Stays Up</h3>
               <p>
-                Closing the window hides it — the embedded server keeps running and the tray
-                icon stays. Click the tray to bring the window back. Only
-                <strong>Quit</strong> (<code>⌘Q</code> or tray → Quit) shuts the server down
-                gracefully, closing SQLite cleanly with a WAL checkpoint.
+                Closing the window hides it — the embedded server keeps running, the tray icon
+                stays, and the dock icon stays too (a clickable "still alive" indicator).
+                <strong>Quit</strong> (<code>⌘Q</code>, app menu, or tray → Quit) pops a
+                confirmation modal — press the Quit button or hit <code>⌘Q</code> a second
+                time to skip the prompt — and only then does the embedded server shut down,
+                closing SQLite cleanly with a WAL checkpoint and removing this PID's entry
+                from the discovery file.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon ic-teal">🔀</div>
+              <h3>Runs Alongside the Web Dashboard</h3>
+              <p>
+                Launch the desktop app and <code>npm run dev</code> at the same time and both
+                stay real-time. Each server appends its <code>{port, pid, startedAt}</code>
+                entry to <code>~/.claude/.agent-dashboard.json</code> on startup; the Claude
+                Code hook handler reads that list and fan-outs every event to every live entry
+                in parallel. Stale entries self-evict via a PID liveness check on read, so a
+                crashed server can't misroute events to a dead port.
               </p>
             </div>
             <div class="feature-card">
@@ -4143,26 +4223,33 @@ ccam-export all --output backup.json</code></pre>
           <p>
             Open
             <a href="https://github.com/hoangsonww/Claude-Code-Agent-Monitor/releases/latest"
-               target="_blank" rel="noopener noreferrer"><strong>Releases → latest</strong></a>
+               target="_blank" rel="noopener noreferrer"
+               class="dl-chip">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Releases → latest
+            </a>
             and download
-            <code>ClaudeCodeMonitor-&lt;version&gt;-universal.dmg</code> from the
-            assets. The macOS Desktop CI job auto-publishes a new
-            <code>vX.Y.Z</code> release every time the version in
-            <code>package.json</code> is bumped on <code>master</code>, so this link
-            always points at the current build. Releases are public — no GitHub
-            sign-in required.
+            <code>ClaudeCodeMonitor-&lt;version&gt;-universal.dmg</code> from the assets. The
+            macOS Desktop CI job auto-publishes a new <code>vX.Y.Z</code> release every time
+            the version in <code>package.json</code> is bumped on <code>master</code>, so this
+            link always points at the current build. Releases are public — no GitHub sign-in
+            required.
           </p>
 
           <h4>Option B — per-commit CI artifact</h4>
           <p>
-            Want a build straight off the tip of <code>master</code>, ahead of the next
-            tagged release? Every green run of the <code>🍎 macOS Desktop (DMG)</code>
-            job on <code>macos-latest</code> uploads the universal DMG as the
+            Want a build straight off the tip of <code>master</code>, ahead of the next tagged
+            release? Every green run of the <code>🍎 macOS Desktop (DMG)</code> job on
+            <code>macos-latest</code> uploads the universal DMG as the
             <code>ClaudeCodeMonitor-dmg</code> workflow artifact. Open the
             <a href="https://github.com/hoangsonww/Claude-Code-Agent-Monitor/actions/workflows/ci.yml?query=branch%3Amaster+is%3Asuccess"
-               target="_blank" rel="noopener noreferrer">latest passing run</a>,
-            scroll to <strong>Artifacts</strong>, and download
-            <code>ClaudeCodeMonitor-dmg</code>. (Sign-in required, 14-day retention.)
+               target="_blank" rel="noopener noreferrer"
+               class="dl-chip">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+              latest passing run
+            </a>,
+            scroll to its Artifacts section, and download
+            <code>ClaudeCodeMonitor-dmg</code>. (GitHub sign-in required; 14-day retention.)
           </p>
 
           <h4>Option C — build locally</h4>
@@ -4194,15 +4281,14 @@ open desktop/release/ClaudeCodeMonitor-*-arm64.dmg   # match the arch you built<
             <div class="callout-body">
               <strong>Use the arch-specific build on your own machine</strong>
               <p>
-                The universal <code>desktop:dmg</code> build is intentionally
-                <strong>slow</strong>: it builds the full app tree <em>twice</em> (once per
-                architecture), merges both with <code>@electron/universal</code>, and
-                ad-hoc-signs every binary in the merged bundle. For running on a single Mac,
-                use <code>desktop:dmg:arm64</code> (Apple Silicon) or
-                <code>desktop:dmg:x64</code> (Intel) — one architecture, no merge, finishing
-                in roughly a minute instead of many. Reserve the universal build for release
-                artifacts; CI already produces one as <code>ClaudeCodeMonitor-dmg</code>, so
-                you rarely need to build it yourself.
+                The universal <code>desktop:dmg</code> build is intentionally slow: it builds
+                the full app tree <em>twice</em> (once per architecture), merges both with
+                <code>@electron/universal</code>, and ad-hoc-signs every binary in the merged
+                bundle. For running on a single Mac, use <code>desktop:dmg:arm64</code>
+                (Apple Silicon) or <code>desktop:dmg:x64</code> (Intel) — one architecture,
+                no merge, finishing in roughly a minute instead of many. Reserve the universal
+                build for release artifacts; CI already produces one as
+                <code>ClaudeCodeMonitor-dmg</code>, so you rarely need to build it yourself.
               </p>
             </div>
           </div>
@@ -4236,10 +4322,10 @@ open desktop/release/ClaudeCodeMonitor-*-arm64.dmg   # match the arch you built<
             <div class="callout-body">
               <strong>Gatekeeper warning on first launch</strong>
               <p>
-                The DMG is <strong>ad-hoc signed</strong> by default — that is all the project
-                can offer without a paid Apple Developer ID. macOS warns the first time you
-                open it (<em>"Apple could not verify…"</em>). Strip the quarantine attribute
-                to get past it:
+                The DMG is ad-hoc signed by default — that is all the project can offer
+                without a paid Apple Developer ID. macOS warns the first time you open it
+                (<em>"Apple could not verify…"</em>). Strip the quarantine attribute to get
+                past it:
               </p>
             </div>
           </div>
@@ -4258,9 +4344,9 @@ xattr -cr "/Applications/Claude Code Monitor.app"</code></pre>
             <div class="callout-body">
               <strong>Bundle size</strong>
               <p>
-                The DMG is roughly <strong>80 MB</strong>, about <strong>250 MB</strong>
-                installed on disk — the standard Electron tax. The app is macOS-only in v1;
-                Windows and Linux are tracked as follow-ups. Logs live at
+                The DMG is roughly 80&nbsp;MB, about 250&nbsp;MB installed on disk — the
+                standard Electron tax. The app is macOS-only in v1; Windows and Linux are
+                tracked as follow-ups. Logs live at
                 <code>~/Library/Logs/Claude Code Monitor/desktop.log</code> (reach them from
                 the tray menu → <em>Show Logs</em>).
               </p>

@@ -691,6 +691,14 @@
       .install-group {
         margin-top: 72px;
       }
+      /* Prevent long URLs / long literal tokens in `<code>` from overflowing
+         their feature / how-step cards. `anywhere` allows wrap at any char,
+         which is fine for URLs and won't hyphenate normal prose. */
+      .feature-card code,
+      .how-step code {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
       .features-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -2378,6 +2386,14 @@
               <span class="marquee-item"><span class="dot emerald"></span>SQLite (WAL)</span>
               <span class="marquee-item"><span class="dot amber"></span>OpenAPI 3.0</span>
               <span class="marquee-item"><span class="dot pink"></span>Mermaid diagrams</span>
+              <span class="marquee-item"><span class="dot violet"></span>macOS desktop app</span>
+              <span class="marquee-item"><span class="dot emerald"></span>Native macOS toasts</span>
+              <span class="marquee-item"><span class="dot rose"></span>Hooks fan-out</span>
+              <span class="marquee-item"><span class="dot cyan"></span>Tray live snapshot</span>
+              <span class="marquee-item"><span class="dot amber"></span>⌘Q confirmation</span>
+              <span class="marquee-item"><span class="dot"></span>Auto-port discovery</span>
+              <span class="marquee-item"><span class="dot pink"></span>Discovery file</span>
+              <span class="marquee-item"><span class="dot violet"></span>CI auto-release</span>
               <!-- duplicate for seamless loop -->
               <span class="marquee-item"><span class="dot"></span>Real-time hooks ingestion</span>
               <span class="marquee-item"><span class="dot cyan"></span>Stream-json output</span>
@@ -2391,6 +2407,14 @@
               <span class="marquee-item"><span class="dot emerald"></span>SQLite (WAL)</span>
               <span class="marquee-item"><span class="dot amber"></span>OpenAPI 3.0</span>
               <span class="marquee-item"><span class="dot pink"></span>Mermaid diagrams</span>
+              <span class="marquee-item"><span class="dot violet"></span>macOS desktop app</span>
+              <span class="marquee-item"><span class="dot emerald"></span>Native macOS toasts</span>
+              <span class="marquee-item"><span class="dot rose"></span>Hooks fan-out</span>
+              <span class="marquee-item"><span class="dot cyan"></span>Tray live snapshot</span>
+              <span class="marquee-item"><span class="dot amber"></span>⌘Q confirmation</span>
+              <span class="marquee-item"><span class="dot"></span>Auto-port discovery</span>
+              <span class="marquee-item"><span class="dot pink"></span>Discovery file</span>
+              <span class="marquee-item"><span class="dot violet"></span>CI auto-release</span>
             </div>
           </div>
           <div class="marquee reverse">
@@ -2407,6 +2431,13 @@
               <span class="marquee-item"><span class="dot"></span>Kanban board</span>
               <span class="marquee-item"><span class="dot cyan"></span>Update notifier</span>
               <span class="marquee-item"><span class="dot emerald"></span>Local-first, zero telemetry</span>
+              <span class="marquee-item"><span class="dot violet"></span>Run web + desktop together</span>
+              <span class="marquee-item"><span class="dot amber"></span>History import &amp; backfill</span>
+              <span class="marquee-item"><span class="dot pink"></span>Native title bar</span>
+              <span class="marquee-item"><span class="dot rose"></span>Open-at-Login</span>
+              <span class="marquee-item"><span class="dot cyan"></span>SMAppService integration</span>
+              <span class="marquee-item"><span class="dot"></span>Single-instance lock</span>
+              <span class="marquee-item"><span class="dot emerald"></span>Per-arch DMG titles</span>
               <!-- duplicate -->
               <span class="marquee-item"><span class="dot violet"></span>Compaction-aware tokens</span>
               <span class="marquee-item"><span class="dot rose"></span>Per-model cost tracking</span>
@@ -2420,6 +2451,13 @@
               <span class="marquee-item"><span class="dot"></span>Kanban board</span>
               <span class="marquee-item"><span class="dot cyan"></span>Update notifier</span>
               <span class="marquee-item"><span class="dot emerald"></span>Local-first, zero telemetry</span>
+              <span class="marquee-item"><span class="dot violet"></span>Run web + desktop together</span>
+              <span class="marquee-item"><span class="dot amber"></span>History import &amp; backfill</span>
+              <span class="marquee-item"><span class="dot pink"></span>Native title bar</span>
+              <span class="marquee-item"><span class="dot rose"></span>Open-at-Login</span>
+              <span class="marquee-item"><span class="dot cyan"></span>SMAppService integration</span>
+              <span class="marquee-item"><span class="dot"></span>Single-instance lock</span>
+              <span class="marquee-item"><span class="dot emerald"></span>Per-arch DMG titles</span>
             </div>
           </div>
           <div class="marquee slow">
@@ -2436,6 +2474,11 @@
               <span class="marquee-item"><span class="dot amber"></span>Single binary, single port</span>
               <span class="marquee-item"><span class="dot pink"></span>Inspect every plugin</span>
               <span class="marquee-item"><span class="dot emerald"></span>Works fully offline</span>
+              <span class="marquee-item"><span class="dot rose"></span>One-DMG-per-build</span>
+              <span class="marquee-item"><span class="dot violet"></span>Quit cleanly w/ WAL checkpoint</span>
+              <span class="marquee-item"><span class="dot cyan"></span>Auto-import legacy sessions</span>
+              <span class="marquee-item"><span class="dot pink"></span>PID-liveness pruning</span>
+              <span class="marquee-item"><span class="dot amber"></span>Dock icon stays on close</span>
               <span class="marquee-item"><span class="dot emerald"></span>Spawn Claude in one click</span>
               <span class="marquee-item"><span class="dot cyan"></span>Resume any session instantly</span>
               <span class="marquee-item"><span class="dot violet"></span>Watch tool calls live</span>
@@ -2448,6 +2491,11 @@
               <span class="marquee-item"><span class="dot amber"></span>Single binary, single port</span>
               <span class="marquee-item"><span class="dot pink"></span>Inspect every plugin</span>
               <span class="marquee-item"><span class="dot emerald"></span>Works fully offline</span>
+              <span class="marquee-item"><span class="dot rose"></span>One-DMG-per-build</span>
+              <span class="marquee-item"><span class="dot violet"></span>Quit cleanly w/ WAL checkpoint</span>
+              <span class="marquee-item"><span class="dot cyan"></span>Auto-import legacy sessions</span>
+              <span class="marquee-item"><span class="dot pink"></span>PID-liveness pruning</span>
+              <span class="marquee-item"><span class="dot amber"></span>Dock icon stays on close</span>
             </div>
           </div>
         </div>
@@ -2670,8 +2718,41 @@
             <h3>macOS desktop app</h3>
             <p>
               The whole dashboard as a native macOS <code>.app</code>, built with Electron 35. It
-              embeds the Express server in-process, lives in the menu bar, auto-starts at login,
-              and installs Claude Code hooks on first boot - zero-setup monitoring.
+              embeds the Express server in-process, lives in the menu bar with a live status
+              snapshot dropdown, auto-starts at login, and installs Claude Code hooks on first
+              boot - zero-setup monitoring. Runs alongside <code>npm run dev</code> with hooks
+              fanning out to both dashboards in parallel.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon cyan">📰</div>
+            <h3>Live activity feed</h3>
+            <p>
+              A real-time streaming event log with pause/resume buffering, multi-dimension
+              filters, color-coded entries by event type, expandable hook payloads, and
+              per-row session navigation. WebSocket-scoped updates so off-screen events never
+              cost a refetch.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon emerald">📥</div>
+            <h3>History import &amp; backfill</h3>
+            <p>
+              Rescan <code>~/.claude/projects/</code>, point at any directory, or drag-drop a
+              <code>.tar.gz</code> archive of transcripts. Imports are <strong>idempotent</strong>
+              — per-event-type high-water marks dedupe re-runs — with WebSocket progress, archive
+              extraction limits, and full subagent JSONL parsing.
+            </p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon amber">🔔</div>
+            <h3>Cross-surface notifications</h3>
+            <p>
+              Configurable per event type (new session, error, completion, subagent spawn). The
+              web dashboard uses Web Push (VAPID); the macOS app fires <strong>native macOS
+              toasts</strong> directly from the embedded server, side-stepping Web Push (which
+              has no FCM credentials inside Electron). Both surfaces stay live when running
+              together.
             </p>
           </div>
         </div>
@@ -2914,7 +2995,7 @@
               <span class="showcase-expand-icon">⤢</span>
               <div class="showcase-overlay">
                 <h4>macOS Desktop App</h4>
-                <p>Native .app shell — menu-bar icon, Open-at-Login, embedded server, same dashboard in a window</p>
+                <p>Native .app — menu-bar tray with a live snapshot dropdown, Open-at-Login, embedded server, native notifications. Runs alongside the web dashboard with real-time intact on both.</p>
               </div>
             </div>
           </div>
@@ -3214,9 +3295,11 @@
             <div class="how-step-num">01</div>
             <h4>Native, menu-bar-first</h4>
             <p>
-              A menu-bar (tray) icon, a native macOS application menu, single-instance lock, and
-              window-close-hides-but-server-keeps-running. Quit cleanly shuts the embedded server
-              down.
+              A menu-bar (tray) icon with a single-click dropdown showing a <strong>live status
+              snapshot</strong> (sessions, agents, events today), a native macOS title bar with
+              the conventional traffic-light row, single-instance lock, and
+              window-close-hides-but-server-keeps-running. ⌘Q opens a confirmation dialog (press
+              ⌘Q again to skip it).
             </p>
           </div>
           <div class="how-step">
@@ -3237,11 +3320,25 @@
               <code>~/Library/Application Support/Claude Code Monitor/data/</code>, outside the
               <code>.app</code> bundle, so it survives reinstalls and updates. The app also
               recovers your login-shell <code>PATH</code> at startup, so <em>Run Claude</em> can
-              find and launch the <code>claude</code> CLI.
+              find and launch the <code>claude</code> CLI. Notifications are delivered as
+              <strong>native macOS toasts</strong> from the embedded server (Web Push doesn't
+              work reliably inside Electron).
             </p>
           </div>
           <div class="how-step">
             <div class="how-step-num">04</div>
+            <h4>Coexists with the web dashboard</h4>
+            <p>
+              Run the desktop app and <code>npm run dev</code> at the same time and both stay
+              real-time. Every running dashboard appends its <code>{port, pid, startedAt}</code>
+              entry to <code>~/.claude/.agent-dashboard.json</code> on startup; the hook handler
+              fans each hook out to every live entry in parallel, so both UIs receive the same
+              events and both their SQLite stores stay in sync. Stale entries self-evict via a
+              PID liveness check on read.
+            </p>
+          </div>
+          <div class="how-step">
+            <div class="how-step-num">05</div>
             <h4>macOS only, for now</h4>
             <p>
               v1 targets macOS. The DMG is ad-hoc signed, so Gatekeeper warns on first launch -
@@ -3495,6 +3592,22 @@
           <div class="stack-item"><div class="stack-item-icon">🐍</div><div class="stack-item-name">Python 3</div><div class="stack-item-desc">statusline script</div></div>
           <div class="stack-item"><div class="stack-item-icon">☁️</div><div class="stack-item-name">Coralogix</div><div class="stack-item-desc">observability</div></div>
           <div class="stack-item"><div class="stack-item-icon">🔭</div><div class="stack-item-name">OpenTelemetry</div><div class="stack-item-desc">collector</div></div>
+          <div class="stack-item"><div class="stack-item-icon">🖥️</div><div class="stack-item-name">Electron 35</div><div class="stack-item-desc">macOS .app shell</div></div>
+          <div class="stack-item"><div class="stack-item-icon">📦</div><div class="stack-item-name">electron-builder</div><div class="stack-item-desc">DMG packaging</div></div>
+          <div class="stack-item"><div class="stack-item-icon">🤖</div><div class="stack-item-name">Claude CLI</div><div class="stack-item-desc">spawned via Run page</div></div>
+          <div class="stack-item"><div class="stack-item-icon">🔔</div><div class="stack-item-name">web-push</div><div class="stack-item-desc">VAPID push library</div></div>
+          <div class="stack-item"><div class="stack-item-icon">📄</div><div class="stack-item-name">swagger-ui-express</div><div class="stack-item-desc">interactive API docs</div></div>
+          <div class="stack-item"><div class="stack-item-icon">📤</div><div class="stack-item-name">multer</div><div class="stack-item-desc">multipart upload</div></div>
+          <div class="stack-item"><div class="stack-item-icon">🗜️</div><div class="stack-item-name">adm-zip</div><div class="stack-item-desc">zip extract (bombs-safe)</div></div>
+          <div class="stack-item"><div class="stack-item-icon">🪢</div><div class="stack-item-name">tar</div><div class="stack-item-desc">tar/tgz extract</div></div>
+          <div class="stack-item"><div class="stack-item-icon">🌍</div><div class="stack-item-name">cors</div><div class="stack-item-desc">Express CORS</div></div>
+          <div class="stack-item"><div class="stack-item-icon">🧵</div><div class="stack-item-name">ws</div><div class="stack-item-desc">WebSocket server</div></div>
+          <div class="stack-item"><div class="stack-item-icon">🔑</div><div class="stack-item-name">SMAppService</div><div class="stack-item-desc">macOS Login Items</div></div>
+          <div class="stack-item"><div class="stack-item-icon">🚦</div><div class="stack-item-name">concurrently</div><div class="stack-item-desc">dev process orchestrator</div></div>
+          <div class="stack-item"><div class="stack-item-icon">⚙️</div><div class="stack-item-name">@types/node</div><div class="stack-item-desc">strict TS in desktop/</div></div>
+          <div class="stack-item"><div class="stack-item-icon">🆔</div><div class="stack-item-name">uuid</div><div class="stack-item-desc">v4 ids</div></div>
+          <div class="stack-item"><div class="stack-item-icon">🪟</div><div class="stack-item-name">Chromium</div><div class="stack-item-desc">embedded BrowserWindow</div></div>
+          <div class="stack-item"><div class="stack-item-icon">🍎</div><div class="stack-item-name">macOS native APIs</div><div class="stack-item-desc">tray, dock, dialog</div></div>
         </div>
       </section>
 

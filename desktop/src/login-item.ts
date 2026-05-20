@@ -5,6 +5,7 @@
  * `SMAppService` / `ServiceManagement` framework on macOS 13+) instead of
  * dropping a LaunchAgent plist. This makes the toggle show up in
  * System Settings → General → Login Items where users expect to manage it.
+ * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
 import { app } from "electron";

@@ -396,10 +396,13 @@ desktop/
 ├── src/
 │   ├── main.ts          # main process entry — lifecycle, dialogs, wiring
 │   ├── server-host.ts   # ★ in-process Express boot, port discovery, adoption,
-│   │                    #   better-sqlite3 ABI patch, DB close
-│   ├── window.ts        # BrowserWindow + persisted geometry
+│   │                    #   better-sqlite3 ABI patch, DB + discovery-file close,
+│   │                    #   getServerSnapshot() for the tray dropdown
+│   ├── window.ts        # BrowserWindow + persisted geometry; native macOS
+│   │                    #   titleBarStyle: 'default' (clear traffic-light row)
 │   ├── menu.ts          # native application menu
-│   ├── tray.ts          # menu-bar icon + context menu
+│   ├── tray.ts          # menu-bar icon + single-click dropdown w/ live
+│   │                    #   {sessions, agents, events-today} snapshot
 │   ├── login-item.ts    # macOS Login Items (SMAppService)
 │   ├── shell-path.ts    # recover the user's shell PATH (so `claude` is found)
 │   ├── logger.ts        # file logger → app.getPath('logs')/desktop.log
@@ -726,17 +729,33 @@ By design, changes outside `desktop/` are kept to a minimum:
   `require.main === module` block, so the embedded server never ran it and the
   desktop dashboard started empty; moving it into `startBackgroundServices()`
   fixes that.) The server also publishes its live port on startup.
-- **`server/lib/server-info.js`** *(new)* — writes/reads the
-  `~/.claude/.agent-dashboard.json` port discovery file.
-- **`scripts/hook-handler.js`** — resolves the dashboard port from that
-  discovery file, so hook events reach the server even when it bound a fallback
-  port instead of 4820.
+- **`server/lib/server-info.js`** *(new)* — multi-server discovery file at
+  `~/.claude/.agent-dashboard.json`. Every running dashboard appends its
+  `{port, pid, startedAt}` entry on startup, removes it on clean shutdown,
+  and stale entries are pruned by a `process.kill(pid, 0)` liveness check on
+  read. Exposes `writeServerInfo`, `removeServerInfo`,
+  `resolveAllDashboardPorts` (fan-out targets), and the legacy single-port
+  `resolveDashboardPort`. The file also carries legacy root-level
+  `port`/`pid`/`startedAt` fields populated from the most recently started
+  live server, so older hook handlers bundled inside an already-installed
+  `.app` still resolve to a reachable port.
+- **`scripts/hook-handler.js`** — `Promise.all` fan-out of every hook
+  payload to every live server returned by `resolveAllDashboardPorts()`
+  (`CLAUDE_DASHBOARD_PORT` overrides to a single target). This is what lets
+  the desktop app coexist with `npm run dev` — both dashboards receive every
+  event and both stay real-time.
 - **`server/lib/push.js`** — `sendPushToAll()` now also fires a **native
   Electron notification** when `process.versions.electron` is set, so the
   desktop app surfaces notifications via the OS API instead of relying on Web
   Push (which fails inside Electron — no FCM credentials in the Chromium
   build). The standalone server path is unchanged: the native leg is a no-op
   there, and Web Push delivers as before.
+- **`scripts/dev.js`** *(new)* — `npm run dev`'s entry point. Probes both
+  `127.0.0.1` and `::1` for a free port in `4820–4859` (so an SSH
+  `LocalForward` with loopback-specific binds can't shadow Node's wildcard
+  listen), exports `DASHBOARD_PORT`, then spawns the existing
+  `concurrently` server + client pipeline. `npm run dev:raw` bypasses it
+  for parity with the old behaviour.
 
 `client/`, `mcp/`, and `vscode-extension/` are **untouched**. If you find
 yourself wanting to edit those, that belongs in a separate PR.

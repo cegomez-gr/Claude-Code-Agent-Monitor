@@ -14,6 +14,7 @@
  *      CPU architecture. A prior `electron-builder --mac --x64/--arm64` build
  *      rebuilds it for the target arch; left mismatched it breaks `desktop:dev`
  *      and `desktop:test` with ERR_DLOPEN_FAILED. We rebuild it if so.
+ * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
 const fs = require("node:fs");
