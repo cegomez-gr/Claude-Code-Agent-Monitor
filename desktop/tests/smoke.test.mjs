@@ -66,10 +66,42 @@ let electronProc;
 // skipping the "adopt an existing healthy server" code path.
 const TEST_PORT = 50000 + Math.floor(Math.random() * 5000);
 
+// On POSIX, spawn the Electron parent as a process-group leader so we can
+// signal the whole tree (helpers, embedded server) with one kill(-pid).
+// Without this, SIGTERM only hits the parent and leaves helpers alive,
+// keeping the stdio pipes open and hanging `node --test` indefinitely.
+const IS_POSIX = process.platform !== "win32";
+
+/** Kill the Electron process tree and resolve when it's actually gone. */
+async function killElectronTree(proc, { timeoutMs = 5_000 } = {}) {
+  if (!proc || proc.exitCode !== null || proc.signalCode !== null) return;
+  proc.killedByTest = true;
+
+  const signalGroup = (sig) => {
+    try {
+      if (IS_POSIX && proc.pid) process.kill(-proc.pid, sig);
+      else proc.kill(sig);
+    } catch {
+      /* group may already be gone */
+    }
+  };
+
+  const exited = once(proc, "exit");
+  signalGroup("SIGTERM");
+
+  const timer = new Promise((resolve) => setTimeout(resolve, timeoutMs, "timeout"));
+  const winner = await Promise.race([exited.then(() => "exit"), timer]);
+  if (winner === "timeout") {
+    signalGroup("SIGKILL");
+    await Promise.race([exited, new Promise((r) => setTimeout(r, 2_000))]);
+  }
+}
+
 describe("desktop smoke", () => {
   before(async () => {
     electronProc = spawn(ELECTRON_BIN, [MAIN_JS], {
       cwd: DESKTOP_ROOT,
+      detached: IS_POSIX,
       env: {
         ...process.env,
         // Suppress the BrowserWindow on the test runner; we only care that
@@ -94,15 +126,7 @@ describe("desktop smoke", () => {
   });
 
   after(async () => {
-    if (electronProc && !electronProc.killed) {
-      electronProc.killedByTest = true;
-      electronProc.kill("SIGTERM");
-      try {
-        await once(electronProc, "exit");
-      } catch {
-        /* ignore */
-      }
-    }
+    await killElectronTree(electronProc);
   });
 
   it("brings up the embedded server and serves /api/health on the bound port", async () => {
