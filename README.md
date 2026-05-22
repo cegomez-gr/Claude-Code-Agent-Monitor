@@ -1918,7 +1918,6 @@ agent-dashboard/
 | WebSocket disconnected            | The client auto-reconnects every 2 seconds. Check that port 4820 is not blocked by a firewall                                                                    |
 | Stale data after restart          | The database persists across restarts. Run `npm run seed` for fresh demo data, or delete `data/dashboard.db` to reset                                            |
 | MCP tools fail to connect         | Confirm dashboard API is up on `MCP_DASHBOARD_BASE_URL` and rebuild/start MCP (`npm run mcp:build`, `npm run mcp:start`)                                         |
-| Negative `avgDuration` on compaction rows in `/api/workflows` | Fixed in v1.2.x — see GitHub issue #156. Live hook ingestion stamped `started_at` from ingestion wall clock but `ended_at` from a transcript timestamp in the past, producing impossible negative durations. The hook path now mirrors `scripts/import-history.js` and stamps both timestamps to the transcript value, and a one-shot startup repair in `server/db.js` collapses `started_at` to `ended_at` for any pre-existing broken rows on next server start. Reproduce / verify with `node scripts/repro-issue-156.js` |
 
 ---
 
