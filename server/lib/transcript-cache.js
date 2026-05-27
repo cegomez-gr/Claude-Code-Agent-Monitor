@@ -7,6 +7,18 @@ const fs = require("fs");
 
 const MAX_CACHE_ENTRIES = 200;
 
+// Hard cap on the length of each per-entry growable array (turnDurations,
+// errors, compaction.entries, usageExtras.{service_tiers,speeds,inference_geos}).
+// Past this point we keep the *tail* — the most recent N items — so the
+// cache reflects current state. Older items are NOT lost from the system:
+// they are already persisted to the events table by routes/hooks.js, with
+// dedup logic that prevents re-insertion when the cache re-reads them.
+// Configurable via TRANSCRIPT_CACHE_MAX_ARRAY_LEN env var.
+const MAX_ARRAY_LEN = (() => {
+  const raw = parseInt(process.env.TRANSCRIPT_CACHE_MAX_ARRAY_LEN, 10);
+  return Number.isFinite(raw) && raw > 0 ? raw : 1000;
+})();
+
 class TranscriptCache {
   constructor(maxEntries = MAX_CACHE_ENTRIES) {
     this._cache = new Map();
@@ -544,6 +556,12 @@ class TranscriptCache {
       const oldest = this._cache.keys().next().value;
       this._cache.delete(oldest);
     }
+  }
+
+  /** Trim an array in-place to keep only the last `maxLen` items. No-op on falsy. */
+  _trimArray(arr, maxLen = MAX_ARRAY_LEN) {
+    if (!arr || !Array.isArray(arr) || arr.length <= maxLen) return;
+    arr.splice(0, arr.length - maxLen);
   }
 
   /** Number of entries currently cached */
