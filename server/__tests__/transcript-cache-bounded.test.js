@@ -155,3 +155,35 @@ describe("TranscriptCache.extract — array caps", () => {
     delete require.cache[require.resolve("../lib/transcript-cache")];
   });
 });
+
+describe("TranscriptCache._set — single storage", () => {
+  it("cache entry contains ONLY {mtimeMs, size, bytesRead, result}", () => {
+    const p = writeJsonl("single.jsonl", [
+      { type: "system", subtype: "turn_duration", durationMs: 100, timestamp: "2026-01-01T00:00:00Z" },
+    ]);
+    const cache = new TranscriptCache();
+    cache.extract(p);
+    const entry = cache._cache.get(p);
+    assert.ok(entry, "entry should be cached");
+    const keys = Object.keys(entry).sort();
+    assert.deepEqual(keys, ["bytesRead", "mtimeMs", "result", "size"]);
+  });
+
+  it("does not store duplicate top-level errors/turnDurations/compaction", () => {
+    const p = writeJsonl("dup.jsonl", [
+      { type: "system", subtype: "turn_duration", durationMs: 1, timestamp: "2026-01-01T00:00:00Z" },
+      { isApiErrorMessage: true, error: "x", message: { content: [{ text: "y" }] }, timestamp: "2026-01-01T00:00:01Z" },
+      { isCompactSummary: true, uuid: "u1", timestamp: "2026-01-01T00:00:02Z" },
+    ]);
+    const cache = new TranscriptCache();
+    cache.extract(p);
+    const entry = cache._cache.get(p);
+    assert.equal(entry.errors, undefined);
+    assert.equal(entry.turnDurations, undefined);
+    assert.equal(entry.compaction, undefined);
+    assert.equal(entry.tokensByModel, undefined);
+    assert.equal(entry.usageExtras, undefined);
+    assert.equal(entry.thinkingBlockCount, undefined);
+    assert.equal(entry.latestModel, undefined);
+  });
+});

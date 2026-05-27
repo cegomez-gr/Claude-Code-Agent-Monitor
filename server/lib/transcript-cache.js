@@ -54,19 +54,7 @@ class TranscriptCache {
       // File shrunk or first read → full re-read
       if (!cached || stat.size < cached.bytesRead) {
         const result = this._fullRead(transcriptPath);
-        this._set(key, {
-          mtimeMs: stat.mtimeMs,
-          size: stat.size,
-          bytesRead: stat.size,
-          tokensByModel: result ? this._cloneTokens(result.tokensByModel) : null,
-          compaction: result ? this._cloneCompaction(result.compaction) : null,
-          errors: result?.errors ? [...result.errors] : null,
-          turnDurations: result?.turnDurations ? [...result.turnDurations] : null,
-          thinkingBlockCount: result?.thinkingBlockCount || 0,
-          usageExtras: result ? this._cloneUsageExtras(result.usageExtras) : null,
-          latestModel: result?.latestModel || null,
-          result,
-        });
+        this._set(key, { mtimeMs: stat.mtimeMs, size: stat.size, bytesRead: stat.size, result });
         return result;
       }
 
@@ -100,34 +88,10 @@ class TranscriptCache {
             !result.usageExtras &&
             !result.latestModel
           ) {
-            this._set(key, {
-              mtimeMs: stat.mtimeMs,
-              size: stat.size,
-              bytesRead: stat.size,
-              tokensByModel: null,
-              compaction: null,
-              errors: null,
-              turnDurations: null,
-              thinkingBlockCount: 0,
-              usageExtras: null,
-              latestModel: null,
-              result: null,
-            });
+            this._set(key, { mtimeMs: stat.mtimeMs, size: stat.size, bytesRead: stat.size, result: null });
             return null;
           }
-          this._set(key, {
-            mtimeMs: stat.mtimeMs,
-            size: stat.size,
-            bytesRead: stat.size,
-            tokensByModel: this._cloneTokens(result.tokensByModel),
-            compaction: this._cloneCompaction(result.compaction),
-            errors: result.errors ? [...result.errors] : null,
-            turnDurations: result.turnDurations ? [...result.turnDurations] : null,
-            thinkingBlockCount: result.thinkingBlockCount || 0,
-            usageExtras: this._cloneUsageExtras(result.usageExtras),
-            latestModel: result.latestModel || null,
-            result,
-          });
+          this._set(key, { mtimeMs: stat.mtimeMs, size: stat.size, bytesRead: stat.size, result });
           return result;
         }
 
@@ -143,19 +107,7 @@ class TranscriptCache {
 
       // Same size, different mtime — content may have been rewritten (compaction)
       const result = this._fullRead(transcriptPath);
-      this._set(key, {
-        mtimeMs: stat.mtimeMs,
-        size: stat.size,
-        bytesRead: stat.size,
-        tokensByModel: result ? this._cloneTokens(result.tokensByModel) : null,
-        compaction: result ? this._cloneCompaction(result.compaction) : null,
-        errors: result?.errors ? [...result.errors] : null,
-        turnDurations: result?.turnDurations ? [...result.turnDurations] : null,
-        thinkingBlockCount: result?.thinkingBlockCount || 0,
-        usageExtras: result ? this._cloneUsageExtras(result.usageExtras) : null,
-        latestModel: result?.latestModel || null,
-        result,
-      });
+      this._set(key, { mtimeMs: stat.mtimeMs, size: stat.size, bytesRead: stat.size, result });
       return result;
     } catch {
       return null;
@@ -453,7 +405,7 @@ class TranscriptCache {
   }
 
   _merge(cached, incremental) {
-    const tokensByModel = cached.tokensByModel ? this._cloneTokens(cached.tokensByModel) : {};
+    const tokensByModel = cached.result?.tokensByModel ? this._cloneTokens(cached.result.tokensByModel) : {};
     if (incremental && incremental.tokensByModel) {
       for (const [model, tokens] of Object.entries(incremental.tokensByModel)) {
         if (!tokensByModel[model]) {
@@ -466,7 +418,7 @@ class TranscriptCache {
       }
     }
 
-    let compaction = cached.compaction ? this._cloneCompaction(cached.compaction) : null;
+    let compaction = cached.result?.compaction ? this._cloneCompaction(cached.result.compaction) : null;
     if (incremental && incremental.compaction) {
       if (!compaction) compaction = { count: 0, entries: [] };
       compaction.count += incremental.compaction.count;
@@ -474,14 +426,14 @@ class TranscriptCache {
       this._trimArray(compaction.entries);
     }
 
-    let errors = cached.errors ? [...cached.errors] : null;
+    let errors = cached.result?.errors ? [...cached.result.errors] : null;
     if (incremental && incremental.errors) {
       if (!errors) errors = [];
       errors.push(...incremental.errors);
       this._trimArray(errors);
     }
 
-    let turnDurations = cached.turnDurations ? [...cached.turnDurations] : null;
+    let turnDurations = cached.result?.turnDurations ? [...cached.result.turnDurations] : null;
     if (incremental && incremental.turnDurations) {
       if (!turnDurations) turnDurations = [];
       turnDurations.push(...incremental.turnDurations);
@@ -489,9 +441,9 @@ class TranscriptCache {
     }
 
     const thinkingBlockCount =
-      (cached.thinkingBlockCount || 0) + (incremental?.thinkingBlockCount || 0);
+      (cached.result?.thinkingBlockCount || 0) + (incremental?.thinkingBlockCount || 0);
 
-    let usageExtras = cached.usageExtras ? this._cloneUsageExtras(cached.usageExtras) : null;
+    let usageExtras = cached.result?.usageExtras ? this._cloneUsageExtras(cached.result.usageExtras) : null;
     if (incremental && incremental.usageExtras) {
       if (!usageExtras) {
         usageExtras = { service_tiers: [], speeds: [], inference_geos: [] };
@@ -518,7 +470,7 @@ class TranscriptCache {
     // JSONL is append-only and parsed in order, so the incremental block's
     // latestModel (when present) is the newest reading — fall back to the
     // previously-cached value when the new chunk had no assistant entries.
-    const latestModel = (incremental && incremental.latestModel) || cached.latestModel || null;
+    const latestModel = (incremental && incremental.latestModel) || cached.result?.latestModel || null;
 
     return {
       tokensByModel,
