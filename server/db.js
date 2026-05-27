@@ -451,6 +451,13 @@ const stmts = {
   updateSessionModel: db.prepare(
     "UPDATE sessions SET model = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND COALESCE(model, '') != ?"
   ),
+  // One-shot writer for sessions.transcript_path. The NULL/'' guard makes
+  // every subsequent hook event for the same session a SQL no-op, so the
+  // periodic compaction sweep can read transcript_path off the row instead
+  // of scanning events.
+  setSessionTranscriptPath: db.prepare(
+    "UPDATE sessions SET transcript_path = ? WHERE id = ? AND (transcript_path IS NULL OR transcript_path = '')"
+  ),
 
   getAgent: db.prepare("SELECT * FROM agents WHERE id = ?"),
   listAgents: db.prepare("SELECT * FROM agents ORDER BY started_at DESC LIMIT ? OFFSET ?"),

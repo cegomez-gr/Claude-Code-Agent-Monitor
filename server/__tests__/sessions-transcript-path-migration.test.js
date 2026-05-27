@@ -53,3 +53,61 @@ describe("sessions.transcript_path migration", () => {
     assert.equal(row.transcript_path, "/tmp/foo.jsonl");
   });
 });
+
+describe("hooks ingestion populates sessions.transcript_path", () => {
+  it("sets transcript_path on first event that carries it", async () => {
+    delete require.cache[require.resolve("../db")];
+    const { db, stmts } = require("../db");
+
+    // Pre-create a session without transcript_path (simulate legacy state)
+    stmts.insertSession.run("s-hook-1", "n", "active", "/tmp/proj", "claude", null);
+    let row = db
+      .prepare("SELECT transcript_path FROM sessions WHERE id = ?")
+      .get("s-hook-1");
+    assert.equal(row.transcript_path, null);
+
+    // Spin up app and POST a hook event with transcript_path
+    delete require.cache[require.resolve("../index")];
+    const { createApp, startServer } = require("../index");
+    const app = createApp();
+    const server = await startServer(app, 0);
+    const port = server.address().port;
+
+    const payload = JSON.stringify({
+      hook_type: "PostToolUse",
+      data: {
+        session_id: "s-hook-1",
+        transcript_path: "/tmp/somewhere/session.jsonl",
+        cwd: "/tmp/proj",
+      },
+    });
+    await new Promise((resolve, reject) => {
+      const http = require("http");
+      const req = http.request(
+        {
+          hostname: "127.0.0.1",
+          port,
+          path: "/api/hooks/event",
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": Buffer.byteLength(payload),
+          },
+        },
+        (res) => {
+          res.resume();
+          res.once("end", resolve);
+        }
+      );
+      req.on("error", reject);
+      req.write(payload);
+      req.end();
+    });
+    server.close();
+
+    row = db
+      .prepare("SELECT transcript_path FROM sessions WHERE id = ?")
+      .get("s-hook-1");
+    assert.equal(row.transcript_path, "/tmp/somewhere/session.jsonl");
+  });
+});

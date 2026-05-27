@@ -87,6 +87,13 @@ function ensureSession(sessionId, data) {
     const mainAgent = stmts.getAgent.get(mainAgentId);
     if (mainAgent) broadcast("agent_created", mainAgent);
   }
+
+  // First-seen transcript_path → write to session row so the periodic sweep
+  // doesn't have to scan events for it. Idempotent via the SQL guard
+  // (NULL/'' check), so subsequent hooks for the same session are no-ops.
+  if (data.transcript_path) {
+    stmts.setSessionTranscriptPath.run(data.transcript_path, sessionId);
+  }
   return session;
 }
 
