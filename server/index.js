@@ -98,8 +98,37 @@ function startServer(app, port) {
   const isProduction = process.env.NODE_ENV === "production";
   if (isProduction) {
     const clientDist = path.join(__dirname, "..", "client", "dist");
-    app.use(express.static(clientDist));
+    // Cache policy designed to survive client rebuilds without forcing a hard
+    // refresh:
+    //   - Hashed bundles under /assets/ never change for a given URL, so cache
+    //     them aggressively (immutable).
+    //   - index.html, /sw.js, and /manifest.json *are* the cache-bust signal,
+    //     so they must revalidate every load — without this the browser's
+    //     heuristic cache happily serves a stale index.html that references
+    //     asset hashes that no longer exist on disk.
+    app.use(
+      express.static(clientDist, {
+        etag: true,
+        lastModified: true,
+        setHeaders(res, filePath) {
+          if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+            res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+            return;
+          }
+          const base = path.basename(filePath);
+          if (base === "index.html" || base === "sw.js" || base === "manifest.json") {
+            res.setHeader("Cache-Control", "no-cache, must-revalidate");
+            return;
+          }
+          // Other static files (favicon, og-image, etc.): short revalidation
+          // window — long enough to be friendly, short enough to recover from
+          // a typo without telling users to hard-refresh.
+          res.setHeader("Cache-Control", "public, max-age=300, must-revalidate");
+        },
+      })
+    );
     app.get("*", (_req, res) => {
+      res.setHeader("Cache-Control", "no-cache, must-revalidate");
       res.sendFile(path.join(clientDist, "index.html"));
     });
   }

@@ -30,6 +30,8 @@ import {
   Plug,
   Clock,
   Gauge,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { api } from "../lib/api";
@@ -132,6 +134,11 @@ interface SidebarProps {
 export function Sidebar({ wsConnected, collapsed, onToggle }: SidebarProps) {
   const { t, i18n } = useTranslation();
   const websiteLabel = "sonnguyenhoang.com";
+  // Track whether nav items are clipped by overflow so we can render
+  // chevron affordances pointing toward the hidden items. Recomputed on
+  // scroll, resize, and any structural change (e.g. collapse toggle).
+  const navRef = useRef<HTMLElement | null>(null);
+  const [navOverflow, setNavOverflow] = useState({ up: false, down: false });
   const [updateStatus, setUpdateStatus] = useState<UpdateStatusPayload | null>(null);
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState(false);
@@ -151,6 +158,35 @@ export function Sidebar({ wsConnected, collapsed, onToggle }: SidebarProps) {
   const typeCountRef = useRef<Map<string, number>>(new Map());
   const recentEventsRef = useRef<Array<{ type: string; at: number }>>([]);
   const persistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const recomputeNavOverflow = useCallback(() => {
+    const el = navRef.current;
+    if (!el) return;
+    const up = el.scrollTop > 1;
+    const down = el.scrollTop + el.clientHeight < el.scrollHeight - 1;
+    setNavOverflow((prev) => (prev.up === up && prev.down === down ? prev : { up, down }));
+  }, []);
+
+  useEffect(() => {
+    recomputeNavOverflow();
+    const el = navRef.current;
+    if (!el) return;
+    const onScroll = () => recomputeNavOverflow();
+    el.addEventListener("scroll", onScroll, { passive: true });
+    const ro =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(recomputeNavOverflow) : null;
+    ro?.observe(el);
+    window.addEventListener("resize", recomputeNavOverflow);
+    return () => {
+      el.removeEventListener("scroll", onScroll);
+      ro?.disconnect();
+      window.removeEventListener("resize", recomputeNavOverflow);
+    };
+  }, [recomputeNavOverflow, collapsed]);
+
+  const scrollNavBy = useCallback((delta: number) => {
+    navRef.current?.scrollBy({ top: delta, behavior: "smooth" });
+  }, []);
 
   // Hydrate from localStorage on mount.
   useEffect(() => {
@@ -307,12 +343,12 @@ export function Sidebar({ wsConnected, collapsed, onToggle }: SidebarProps) {
 
   return (
     <aside
-      className={`fixed left-0 top-0 bottom-0 bg-surface-1 border-r border-border flex flex-col z-30 overflow-y-auto overflow-x-hidden transition-[width] duration-200 ${
+      className={`fixed left-0 top-0 bottom-0 bg-surface-1 border-r border-border flex flex-col z-30 overflow-hidden transition-[width] duration-200 ${
         collapsed ? "w-[4.25rem]" : "w-60"
       }`}
     >
       {/* Brand */}
-      <div className="px-3 py-4 border-b border-border">
+      <div className="px-3 py-4 border-b border-border flex-shrink-0">
         <div className={`flex items-center ${collapsed ? "justify-center" : "gap-3 px-2"}`}>
           <div className="w-8 h-8 rounded-lg bg-accent/20 flex items-center justify-center flex-shrink-0">
             <Activity className="w-4 h-4 text-accent" />
@@ -326,35 +362,62 @@ export function Sidebar({ wsConnected, collapsed, onToggle }: SidebarProps) {
         </div>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-2 py-3 space-y-1">
-        {NAV_KEYS.map(({ to, icon: Icon, key }) => {
-          const label = t(key);
-          return (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === "/"}
-              title={collapsed ? label : undefined}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg text-sm font-medium transition-colors duration-150 ${
-                  collapsed ? "justify-center px-2 py-2.5" : "px-3 py-2.5"
-                } ${
-                  isActive
-                    ? "bg-accent/10 text-accent border border-accent/20"
-                    : "text-gray-400 hover:text-gray-200 hover:bg-surface-3 border border-transparent"
-                }`
-              }
-            >
-              <Icon className="w-4 h-4 flex-shrink-0" />
-              {!collapsed && <span>{label}</span>}
-            </NavLink>
-          );
-        })}
-      </nav>
+      {/* Nav — only this section scrolls when its items overflow; the rest of
+          the sidebar (brand, language, collapse toggle, footer) stays pinned.
+          Chevron buttons appear at the edges when content is clipped, so the
+          user knows there's more to reach without inspecting the scrollbar. */}
+      <div className="flex-1 min-h-0 relative flex">
+        <nav ref={navRef} className="flex-1 overflow-y-auto overflow-x-hidden px-2 py-3 space-y-1">
+          {NAV_KEYS.map(({ to, icon: Icon, key }) => {
+            const label = t(key);
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                end={to === "/"}
+                title={collapsed ? label : undefined}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 rounded-lg text-sm font-medium transition-colors duration-150 ${
+                    collapsed ? "justify-center px-2 py-2.5" : "px-3 py-2.5"
+                  } ${
+                    isActive
+                      ? "bg-accent/10 text-accent border border-accent/20"
+                      : "text-gray-400 hover:text-gray-200 hover:bg-surface-3 border border-transparent"
+                  }`
+                }
+              >
+                <Icon className="w-4 h-4 flex-shrink-0" />
+                {!collapsed && <span>{label}</span>}
+              </NavLink>
+            );
+          })}
+        </nav>
+        {navOverflow.up && (
+          <button
+            type="button"
+            onClick={() => scrollNavBy(-160)}
+            aria-label={t("nav:scrollUp")}
+            title={t("nav:scrollUp")}
+            className="absolute top-1.5 right-1.5 z-10 inline-flex items-center justify-center w-6 h-6 rounded-md border border-border bg-surface-2/90 text-gray-300 hover:text-gray-50 hover:bg-surface-3 shadow-md backdrop-blur-sm transition-colors animate-fade-in"
+          >
+            <ChevronUp className="w-3.5 h-3.5" aria-hidden />
+          </button>
+        )}
+        {navOverflow.down && (
+          <button
+            type="button"
+            onClick={() => scrollNavBy(160)}
+            aria-label={t("nav:scrollDown")}
+            title={t("nav:scrollDown")}
+            className="absolute bottom-1.5 right-1.5 z-10 inline-flex items-center justify-center w-6 h-6 rounded-md border border-border bg-surface-2/90 text-gray-300 hover:text-gray-50 hover:bg-surface-3 shadow-md backdrop-blur-sm transition-colors animate-fade-in"
+          >
+            <ChevronDown className="w-3.5 h-3.5" aria-hidden />
+          </button>
+        )}
+      </div>
 
       {/* Language controls */}
-      <div className="px-2 pb-2">
+      <div className="px-2 pb-2 flex-shrink-0">
         {collapsed ? (
           <button
             onClick={toggleLang}
@@ -398,7 +461,7 @@ export function Sidebar({ wsConnected, collapsed, onToggle }: SidebarProps) {
       </div>
 
       {/* Collapse toggle */}
-      <div className="px-2 py-2">
+      <div className="px-2 py-2 flex-shrink-0">
         <button
           onClick={onToggle}
           className={`w-full h-10 rounded-lg border border-border bg-surface-2 transition-colors ${
@@ -424,7 +487,7 @@ export function Sidebar({ wsConnected, collapsed, onToggle }: SidebarProps) {
 
       {/* Footer */}
       <div
-        className={`px-3 pt-3 pb-4 border-t border-border space-y-2.5 ${collapsed ? "px-2" : ""}`}
+        className={`px-3 pt-3 pb-4 border-t border-border space-y-2.5 flex-shrink-0 ${collapsed ? "px-2" : ""}`}
       >
         <button
           type="button"

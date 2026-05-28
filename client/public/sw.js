@@ -3,11 +3,15 @@
  * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
-const CACHE_NAME = "dashboard-v1";
-const SHELL = ["/", "/manifest.json", "/favicon.svg"];
+// Bump this any time the SW logic changes — old clients will install the new
+// SW, drop their existing caches in `activate`, and `skipWaiting` so the
+// freshly-built bundle starts being served on the very next request.
+const CACHE_NAME = "dashboard-v2";
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((c) => c.addAll(SHELL)));
+self.addEventListener("install", () => {
+  // No pre-cache: network-first below means the cache fills lazily, and
+  // there's nothing to "warm" — the v1 SW was pre-caching `/`, which is
+  // exactly the file most likely to go stale after a rebuild.
   self.skipWaiting();
 });
 
@@ -18,15 +22,16 @@ self.addEventListener("activate", (event) => {
       .then((keys) =>
         Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
       )
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   if (request.method !== "GET") return;
   const url = new URL(request.url);
-  // Skip API, WebSocket, and hot-module-reload requests
+  if (url.origin !== self.location.origin) return;
+  // Skip API, WebSocket, and Vite HMR endpoints
   if (
     url.pathname.startsWith("/api/") ||
     url.pathname.startsWith("/ws") ||
@@ -34,24 +39,39 @@ self.addEventListener("fetch", (event) => {
   )
     return;
 
-  if (request.mode === "navigate") {
-    event.respondWith(fetch(request).catch(() => caches.match("/")));
+  // Hashed bundles under /assets/ are immutable for a given URL — cache-first
+  // is safe and fast. A new build emits new filenames, so stale entries simply
+  // don't get re-requested.
+  if (url.pathname.startsWith("/assets/")) {
+    event.respondWith(
+      caches.match(request).then(
+        (cached) =>
+          cached ||
+          fetch(request).then((response) => {
+            if (response.ok && response.type === "basic") {
+              const clone = response.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+            }
+            return response;
+          })
+      )
+    );
     return;
   }
 
-  // Cache-first for static assets (JS/CSS bundles, images)
+  // Everything else (navigations, sw.js, manifest, icons, root /): network-first
+  // with cache fallback. The user always gets the freshest UI while online and
+  // a sensible fallback when offline.
   event.respondWith(
-    caches.match(request).then(
-      (cached) =>
-        cached ||
-        fetch(request).then((response) => {
-          if (response.ok && response.type === "basic") {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-    )
+    fetch(request)
+      .then((response) => {
+        if (response.ok && response.type === "basic") {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
+        return response;
+      })
+      .catch(() => caches.match(request).then((c) => c || caches.match("/")))
   );
 });
 
