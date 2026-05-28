@@ -55,6 +55,7 @@ Thumbs.db
 *.swo
 *.sublime-project
 *.sublime-workspace
+.helm/
 
 # Coverage and testing
 coverage/

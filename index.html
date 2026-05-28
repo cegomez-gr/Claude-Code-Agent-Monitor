@@ -2647,8 +2647,9 @@
             <h3>Cost &amp; token tracking</h3>
             <p>
               Per-model cost estimation with configurable pricing rules, compaction-aware token
-              accounting that preserves totals across context compressions, and an LRU-cached
-              JSONL extractor.
+              accounting that preserves totals across context compressions, and a memory-bounded
+              LRU JSONL extractor whose per-entry arrays are tail-capped so a multi-day session
+              cannot leak the cache.
             </p>
           </div>
           <div class="feature-card">

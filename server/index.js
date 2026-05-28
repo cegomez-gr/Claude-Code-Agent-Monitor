@@ -98,8 +98,37 @@ function startServer(app, port) {
   const isProduction = process.env.NODE_ENV === "production";
   if (isProduction) {
     const clientDist = path.join(__dirname, "..", "client", "dist");
-    app.use(express.static(clientDist));
+    // Cache policy designed to survive client rebuilds without forcing a hard
+    // refresh:
+    //   - Hashed bundles under /assets/ never change for a given URL, so cache
+    //     them aggressively (immutable).
+    //   - index.html, /sw.js, and /manifest.json *are* the cache-bust signal,
+    //     so they must revalidate every load — without this the browser's
+    //     heuristic cache happily serves a stale index.html that references
+    //     asset hashes that no longer exist on disk.
+    app.use(
+      express.static(clientDist, {
+        etag: true,
+        lastModified: true,
+        setHeaders(res, filePath) {
+          if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+            res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+            return;
+          }
+          const base = path.basename(filePath);
+          if (base === "index.html" || base === "sw.js" || base === "manifest.json") {
+            res.setHeader("Cache-Control", "no-cache, must-revalidate");
+            return;
+          }
+          // Other static files (favicon, og-image, etc.): short revalidation
+          // window — long enough to be friendly, short enough to recover from
+          // a typo without telling users to hard-refresh.
+          res.setHeader("Cache-Control", "public, max-age=300, must-revalidate");
+        },
+      })
+    );
     app.get("*", (_req, res) => {
+      res.setHeader("Cache-Control", "no-cache, must-revalidate");
       res.sendFile(path.join(clientDist, "index.html"));
     });
   }
@@ -303,11 +332,11 @@ if (require.main === module) {
         cleanupDb.stmts.updateSession.run(null, "abandoned", now, null, s.id);
         broadcast("session_updated", cleanupDb.stmts.getSession.get(s.id));
 
-        // Evict transcript cache for abandoned sessions to bound memory growth
+        // Evict transcript cache for abandoned sessions to bound memory growth.
+        // Reads transcript_path off the session row (populated by hooks
+        // ensureSession + one-time db.js backfill) instead of scanning events.
         const tpRow = cleanupDb.db
-          .prepare(
-            "SELECT json_extract(data, '$.transcript_path') as tp FROM events WHERE session_id = ? AND json_extract(data, '$.transcript_path') IS NOT NULL LIMIT 1"
-          )
+          .prepare("SELECT transcript_path AS tp FROM sessions WHERE id = ?")
           .get(s.id);
         if (tpRow?.tp) transcriptCache.invalidate(tpRow.tp);
       }
@@ -323,10 +352,13 @@ if (require.main === module) {
       }
     }
 
-    // 2. Scan active sessions for new compaction entries
+    // 2. Scan active sessions for new compaction entries.
+    // Reads from sessions.transcript_path (populated by hooks ensureSession +
+    // one-time backfill in db.js migration) rather than scanning events —
+    // O(active sessions) instead of O(events rows).
     const active = cleanupDb.db
       .prepare(
-        "SELECT DISTINCT e.session_id, json_extract(e.data, '$.transcript_path') as tp FROM events e JOIN sessions s ON s.id = e.session_id WHERE s.status = 'active' AND json_extract(e.data, '$.transcript_path') IS NOT NULL GROUP BY e.session_id ORDER BY MAX(e.id) DESC"
+        "SELECT id AS session_id, transcript_path AS tp FROM sessions WHERE status = 'active' AND transcript_path IS NOT NULL ORDER BY updated_at DESC"
       )
       .all();
     for (const row of active) {

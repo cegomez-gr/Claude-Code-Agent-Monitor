@@ -205,7 +205,7 @@ The dashboard, landing page, and wiki each ship as independent Progressive Web A
 - `background_color` — splash screen background
 - `start_url` — entry point when launched from home screen
 
-**Updating the service worker cache:** Each SW has a `CACHE_NAME` constant (e.g. `dashboard-v1`). After deploying new assets, bump the version string to force browsers to re-fetch.
+**Updating the service worker cache:** Each SW has a `CACHE_NAME` constant (e.g. `dashboard-v2`). After deploying new assets, bump the version string to force browsers to re-fetch — though for the dashboard this is rarely needed: hashed `/assets/*` URLs are immutable per build, everything else is fetched network-first with cache fallback, and a `controllerchange` listener in the client reloads the page exactly once when a new SW takes over, so a rebuild propagates without a hard refresh.
 
 **Browser support:** PWA install prompts appear in Chrome 107+, Edge 107+, and Firefox 110+ (desktop and Android). Safari supports `apple-mobile-web-app-capable` for iOS home-screen mode but does not show an install banner.
 

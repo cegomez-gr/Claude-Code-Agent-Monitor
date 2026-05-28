@@ -930,6 +930,21 @@
                   </p>
                 </div>
                 <div class="feature-card">
+                  <div class="feature-icon ic-cyan">🍎</div>
+                  <h3 id="feat-desktop-app">macOS Desktop App</h3>
+                  <p>
+                    A native macOS <code>.app</code> (shipped as a <code>.dmg</code>) built with
+                    Electron 35. It <strong>embeds the Express server in-process</strong> —
+                    <code>require()</code>-ing <code>server/index.js</code> directly, with no
+                    child process and no IPC — and renders the built React client in a
+                    <code>BrowserWindow</code>. Adds a menu-bar (tray) icon, a native macOS app
+                    menu, auto-start at login via macOS Login Items, and single-instance lock.
+                    Closing the window hides it while the server keeps running, and the app
+                    auto-installs Claude Code hooks on first boot so a DMG-only user gets events
+                    flowing without a checkout.
+                  </p>
+                </div>
+                <div class="feature-card">
                   <div class="feature-icon ic-pink">📰</div>
                   <h3 id="feat-activity">Activity Feed</h3>
                   <p>
@@ -999,13 +1014,30 @@
                   <div class="feature-icon ic-cyan">💾</div>
                   <h3>Transcript Cache</h3>
                   <p>
-                    Incremental JSONL reader shared across the hook handler and compaction scanner.
-                    Uses byte-offset tracking to skip already-parsed content and bounds memory
-                    with LRU eviction of cold session buffers. Detects API errors, turn durations,
-                    thinking blocks, and usage-extras from live transcripts in real time. Cache
-                    hits short-circuit disk I/O so even sessions with tens of thousands of turns
-                    stay fast. The same cache feeds the conversation viewer, cost recalculation,
-                    and the import pipeline's idempotent merge logic.
+                    Incremental JSONL reader shared across the hook handler, compaction scanner,
+                    conversation viewer, and import pipeline. Byte-offset tracking skips
+                    already-parsed content; cache hits short-circuit disk I/O so even sessions
+                    with tens of thousands of turns stay fast.
+                  </p>
+                </div>
+                <div class="feature-card">
+                  <div class="feature-icon ic-emerald">📉</div>
+                  <h3>Bounded Cache Memory</h3>
+                  <p>
+                    LRU eviction of cold session buffers plus a tail-cap on per-entry growable
+                    arrays (turn durations, API errors, compaction entries). A session that runs
+                    for days cannot grow a single cache entry without bound, and each entry stores
+                    its parsed result only once — no shadow copy.
+                  </p>
+                </div>
+                <div class="feature-card">
+                  <div class="feature-icon ic-amber">🧭</div>
+                  <h3>Constant-Time Sweep</h3>
+                  <p>
+                    The periodic compaction sweep reads each active session's transcript path
+                    directly from <code>sessions.transcript_path</code> (a partial index covers
+                    exactly those rows), so the work is O(active sessions) instead of a
+                    <code>json_extract</code> scan over the whole events table.
                   </p>
                 </div>
                 <div class="feature-card">
@@ -1234,28 +1266,31 @@
                   <div class="feature-icon ic-indigo">📲</div>
                   <h3>Progressive Web App</h3>
                   <p>
-                    Three independent PWAs — dashboard, landing page, and wiki — each with
-                    its own Web App Manifest and Service Worker. Install to your home screen or
-                    dock for a standalone, chrome-less experience. The dashboard SW caches the
-                    app shell cache-first, serves navigation network-first, and preserves the
-                    VAPID push pipeline. Landing and wiki SWs precache their shells and lazy-
-                    cache images for offline access after one visit. SVG icons with
+                    Three independent PWAs — dashboard, landing page, and wiki — each with its
+                    own Web App Manifest and Service Worker. Install to your home screen or dock
+                    for a standalone, chrome-less experience. SVG icons with
                     <code>sizes="any"</code> and iOS standalone meta tags included.
                   </p>
                 </div>
                 <div class="feature-card">
-                  <div class="feature-icon ic-cyan">🍎</div>
-                  <h3 id="feat-desktop-app">macOS Desktop App</h3>
+                  <div class="feature-icon ic-rose">🔄</div>
+                  <h3>Fresh-by-Default Caching</h3>
                   <p>
-                    A native macOS <code>.app</code> (shipped as a <code>.dmg</code>) built with
-                    Electron 35. It <strong>embeds the Express server in-process</strong> —
-                    <code>require()</code>-ing <code>server/index.js</code> directly, with no
-                    child process and no IPC — and renders the built React client in a
-                    <code>BrowserWindow</code>. Adds a menu-bar (tray) icon, a native macOS app
-                    menu, auto-start at login via macOS Login Items, and single-instance lock.
-                    Closing the window hides it while the server keeps running, and the app
-                    auto-installs Claude Code hooks on first boot so a DMG-only user gets events
-                    flowing without a checkout.
+                    The dashboard SW serves Vite's hashed <code>/assets/*</code> bundles
+                    cache-first (URLs are immutable per build) and treats everything else as
+                    network-first with cache fallback. Explicit <code>Cache-Control</code> headers
+                    on the production Express static middleware reinforce the policy, so a
+                    rebuild replaces the in-browser code without a hard refresh.
+                  </p>
+                </div>
+                <div class="feature-card">
+                  <div class="feature-icon ic-teal">♻️</div>
+                  <h3>Auto-Reload on Update</h3>
+                  <p>
+                    A <code>controllerchange</code> listener in <code>client/src/main.tsx</code>
+                    reloads the page exactly once when a new SW takes over an already-controlled
+                    page. First installs do not reload, so the very first visit is never
+                    interrupted.
                   </p>
                 </div>
               </div>

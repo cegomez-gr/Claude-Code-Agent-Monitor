@@ -161,7 +161,8 @@ CREATE TABLE sessions (
     ended_at TEXT,
     metadata TEXT,
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-    awaiting_input_since TEXT                                         -- NULL unless Waiting
+    awaiting_input_since TEXT,                                        -- NULL unless Waiting
+    transcript_path TEXT                                              -- absolute path to JSONL transcript
 );
 ```
 
@@ -179,6 +180,7 @@ CREATE TABLE sessions (
 | `metadata` | TEXT | YES | JSON blob for extras (turn duration totals, thinking blocks, …) |
 | `updated_at` | TEXT | NO | Bumped on every event for staleness detection |
 | `awaiting_input_since` | TEXT | YES | ISO 8601 stamp set when the session is **Waiting** (Stop, SessionStart, permission Notification). NULL otherwise |
+| `transcript_path` | TEXT | YES | Absolute path to the session's JSONL transcript. Written by `routes/hooks.js` on the first event that carries it (subsequent events no-op via a SQL guard) and read by the periodic compaction sweep — so the sweep touches only active session rows instead of scanning the entire `events` table for `json_extract(data,'$.transcript_path')`. Backfilled once from `events` by the `db.js` migration |
 
 **Constraints:**
 - `status` must be one of the four enum values
@@ -397,12 +399,21 @@ CREATE TABLE pricing_rules (
 CREATE INDEX idx_sessions_session_id ON sessions(session_id);
 CREATE INDEX idx_sessions_status ON sessions(status);
 CREATE INDEX idx_sessions_updated_at ON sessions(updated_at DESC);
+
+-- Partial index covering only the rows the periodic compaction sweep reads:
+-- active sessions with a known transcript_path. Writes to other sessions skip
+-- the index entirely, so the maintenance cost stays bounded by the small set
+-- of live sessions.
+CREATE INDEX idx_sessions_active_tp
+    ON sessions(status, transcript_path)
+    WHERE status='active' AND transcript_path IS NOT NULL;
 ```
 
 **Query Patterns:**
 - `SELECT * FROM sessions WHERE session_id = ?` - Primary key lookup
 - `SELECT * FROM sessions WHERE status = 'active'` - Filter by status
 - `SELECT * FROM sessions ORDER BY updated_at DESC LIMIT 50` - Recent sessions
+- `SELECT id, transcript_path FROM sessions WHERE status='active' AND transcript_path IS NOT NULL ORDER BY updated_at DESC` — periodic compaction sweep (covered by the partial index above)
 
 ### agents Indexes
 

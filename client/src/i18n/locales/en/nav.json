@@ -16,6 +16,8 @@
   "expand": "Expand sidebar",
   "collapse": "Collapse sidebar",
   "collapseShort": "Collapse",
+  "scrollUp": "Scroll navigation up",
+  "scrollDown": "Scroll navigation down",
   "live": "Live",
   "disconnected": "Disconnected",
   "connectionDetails": "Connection details",
