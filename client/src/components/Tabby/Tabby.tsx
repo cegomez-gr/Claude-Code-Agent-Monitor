@@ -73,8 +73,10 @@ export function Tabby() {
     (query: string): string | null => {
       const result = matchIntent(query, brain.status);
       if (result.kind === "answer") return result.text;
-      // Handoff: spawn a real claude via the existing Run page.
-      navigate(`/run?prompt=${encodeURIComponent(result.prompt)}`);
+      // Handoff: spawn a real claude via the existing Run page. `autostart=1`
+      // tells Run to fire the prompt automatically once it's prefilled, so the
+      // question is actually sent instead of just dropped into the composer.
+      navigate(`/run?prompt=${encodeURIComponent(result.prompt)}&autostart=1`);
       setOpen(false);
       return null;
     },

@@ -924,18 +924,44 @@ export function Run() {
 
   // Prefill the prompt box from `?prompt=<text>` (e.g. Tabby's Ask handoff).
   // Apply once, then strip the param so a later refresh doesn't overwrite edits
-  // the user has since made to the prompt.
+  // the user has since made to the prompt. When `?autostart=1` is also present
+  // (Tabby's "ask" path), arm a pending flag so the run fires automatically
+  // once preflight is ready — see the autostart effect below.
   const promptPrefilledRef = useRef(false);
+  const pendingAutostartRef = useRef(false);
   useEffect(() => {
     if (promptPrefilledRef.current) return;
     const p = searchParams.get("prompt");
     if (!p) return;
     promptPrefilledRef.current = true;
+    if (searchParams.get("autostart") === "1") pendingAutostartRef.current = true;
     setPrompt(p);
     const next = new URLSearchParams(searchParams);
     next.delete("prompt");
+    next.delete("autostart");
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
+
+  // Autostart a deep-linked prompt once preflight has settled. We wait for the
+  // binary probe (can't spawn without `claude`), the prefilled prompt, and the
+  // defaulted cwd so the spawn matches exactly what the manual Start button
+  // would do. Fires at most once; if `claude` isn't found or a run is already
+  // in flight, it disarms and leaves the prompt prefilled for a manual Start.
+  useEffect(() => {
+    if (!pendingAutostartRef.current) return;
+    if (binaryStatus === null) return; // probe still pending
+    if (!binaryStatus.found) {
+      pendingAutostartRef.current = false;
+      return;
+    }
+    if (busy || handle) {
+      pendingAutostartRef.current = false;
+      return;
+    }
+    if (!prompt.trim() || !cwd) return; // wait for prefill + cwd default
+    pendingAutostartRef.current = false;
+    void start();
+  }, [binaryStatus, prompt, cwd, busy, handle, start]);
 
   const send = useCallback(async () => {
     if (!handle || !followUp.trim() || busy) return;
@@ -3149,6 +3175,10 @@ function Select<T extends string>({
   );
 }
 
+// Sentinel option value for "Custom model…". Empty string is already taken by
+// the "inherit from settings" choice, so use a non-empty marker.
+const MODEL_CUSTOM = "__custom__";
+
 function ModelPicker({ value, onChange }: { value: string; onChange: (s: string) => void }) {
   const { t } = useTranslation("run");
   // "Custom" is selected when the value isn't one of our curated IDs.
@@ -3156,9 +3186,23 @@ function ModelPicker({ value, onChange }: { value: string; onChange: (s: string)
   const isCustom = value !== "" && !knownIds.includes(value);
   const [showCustom, setShowCustom] = useState(isCustom);
 
-  const onSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const v = e.target.value;
-    if (v === "__custom__") {
+  // Reuse the shared Select so the Model dropdown renders identically to the
+  // Permission Mode and Effort dropdowns (Tailwind + lucide popover) instead of
+  // a browser-native <select>.
+  const options = useMemo(
+    () => [
+      ...RUN_MODEL_CHOICES.map((c) => ({
+        value: c.id === "" ? "" : c.id,
+        label: c.id === "" ? t("fields.modelInheritLabel") : c.label,
+        hint: c.hint,
+      })),
+      { value: MODEL_CUSTOM, label: t("fields.modelCustom") },
+    ],
+    [t]
+  );
+
+  const onSelect = (v: string) => {
+    if (v === MODEL_CUSTOM) {
       setShowCustom(true);
       return;
     }
@@ -3166,22 +3210,11 @@ function ModelPicker({ value, onChange }: { value: string; onChange: (s: string)
     onChange(v);
   };
 
-  const selectValue = showCustom || isCustom ? "__custom__" : value;
+  const selectValue = showCustom || isCustom ? MODEL_CUSTOM : value;
 
   return (
     <div className="space-y-1.5">
-      <select
-        value={selectValue}
-        onChange={onSelect}
-        className="w-full bg-surface-2 border border-border rounded-md px-2 py-1.5 text-[11px] text-gray-100 focus:outline-none focus:border-accent/50"
-      >
-        {RUN_MODEL_CHOICES.map((c) => (
-          <option key={c.id || "__inherit__"} value={c.id}>
-            {c.id === "" ? t("fields.modelInheritLabel") : c.label}
-          </option>
-        ))}
-        <option value="__custom__">{t("fields.modelCustom")}</option>
-      </select>
+      <Select<string> value={selectValue} onChange={onSelect} options={options} />
       {(showCustom || isCustom) && (
         <input
           type="text"
