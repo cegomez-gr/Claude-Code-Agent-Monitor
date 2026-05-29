@@ -12,36 +12,59 @@ export type QuipKey = NonNullable<TabbyPulse> | Mood;
 
 const QUIPS: Record<QuipKey, string[]> = {
   // Pulses (event-driven, transient bubbles)
-  session_done: ["session wrapped 🐾", "nice, that one's done", "clean run — purr"],
+  session_done: [
+    "a session just wrapped up! 🐾",
+    "a session finished — nice work! ✨",
+    "that session's all done 😺",
+    "clean finish on that one 💜",
+  ],
   session_start: [
-    "ooh, a new session",
-    "something's cooking",
-    "eyes on it 👀",
-    "a new one just landed",
+    "a new session started! 👀",
+    "a fresh session just landed 🐾",
+    "ooh, a new session to watch 😻",
+    "something new is cooking 🍲",
   ],
   subagent_spawn: [
-    "a subagent just spawned 🐾",
-    "reinforcements! new subagent",
-    "delegating — subagent's on it",
-    "ooh, a little helper appeared",
+    "a subagent just spawned! 🐾",
+    "a little helper joined in 🤝",
+    "a subagent's on the job 🚀",
+    "reinforcements — new subagent! 😺",
   ],
   waiting: [
-    "this one's waiting on you 👀",
-    "needs your input over here",
-    "paused — your move",
-    "tap tap… it's waiting for you",
+    "a session needs your input 👀",
+    "a session is waiting on you ⏳",
+    "a session paused for your reply 💬",
+    "your turn — a session's waiting 🐾",
   ],
-  error: ["ow, an error", "a hook tripped — peek?", "hiss… something broke"],
-  run_done: ["run finished 🐾", "all done over here", "that's a wrap"],
+  error: [
+    "uh oh, a session hit an error 😿",
+    "something broke — wanna peek? 🙀",
+    "a hook tripped on something ⚠️",
+    "hiss… an error popped up 💢",
+  ],
+  run_done: [
+    "your run just finished! 🐾",
+    "the run's all wrapped up ✨",
+    "run complete — that's a wrap 😸",
+    "all done with that run 💜",
+  ],
   // Moods (steady-state flavor, used by the panel / idle bubbles)
-  disconnected: ["lost the thread…", "can't reach the server", "no signal — napping"],
-  worried: ["that didn't look right", "keeping an eye out"],
-  stuck: ["this one's been quiet a while…", "still chewing on something?"],
-  happy: ["good run!", "love a tidy finish"],
-  thinking: ["hmm, let me look…", "sniffing around…"],
-  watching: ["on the prowl 👀", "watching your sessions"],
-  sleeping: ["zzz", "wake me if something happens", "curled up, all calm"],
-  idle: ["all quiet", "ready when you are", "just vibing"],
+  disconnected: [
+    "lost the connection… 😴",
+    "can't reach the server 📡",
+    "no signal — taking a nap 💤",
+  ],
+  worried: ["that didn't look right 😟", "keeping an eye out 👀", "hmm, something's off 🫣"],
+  stuck: [
+    "a session's been quiet a while… 🤔",
+    "is something stuck? ⏳",
+    "still chewing on it… 😾",
+  ],
+  happy: ["great run! 😻", "love a tidy finish ✨", "purrfect 💜"],
+  thinking: ["hmm, let me look… 🤔", "sniffing around… 🐾", "one sec, checking 🔍"],
+  watching: ["on the prowl 👀", "watching your sessions 😼", "eyes peeled 🐾"],
+  sleeping: ["zzz… 💤", "wake me if something happens 😴", "curled up, all calm 🐈"],
+  idle: ["all quiet 😺", "ready when you are 🐾", "just vibing ✨"],
 };
 
 /**

@@ -253,7 +253,9 @@
   animation: tabby-breathe 4s ease-in-out infinite;
   transform-origin: 50px 60px;
 }
-.tabby-cat[data-mood="idle"] .tabby-pupils {
+/* Blink lives on the inner group so it never overrides the outer group's
+   eye-tracking translate (which would freeze the eyes — see CatAvatar). */
+.tabby-cat[data-mood="idle"] .tabby-pupils-blink {
   animation: tabby-blink 5s ease-in-out infinite;
   transform-origin: 50px 50px;
 }

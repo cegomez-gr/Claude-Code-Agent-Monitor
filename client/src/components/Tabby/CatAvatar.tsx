@@ -21,6 +21,24 @@ interface CatAvatarProps {
 
 const MAX_PUPIL_SHIFT = 2.8; // px in the 100x100 viewBox
 
+// Module-level last-known cursor position, tracked from the moment this module
+// first loads (well before any avatar mounts). This is what makes eye tracking
+// feel *immediate*: as soon as the cat mounts it aims at wherever the cursor
+// already is, instead of sitting centered until the next mousemove. `null`
+// until the very first pointer event of the page's life.
+let lastCursor: { x: number; y: number } | null = null;
+if (typeof window !== "undefined") {
+  const remember = (e: MouseEvent) => {
+    lastCursor = { x: e.clientX, y: e.clientY };
+  };
+  // capture phase + passive so we never interfere with anything else.
+  window.addEventListener("mousemove", remember, { capture: true, passive: true });
+  window.addEventListener("pointermove", remember as EventListener, {
+    capture: true,
+    passive: true,
+  });
+}
+
 export function CatAvatar({ mood, reducedMotion, size = 60 }: CatAvatarProps) {
   const rootRef = useRef<SVGSVGElement | null>(null);
   const rafRef = useRef<number>();
@@ -37,27 +55,41 @@ export function CatAvatar({ mood, reducedMotion, size = 60 }: CatAvatarProps) {
       setPupil({ x: 0, y: 0 });
       return;
     }
+
+    const aimAt = (clientX: number, clientY: number) => {
+      const el = rootRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const dx = clientX - cx;
+      const dy = clientY - cy;
+      const dist = Math.hypot(dx, dy) || 1;
+      // Normalize then clamp to the eye socket range.
+      const nx = (dx / dist) * Math.min(1, dist / 240);
+      const ny = (dy / dist) * Math.min(1, dist / 240);
+      setPupil({ x: nx * MAX_PUPIL_SHIFT, y: ny * MAX_PUPIL_SHIFT });
+    };
+
+    // Immediately aim at the last-known cursor (next frame, so layout is ready)
+    // — no waiting for the user to move the mouse first.
+    let initRaf = 0;
+    if (lastCursor) {
+      const c = lastCursor;
+      initRaf = requestAnimationFrame(() => aimAt(c.x, c.y));
+    }
+
     const onMove = (e: MouseEvent) => {
       if (rafRef.current) return;
       rafRef.current = requestAnimationFrame(() => {
         rafRef.current = undefined;
-        const el = rootRef.current;
-        if (!el) return;
-        const r = el.getBoundingClientRect();
-        const cx = r.left + r.width / 2;
-        const cy = r.top + r.height / 2;
-        const dx = e.clientX - cx;
-        const dy = e.clientY - cy;
-        const dist = Math.hypot(dx, dy) || 1;
-        // Normalize then clamp to the eye socket range.
-        const nx = (dx / dist) * Math.min(1, dist / 240);
-        const ny = (dy / dist) * Math.min(1, dist / 240);
-        setPupil({ x: nx * MAX_PUPIL_SHIFT, y: ny * MAX_PUPIL_SHIFT });
+        aimAt(e.clientX, e.clientY);
       });
     };
-    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mousemove", onMove, { passive: true });
     return () => {
       window.removeEventListener("mousemove", onMove);
+      if (initRaf) cancelAnimationFrame(initRaf);
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = undefined;
     };
@@ -136,13 +168,20 @@ export function CatAvatar({ mood, reducedMotion, size = 60 }: CatAvatarProps) {
       <g className="tabby-eyes-open">
         <ellipse className="tabby-eye" cx="37" cy="50" rx="9.5" ry="11.5" />
         <ellipse className="tabby-eye" cx="63" cy="50" rx="9.5" ry="11.5" />
+        {/* Outer group carries the eye-tracking translate; the inner group
+            carries the blink (scaleY) animation. They MUST be separate
+            elements — a CSS animation on `transform` overrides an inline
+            `transform`, so putting both on one node makes the blink clobber
+            the tracking (the original "eyes only track after a while" bug). */}
         <g className="tabby-pupils" style={{ transform: `translate(${pupil.x}px, ${pupil.y}px)` }}>
-          <circle className="tabby-pupil" cx="37" cy="51" r="5.4" />
-          <circle className="tabby-pupil" cx="63" cy="51" r="5.4" />
-          <circle className="tabby-glint" cx="39.4" cy="48" r="2.1" />
-          <circle className="tabby-glint" cx="65.4" cy="48" r="2.1" />
-          <circle className="tabby-glint tabby-glint-sm" cx="34.8" cy="53" r="1.1" />
-          <circle className="tabby-glint tabby-glint-sm" cx="60.8" cy="53" r="1.1" />
+          <g className="tabby-pupils-blink">
+            <circle className="tabby-pupil" cx="37" cy="51" r="5.4" />
+            <circle className="tabby-pupil" cx="63" cy="51" r="5.4" />
+            <circle className="tabby-glint" cx="39.4" cy="48" r="2.1" />
+            <circle className="tabby-glint" cx="65.4" cy="48" r="2.1" />
+            <circle className="tabby-glint tabby-glint-sm" cx="34.8" cy="53" r="1.1" />
+            <circle className="tabby-glint tabby-glint-sm" cx="60.8" cy="53" r="1.1" />
+          </g>
         </g>
       </g>
 
