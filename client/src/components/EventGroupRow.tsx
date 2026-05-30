@@ -14,7 +14,7 @@ import { useTranslation } from "react-i18next";
 import { ChevronRight, ExternalLink } from "lucide-react";
 import { AgentStatusBadge } from "./StatusBadge";
 import { EventDetail } from "./EventDetail";
-import { formatTime, timeAgo } from "../lib/format";
+import { formatTime, formatDateShort, timeAgo } from "../lib/format";
 import {
   agentOriginLabel,
   buildEventTitle,
@@ -97,11 +97,12 @@ export function EventGroupRow({
         </button>
 
         <div
-          className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer"
+          className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer"
           onClick={() => (onRowActivate ? onRowActivate() : canExpand && setExpanded((v) => !v))}
         >
-          <div className="w-16 text-[11px] text-gray-500 font-mono flex-shrink-0 text-right">
-            {formatTime(group.firstAt)}
+          <div className="w-16 flex-shrink-0 text-right font-mono leading-tight">
+            <div className="text-[11px] text-gray-500">{formatTime(group.firstAt)}</div>
+            <div className="text-[9px] text-gray-600">{formatDateShort(group.firstAt)}</div>
           </div>
 
           <div className="flex items-center gap-1 flex-shrink-0">
@@ -196,8 +197,11 @@ export function EventGroupRow({
                   >
                     ▶
                   </span>
-                  <div className="w-16 text-[11px] text-gray-600 font-mono flex-shrink-0 text-right">
-                    {formatTime(event.created_at)}
+                  <div className="w-20 flex-shrink-0 text-right font-mono leading-tight">
+                    <div className="text-[11px] text-gray-600">{formatTime(event.created_at)}</div>
+                    <div className="text-[9px] text-gray-700">
+                      {formatDateShort(event.created_at)}
+                    </div>
                   </div>
                   <AgentStatusBadge status={statusFromEventType(event.event_type)} />
                   <span className="text-[11px] text-gray-500 font-mono flex-shrink-0">

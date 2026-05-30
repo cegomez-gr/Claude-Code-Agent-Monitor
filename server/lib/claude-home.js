@@ -19,6 +19,17 @@ function getProjectsDir() {
   return path.join(getClaudeHome(), "projects");
 }
 
+/**
+ * Dashboard-owned directory where imported transcripts are snapshotted so the
+ * Conversation tab survives Claude Code pruning the originals in
+ * ~/.claude/projects. Lives next to the SQLite DB (same resolution order:
+ * DASHBOARD_DATA_DIR for hosts with read-only bundles, else the repo `data/`).
+ */
+function getTranscriptSnapshotDir() {
+  const dataDir = process.env.DASHBOARD_DATA_DIR || path.join(__dirname, "..", "..", "data");
+  return path.join(dataDir, "transcripts");
+}
+
 function getSettingsPath() {
   return path.join(getClaudeHome(), "settings.json");
 }
@@ -81,6 +92,42 @@ function findTranscriptPath(sessionId) {
     }
   } catch {
     // Permission or IO error, ignore
+  }
+  return null;
+}
+
+/**
+ * Path to the dashboard's durable transcript snapshot for a session, if one
+ * exists. Snapshots are written at import time (see snapshotTranscript in
+ * scripts/import-history.js) so the Conversation tab keeps working after Claude
+ * Code deletes the original under its `cleanupPeriodDays` retention (default
+ * 30d). Returns the path or null.
+ */
+function getSnapshotTranscriptPath(sessionId) {
+  const candidate = path.join(getTranscriptSnapshotDir(), `${sessionId}.jsonl`);
+  return fs.existsSync(candidate) ? candidate : null;
+}
+
+/**
+ * Path to a snapshotted subagent transcript, mirroring the live layout
+ * `<snapshotDir>/<sessionId>/subagents/agent-<agentId>.jsonl`. Supports the
+ * same compaction prefix-fuzzy match as findSubagentTranscriptPath. Returns
+ * the path or null.
+ */
+function getSnapshotSubagentTranscriptPath(sessionId, agentId) {
+  const subDir = path.join(getTranscriptSnapshotDir(), sessionId, "subagents");
+  if (!fs.existsSync(subDir)) return null;
+  const exact = path.join(subDir, `agent-${agentId}.jsonl`);
+  if (fs.existsSync(exact)) return exact;
+  if (agentId.startsWith("acompact-")) {
+    try {
+      const match = fs
+        .readdirSync(subDir)
+        .find((f) => f.startsWith("agent-acompact-") && f.endsWith(".jsonl"));
+      if (match) return path.join(subDir, match);
+    } catch {
+      /* ignore */
+    }
   }
   return null;
 }
@@ -171,9 +218,12 @@ function writeEnvFile(key, value) {
 module.exports = {
   getClaudeHome,
   getProjectsDir,
+  getTranscriptSnapshotDir,
   getSettingsPath,
   getTranscriptPath,
   getSubagentTranscriptPath,
+  getSnapshotTranscriptPath,
+  getSnapshotSubagentTranscriptPath,
   findTranscriptPath,
   findSubagentTranscriptPath,
   setClaudeHome,

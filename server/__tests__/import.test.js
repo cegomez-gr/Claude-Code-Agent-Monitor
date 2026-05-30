@@ -338,6 +338,43 @@ describe("importFromDirectory directly", () => {
       fs.rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it("snapshots the transcript into the data dir so it survives Claude Code pruning", async () => {
+    // Regression: the Conversation tab reads JSONL live from ~/.claude/projects,
+    // but Claude Code deletes session files older than cleanupPeriodDays
+    // (default 30 days). Import must snapshot the transcript into the
+    // dashboard's own data dir so the conversation survives that deletion.
+    const prevDataDir = process.env.DASHBOARD_DATA_DIR;
+    const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "ccam-data-"));
+    process.env.DASHBOARD_DATA_DIR = dataDir;
+    const src = fs.mkdtempSync(path.join(os.tmpdir(), "ccam-src-"));
+    const sessionId = "dddddddd-4444-4444-8444-dddddddddddd";
+    fs.writeFileSync(
+      path.join(src, `${sessionId}.jsonl`),
+      fixtureLines(sessionId, "/Users/demo/snap", "claude-opus-4-8", 5, 3)
+        .map((o) => JSON.stringify(o))
+        .join("\n")
+    );
+
+    try {
+      await importHistory.importFromDirectory({ db, stmts }, src);
+      const snapshot = path.join(dataDir, "transcripts", `${sessionId}.jsonl`);
+      assert.ok(fs.existsSync(snapshot), "transcript should be snapshotted into the data dir");
+      assert.ok(
+        fs.readFileSync(snapshot, "utf8").includes('"text":"ok"'),
+        "snapshot should contain the original conversation"
+      );
+
+      // And the read route should resolve it via the snapshot helper.
+      const { getSnapshotTranscriptPath } = require("../lib/claude-home");
+      assert.equal(getSnapshotTranscriptPath(sessionId), snapshot);
+    } finally {
+      if (prevDataDir === undefined) delete process.env.DASHBOARD_DATA_DIR;
+      else process.env.DASHBOARD_DATA_DIR = prevDataDir;
+      fs.rmSync(src, { recursive: true, force: true });
+      fs.rmSync(dataDir, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("POST /api/import/rescan", () => {

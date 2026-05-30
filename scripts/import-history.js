@@ -15,9 +15,72 @@ const fs = require("fs");
 const path = require("path");
 const readline = require("readline");
 
-const { getClaudeHome, getProjectsDir } = require("../server/lib/claude-home");
+const {
+  getClaudeHome,
+  getProjectsDir,
+  getTranscriptSnapshotDir,
+} = require("../server/lib/claude-home");
 const CLAUDE_DIR = getClaudeHome();
 const PROJECTS_DIR = getProjectsDir();
+
+/**
+ * Snapshot an imported session's JSONL transcript (and its subagent
+ * transcripts) into the dashboard's own data dir so the Conversation tab can
+ * still render it after Claude Code rotates / deletes the original file in
+ * ~/.claude/projects.
+ *
+ * The dashboard never stores conversation text in the database — the
+ * Conversation tab reads the JSONL on demand. On startup we import metadata
+ * from ~/.claude/projects, but Claude Code prunes old session files over time
+ * (often leaving only a `.jsonl.wakatime` sidecar). When that happens the
+ * session row survives but its transcript is gone → an empty Conversation tab.
+ * Keeping a durable copy under <dataDir>/transcripts/ fixes that; the read
+ * route prefers the live file and falls back to this snapshot.
+ *
+ * Re-snapshots when the source has grown (a live session that gained turns
+ * since the last import). Best-effort and non-fatal.
+ */
+function snapshotTranscript(sourceJsonlPath, sessionId) {
+  try {
+    const srcMain = path.resolve(sourceJsonlPath);
+    const snapDir = getTranscriptSnapshotDir();
+    const destMain = path.join(snapDir, `${sessionId}.jsonl`);
+    if (path.resolve(destMain) !== srcMain) {
+      copyIfNewer(srcMain, destMain);
+    }
+
+    // Subagent transcripts live under `<sessionId>/subagents/agent-*.jsonl`.
+    for (const subPath of findSessionSubagents(sourceJsonlPath)) {
+      const destSub = path.join(snapDir, sessionId, "subagents", path.basename(subPath));
+      if (path.resolve(destSub) === path.resolve(subPath)) continue;
+      copyIfNewer(subPath, destSub);
+    }
+  } catch {
+    /* non-fatal: metadata import already succeeded */
+  }
+}
+
+/**
+ * Copy `src` to `dest` only when `dest` is missing or smaller than `src`
+ * (i.e. the source grew). Creates parent dirs as needed.
+ */
+function copyIfNewer(src, dest) {
+  let srcSize;
+  try {
+    srcSize = fs.statSync(src).size;
+  } catch {
+    return; // source vanished mid-import — nothing to copy
+  }
+  let destSize = -1;
+  try {
+    destSize = fs.statSync(dest).size;
+  } catch {
+    /* dest missing */
+  }
+  if (destSize >= srcSize) return; // snapshot already at least as complete
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  fs.copyFileSync(src, dest);
+}
 
 /**
  * Parse a single JSONL session file to extract session metadata.
@@ -1286,7 +1349,8 @@ async function importAllSessions(dbModule) {
     const batch = [];
     for (const file of files) {
       try {
-        const session = await parseSessionFile(path.join(projPath, file));
+        const sourcePath = path.join(projPath, file);
+        const session = await parseSessionFile(sourcePath);
         if (!session) {
           skipped++;
           continue;
@@ -1307,13 +1371,21 @@ async function importAllSessions(dbModule) {
           }
         }
 
+        session._sourceJsonlPath = sourcePath;
         batch.push(session);
       } catch {
         errors++;
       }
     }
 
-    if (batch.length > 0) importBatch(batch);
+    if (batch.length > 0) {
+      importBatch(batch);
+      // Snapshot transcripts into the dashboard's data dir so they outlive
+      // Claude Code's cleanupPeriodDays pruning (default 30 days).
+      for (const session of batch) {
+        snapshotTranscript(session._sourceJsonlPath, session.sessionId);
+      }
+    }
   }
 
   return { imported, skipped, errors };
@@ -1731,6 +1803,10 @@ async function importFromDirectory(dbModule, rootDir, options = {}) {
         }
       }
 
+      // Remember where this session's JSONL came from so we can snapshot it
+      // into the dashboard's data dir after the metadata import — the
+      // Conversation tab reads transcripts from disk, not the DB.
+      session._sourceJsonlPath = f;
       parsedSessions.push(session);
       counters.sessionsSeen++;
     } catch {
@@ -1761,6 +1837,15 @@ async function importFromDirectory(dbModule, rootDir, options = {}) {
       }
     });
     importBatch(parsedSessions);
+
+    // Snapshot each session's transcript into the dashboard's data dir so the
+    // Conversation tab survives Claude Code's cleanupPeriodDays pruning. Done
+    // outside the DB transaction since it's filesystem I/O.
+    for (const session of parsedSessions) {
+      if (session._sourceJsonlPath) {
+        snapshotTranscript(session._sourceJsonlPath, session.sessionId);
+      }
+    }
   }
 
   // Orphan subagent JSONLs (parent session not present in DB or not among the

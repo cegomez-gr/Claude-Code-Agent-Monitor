@@ -670,8 +670,16 @@ export const RUN_EFFORT_CHOICES: EffortChoice[] = [
 // Curated model list. "" means "inherit from settings.json" — no --model flag.
 export const RUN_MODEL_CHOICES: ModelChoice[] = [
   { id: "", label: "Inherit from settings", hint: "Use whatever your settings.json model is" },
-  { id: "opus[1m]", label: "Opus 4.7 (1M context)", hint: "Highest capability, 1M token window" },
-  { id: "opus", label: "Opus 4.7", hint: "Highest capability, default window" },
+  {
+    id: "claude-opus-4-8[1m]",
+    label: "Opus 4.8 (1M context)",
+    hint: "Highest capability, 1M token window",
+  },
+  {
+    id: "claude-opus-4-7[1m]",
+    label: "Opus 4.7 (1M context)",
+    hint: "Previous Opus, 1M token window",
+  },
   { id: "sonnet", label: "Sonnet 4.6", hint: "Balanced capability and speed" },
   { id: "haiku", label: "Haiku 4.5", hint: "Fastest, lightest" },
 ];

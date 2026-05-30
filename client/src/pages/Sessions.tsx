@@ -250,7 +250,7 @@ export function Sessions() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="bg-transparent w-full text-xs text-gray-200 outline-none pl-3 pr-8 appearance-none cursor-pointer whitespace-nowrap"
+              className="bg-transparent w-full text-sm text-gray-200 outline-none pl-3 pr-8 appearance-none cursor-pointer whitespace-nowrap"
             >
               <option value="time">Sort by Time ({sortDesc ? "Newest" : "Oldest"})</option>
               <option value="duration">

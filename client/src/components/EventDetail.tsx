@@ -13,7 +13,7 @@ import { useTranslation } from "react-i18next";
 import type { DashboardEvent } from "../lib/types";
 import type { AgentInfo } from "../lib/event-grouping";
 import { buildEventSummary } from "../lib/event-summary";
-import { formatModelName } from "../lib/format";
+import { formatModelName, formatDateTimeFull } from "../lib/format";
 import { CopyButton } from "./event-views/primitives";
 import { ToolInputView, ToolResponseView } from "./event-views/tool-views";
 
@@ -118,6 +118,15 @@ export function EventDetail({ event, agentInfoById, sessionNameById }: EventDeta
 
   const rows = useMemo<Row[]>(() => {
     const result: Row[] = [{ key: "event_id", label: t("eventDetail.eventId"), value: event.id }];
+    // Full date + time + timezone — list rows only show a short time, so the
+    // detail panel spells out exactly when the event was recorded.
+    if (event.created_at) {
+      result.push({
+        key: "recorded_at",
+        label: t("eventDetail.recordedAt", "Recorded at"),
+        value: formatDateTimeFull(event.created_at),
+      });
+    }
     // Surface the session name above the raw id when we can resolve it —
     // makes "f2f3c568-..." recognisable as e.g. "AI-Assistant-Chatbot
     // (enumerated-wandering-jellyfish)" without losing the id below.

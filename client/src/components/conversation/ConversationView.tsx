@@ -406,8 +406,15 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
             Loading conversation...
           </div>
         ) : messages.length === 0 ? (
-          <div className="text-center py-12 text-gray-500 text-sm">
-            No conversation records found.
+          <div className="mx-auto max-w-md py-12 text-center">
+            <p className="text-sm text-gray-400">No conversation records found.</p>
+            <p className="mt-2 text-xs leading-relaxed text-gray-500">
+              This session's metadata was imported, but its transcript file is no longer on disk.
+              Claude Code automatically deletes inactive session transcripts after a retention
+              period (<code className="text-gray-400">cleanupPeriodDays</code>, default 30 days), so
+              older conversations may already be gone. Sessions imported from now on are snapshotted
+              and kept even after Claude Code prunes the originals.
+            </p>
           </div>
         ) : (
           <MessageList messages={messages} loading={false} />

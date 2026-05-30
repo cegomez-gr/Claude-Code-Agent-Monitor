@@ -79,6 +79,7 @@
     "summary": "Tóm tắt",
     "seeDetailsBelow": "Xem chi tiết đầy đủ bên dưới trong {{fields}}",
     "eventId": "ID sự kiện",
+    "recordedAt": "Ghi lúc",
     "session": "Phiên",
     "sessionId": "ID phiên",
     "agentId": "ID Agent",

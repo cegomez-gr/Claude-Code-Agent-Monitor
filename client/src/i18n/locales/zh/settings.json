@@ -29,7 +29,9 @@
       "patternsTitle": "模式语法",
       "patternsBody": "模式采用 SQL 风格的通配。% 可匹配任意字符。例如：claude-opus-4-7% 匹配以 claude-opus-4-7 开头的所有 model id（如 claude-opus-4-7、claude-opus-4-7-20260101）。claude-%-haiku 匹配任意 haiku 变体。像 claude-sonnet-4-6 这样的精确 id 只匹配自身。",
       "manualUpdates": "你必须手动更新价格",
-      "manualUpdatesBody": "Anthropic 在其官网公布价格变动——并没有实时数据源。当新模型发布或费率调整时，请编辑对应的规则（或在通用规则之上添加新规则），以便后续记录的会话能正确计费。已经存储的会话仍保留入库时使用的价格。"
+      "manualUpdatesBody": "Anthropic 在其官网公布价格变动——并没有实时数据源。当新模型发布或费率调整时，请编辑对应的规则（或在通用规则之上添加新规则），以便后续记录的会话能正确计费。已经存储的会话仍保留入库时使用的价格。",
+      "apiPricing": "仅供参考 — API 价格",
+      "apiPricingBody": "这些是按量付费的 API 价格。如果你通过订阅套餐（Pro、Max、Team 或 Enterprise）使用 Claude Code，你的实际花费是固定的月费，而非按 Token 计费——因此这里的数字通常会高于你实际支付的金额。请将此处的费用视为用量估算，仅供参考，并非账单。"
     }
   },
   "claudeHome": {

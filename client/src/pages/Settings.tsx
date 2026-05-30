@@ -304,7 +304,14 @@ function PricingInfoTooltip() {
           <p className="font-semibold text-amber-300 uppercase tracking-wider text-[9px] mb-1">
             {t("pricing.tooltip.manualUpdates")}
           </p>
-          <p className="text-gray-400 leading-snug">{t("pricing.tooltip.manualUpdatesBody")}</p>
+          <p className="text-gray-400 leading-snug mb-2.5">
+            {t("pricing.tooltip.manualUpdatesBody")}
+          </p>
+
+          <p className="font-semibold text-amber-300 uppercase tracking-wider text-[9px] mb-1">
+            {t("pricing.tooltip.apiPricing")}
+          </p>
+          <p className="text-gray-400 leading-snug">{t("pricing.tooltip.apiPricingBody")}</p>
         </div>
       )}
     </>

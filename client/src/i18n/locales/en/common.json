@@ -79,6 +79,7 @@
     "summary": "Summary",
     "seeDetailsBelow": "Check below for full details in {{fields}}",
     "eventId": "Event ID",
+    "recordedAt": "Recorded at",
     "session": "Session",
     "sessionId": "Session ID",
     "agentId": "Agent ID",

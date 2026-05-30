@@ -36,7 +36,7 @@ import {
   statusFromEventType,
 } from "../lib/event-grouping";
 import type { AgentInfo } from "../lib/event-grouping";
-import { formatTime, timeAgo } from "../lib/format";
+import { formatTime, formatDateShort, timeAgo } from "../lib/format";
 import type { DashboardEvent } from "../lib/types";
 
 const PAGE_SIZE = 50;
@@ -399,8 +399,13 @@ export function ActivityFeed() {
                             className={`w-3.5 h-3.5 text-gray-500 transition-transform flex-shrink-0 -mr-1.5 ${isOpen ? "rotate-90" : ""}`}
                           />
 
-                          <div className="w-14 text-[11px] text-gray-500 font-mono flex-shrink-0 text-right">
-                            {formatTime(event.created_at)}
+                          <div className="w-16 flex-shrink-0 text-right font-mono leading-tight">
+                            <div className="text-[11px] text-gray-500">
+                              {formatTime(event.created_at)}
+                            </div>
+                            <div className="text-[9px] text-gray-600">
+                              {formatDateShort(event.created_at)}
+                            </div>
                           </div>
 
                           <AgentStatusBadge status={statusFromEventType(event.event_type)} />

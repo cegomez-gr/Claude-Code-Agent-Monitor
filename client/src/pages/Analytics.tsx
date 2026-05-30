@@ -118,24 +118,34 @@ function Heatmap({ weeks }: { weeks: Array<Array<{ date: string; count: number }
   const dayLabels = [dayNames[0], "", dayNames[2], "", dayNames[4], "", ""];
   const maxCount = Math.max(...weeks.flatMap((w) => w.map((c) => c.count)), 1);
 
-  // Compute month label positions accurately
+  // Compute month label positions accurately. A label is ~3 columns wide (each
+  // column is 16px, a 3-letter month ≈ 22px). The very first month is often a
+  // stub — the 52-week window starts mid-month, so e.g. "May" sits at col 0 and
+  // "Jun" at col 1 and they overlap. Drop the *stub* (the earlier, partial one)
+  // rather than the full month after it, so the next label isn't pushed away.
   const monthPositions = useMemo(() => {
-    const positions: Array<{ label: string; col: number }> = [];
+    const MIN_LABEL_GAP = 3; // columns a label needs to itself
+    const starts: Array<{ label: string; col: number }> = [];
     let prevMonth = -1;
 
     weeks.forEach((week, wi) => {
       const firstCell = week[0];
       if (!firstCell) return;
-
       const parts = firstCell.date.split("-").map(Number);
       const m = (parts[1] || 1) - 1; // 0-indexed month
-
       if (m !== prevMonth) {
-        positions.push({ label: monthLabels[m] ?? "", col: wi });
+        starts.push({ label: monthLabels[m] ?? "", col: wi });
         prevMonth = m;
       }
     });
-    return positions;
+
+    // Drop a label when the *next* month starts too soon after it (it would
+    // collide). Suppressing the earlier label leaves the later, full month in
+    // place — no gap is introduced.
+    return starts.filter((s, i) => {
+      const next = starts[i + 1];
+      return !next || next.col - s.col >= MIN_LABEL_GAP;
+    });
   }, [weeks, monthLabels]);
 
   return (

@@ -54,6 +54,31 @@ export function formatDateTime(iso: string): string {
   });
 }
 
+/** Date only, e.g. "Apr 18" — paired with formatTime as a small second line in
+ *  narrow list rows (timeline, activity feed) so the date is visible too. */
+export function formatDateShort(iso: string): string {
+  const d = parseDate(iso);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleString(getCurrentLocale(), { month: "short", day: "numeric" });
+}
+
+/** Fully detailed timestamp with weekday, full date, seconds, and timezone —
+ *  e.g. "Sat, Apr 18, 2026, 08:49:13 AM PDT". For detail panels. */
+export function formatDateTimeFull(iso: string): string {
+  const d = parseDate(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleString(getCurrentLocale(), {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    timeZoneName: "short",
+  });
+}
+
 export function formatDuration(start: string, end: string): string {
   const ms = parseDate(end).getTime() - parseDate(start).getTime();
   return formatMs(ms);

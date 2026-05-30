@@ -15,6 +15,8 @@ const {
   getProjectsDir,
   getTranscriptPath,
   getSubagentTranscriptPath,
+  getSnapshotTranscriptPath,
+  getSnapshotSubagentTranscriptPath,
   findTranscriptPath,
   findSubagentTranscriptPath,
 } = require("../lib/claude-home");
@@ -300,9 +302,11 @@ router.get("/:id/transcripts", async (req, res) => {
   // Query database agent list for db_agent_id association
   const dbAgents = stmts.listAgentsBySession.all(req.params.id) || [];
 
-  // Main session transcript
+  // Main session transcript (live, else the durable import-time snapshot)
   const mainPath =
-    getTranscriptPath(req.params.id, session.cwd) || findTranscriptPath(req.params.id);
+    getTranscriptPath(req.params.id, session.cwd) ||
+    findTranscriptPath(req.params.id) ||
+    getSnapshotTranscriptPath(req.params.id);
   if (mainPath && fs.existsSync(mainPath)) {
     // Main agent database ID format: <sessionId>-main
     const mainDbAgent = dbAgents.find((a) => a.type === "main");
@@ -497,14 +501,21 @@ router.get("/:id/transcript", async (req, res) => {
   const beforeLine = req.query.before ? parseInt(req.query.before) : null;
   const offset = parseInt(req.query.offset) || 0;
 
-  // Determine the JSONL file path to read
+  // Determine the JSONL file path to read. Prefer the live file under
+  // ~/.claude/projects, then fall back to the dashboard's durable snapshot —
+  // the live file is gone once Claude Code prunes it under cleanupPeriodDays
+  // (default 30 days), but the snapshot taken at import time survives.
   let jsonlPath;
   if (agentId && agentId !== "main") {
     jsonlPath =
       getSubagentTranscriptPath(req.params.id, session.cwd, agentId) ||
-      findSubagentTranscriptPath(req.params.id, agentId);
+      findSubagentTranscriptPath(req.params.id, agentId) ||
+      getSnapshotSubagentTranscriptPath(req.params.id, agentId);
   } else {
-    jsonlPath = getTranscriptPath(req.params.id, session.cwd) || findTranscriptPath(req.params.id);
+    jsonlPath =
+      getTranscriptPath(req.params.id, session.cwd) ||
+      findTranscriptPath(req.params.id) ||
+      getSnapshotTranscriptPath(req.params.id);
   }
 
   if (!jsonlPath || !fs.existsSync(jsonlPath)) {
