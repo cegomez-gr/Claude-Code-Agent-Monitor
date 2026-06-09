@@ -30,7 +30,12 @@ function calculateCost(tokenRows, pricingRules) {
       output_per_mtok: 0,
       cache_read_per_mtok: 0,
       cache_write_per_mtok: 0,
+      cache_write_1h_per_mtok: 0,
     };
+    // token_usage tracks a single cache_write_tokens count and does not split
+    // 5m vs 1h ephemeral writes, so cost uses the 5m rate (cache_write_per_mtok).
+    // cache_write_1h_per_mtok is stored/edited/displayed in the pricing config but
+    // is not applied here until ingestion records 1h writes separately.
     const cost =
       (row.input_tokens / 1e6) * rates.input_per_mtok +
       (row.output_tokens / 1e6) * rates.output_per_mtok +
@@ -86,6 +91,7 @@ router.put("/", (req, res) => {
     output_per_mtok,
     cache_read_per_mtok,
     cache_write_per_mtok,
+    cache_write_1h_per_mtok,
   } = req.body;
   if (!model_pattern || !display_name) {
     return res.status(400).json({
@@ -99,7 +105,8 @@ router.put("/", (req, res) => {
     input_per_mtok ?? 0,
     output_per_mtok ?? 0,
     cache_read_per_mtok ?? 0,
-    cache_write_per_mtok ?? 0
+    cache_write_per_mtok ?? 0,
+    cache_write_1h_per_mtok ?? 0
   );
 
   const rule = stmts.getPricing.get(model_pattern);

@@ -106,6 +106,7 @@ db.exec(`
     output_per_mtok REAL NOT NULL DEFAULT 0,
     cache_read_per_mtok REAL NOT NULL DEFAULT 0,
     cache_write_per_mtok REAL NOT NULL DEFAULT 0,
+    cache_write_1h_per_mtok REAL NOT NULL DEFAULT 0,
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
   );
 
@@ -151,29 +152,62 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_dashboard_runs_session ON dashboard_runs(session_id);
 `);
 
+// Migrate: add the 1h-ephemeral cache-write rate column to model_pricing.
+// Older DBs predate the 5m/1h cache-write split. ADD COLUMN defaults every
+// existing row to 0, which is not a realistic rate — so immediately backfill a
+// sensible per-model value derived from each row's own rates rather than a flat
+// guess (this also covers custom user-added models, not just the defaults):
+//   • 1h write ≈ 2× base input            (Anthropic's published ratio)
+//   • fallback: 1.6× the 5m write rate     (since 5m ≈ 1.25× input ⇒ 1h ≈ 1.6× 5m)
+//   • leave 0 only when neither input nor 5m-write is known.
+// User-edited 5m/input/output/read rates are preserved untouched. The top-up
+// below only inserts missing patterns, so it can't fill a new column on rows
+// that already exist — this backfill is what keeps existing models complete.
+try {
+  db.prepare("SELECT cache_write_1h_per_mtok FROM model_pricing LIMIT 1").get();
+} catch {
+  db.prepare(
+    "ALTER TABLE model_pricing ADD COLUMN cache_write_1h_per_mtok REAL NOT NULL DEFAULT 0"
+  ).run();
+  db.prepare(
+    `UPDATE model_pricing
+     SET cache_write_1h_per_mtok = CASE
+       WHEN input_per_mtok > 0 THEN input_per_mtok * 2
+       WHEN cache_write_per_mtok > 0 THEN cache_write_per_mtok * 1.6
+       ELSE 0
+     END
+     WHERE cache_write_1h_per_mtok = 0`
+  ).run();
+}
+
 // Default model pricing — shared by initial seed + startup top-up + reset endpoint
-// Columns: pattern, display_name, input, output, cache_read (hits & refreshes), cache_write (5m ephemeral)
-// Each model gets its own explicit row — no catch-all grouping
+// Columns: pattern, display_name, input, output, cache_read (hits & refreshes),
+//          cache_write (5m ephemeral writes), cache_write_1h (1h ephemeral writes)
+// Each model gets its own explicit row — no catch-all grouping.
+// Rate shape mirrors Anthropic's published table: 5m write = 1.25× input, 1h write = 2× input.
 const DEFAULT_PRICING = [
+  // Next-gen flagship
+  ["claude-fable-5%", "Claude Fable 5", 10, 50, 1, 12.5, 20],
+  ["claude-mythos-5%", "Claude Mythos 5", 10, 50, 1, 12.5, 20],
   // Opus family
-  ["claude-opus-4-8%", "Claude Opus 4.8", 5, 25, 0.5, 6.25],
-  ["claude-opus-4-7%", "Claude Opus 4.7", 5, 25, 0.5, 6.25],
-  ["claude-opus-4-6%", "Claude Opus 4.6", 5, 25, 0.5, 6.25],
-  ["claude-opus-4-5%", "Claude Opus 4.5", 5, 25, 0.5, 6.25],
-  ["claude-opus-4-1%", "Claude Opus 4.1", 15, 75, 1.5, 18.75],
-  ["claude-opus-4-2%", "Claude Opus 4", 15, 75, 1.5, 18.75],
+  ["claude-opus-4-8%", "Claude Opus 4.8", 5, 25, 0.5, 6.25, 10],
+  ["claude-opus-4-7%", "Claude Opus 4.7", 5, 25, 0.5, 6.25, 10],
+  ["claude-opus-4-6%", "Claude Opus 4.6", 5, 25, 0.5, 6.25, 10],
+  ["claude-opus-4-5%", "Claude Opus 4.5", 5, 25, 0.5, 6.25, 10],
+  ["claude-opus-4-1%", "Claude Opus 4.1", 15, 75, 1.5, 18.75, 30],
+  ["claude-opus-4-2%", "Claude Opus 4", 15, 75, 1.5, 18.75, 30],
   // Sonnet family
-  ["claude-sonnet-4-6%", "Claude Sonnet 4.6", 3, 15, 0.3, 3.75],
-  ["claude-sonnet-4-5%", "Claude Sonnet 4.5", 3, 15, 0.3, 3.75],
-  ["claude-sonnet-4-2%", "Claude Sonnet 4", 3, 15, 0.3, 3.75],
-  ["claude-3-7-sonnet%", "Claude Sonnet 3.7", 3, 15, 0.3, 3.75],
-  ["claude-3-5-sonnet%", "Claude Sonnet 3.5", 3, 15, 0.3, 3.75],
+  ["claude-sonnet-4-6%", "Claude Sonnet 4.6", 3, 15, 0.3, 3.75, 6],
+  ["claude-sonnet-4-5%", "Claude Sonnet 4.5", 3, 15, 0.3, 3.75, 6],
+  ["claude-sonnet-4-2%", "Claude Sonnet 4", 3, 15, 0.3, 3.75, 6],
+  ["claude-3-7-sonnet%", "Claude Sonnet 3.7", 3, 15, 0.3, 3.75, 6],
+  ["claude-3-5-sonnet%", "Claude Sonnet 3.5", 3, 15, 0.3, 3.75, 6],
   // Haiku family
-  ["claude-haiku-4-5%", "Claude Haiku 4.5", 1, 5, 0.1, 1.25],
-  ["claude-3-5-haiku%", "Claude Haiku 3.5", 0.8, 4, 0.08, 1],
-  ["claude-3-haiku%", "Claude Haiku 3", 0.25, 1.25, 0.03, 0.3],
+  ["claude-haiku-4-5%", "Claude Haiku 4.5", 1, 5, 0.1, 1.25, 2],
+  ["claude-3-5-haiku%", "Claude Haiku 3.5", 0.8, 4, 0.08, 1, 1.6],
+  ["claude-3-haiku%", "Claude Haiku 3", 0.25, 1.25, 0.03, 0.3, 0.5],
   // Legacy
-  ["claude-3-opus%", "Claude Opus 3", 15, 75, 1.5, 18.75],
+  ["claude-3-opus%", "Claude Opus 3", 15, 75, 1.5, 18.75, 30],
 ];
 
 // Top-up: insert any default pattern that isn't already present. Preserves
@@ -188,11 +222,11 @@ const DEFAULT_PRICING = [
       .map((r) => r.model_pattern)
   );
   const insert = db.prepare(
-    "INSERT OR IGNORE INTO model_pricing (model_pattern, display_name, input_per_mtok, output_per_mtok, cache_read_per_mtok, cache_write_per_mtok) VALUES (?, ?, ?, ?, ?, ?)"
+    "INSERT OR IGNORE INTO model_pricing (model_pattern, display_name, input_per_mtok, output_per_mtok, cache_read_per_mtok, cache_write_per_mtok, cache_write_1h_per_mtok) VALUES (?, ?, ?, ?, ?, ?, ?)"
   );
   const addMissing = db.transaction((rows) => {
-    for (const [pattern, name, inp, out, cr, cw] of rows) {
-      if (!existing.has(pattern)) insert.run(pattern, name, inp, out, cr, cw);
+    for (const [pattern, name, inp, out, cr, cw, cw1h] of rows) {
+      if (!existing.has(pattern)) insert.run(pattern, name, inp, out, cr, cw, cw1h);
     }
   });
   addMissing(DEFAULT_PRICING);
@@ -603,14 +637,15 @@ const stmts = {
   listPricing: db.prepare("SELECT * FROM model_pricing ORDER BY display_name ASC"),
   getPricing: db.prepare("SELECT * FROM model_pricing WHERE model_pattern = ?"),
   upsertPricing: db.prepare(`
-    INSERT INTO model_pricing (model_pattern, display_name, input_per_mtok, output_per_mtok, cache_read_per_mtok, cache_write_per_mtok, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+    INSERT INTO model_pricing (model_pattern, display_name, input_per_mtok, output_per_mtok, cache_read_per_mtok, cache_write_per_mtok, cache_write_1h_per_mtok, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
     ON CONFLICT(model_pattern) DO UPDATE SET
       display_name = excluded.display_name,
       input_per_mtok = excluded.input_per_mtok,
       output_per_mtok = excluded.output_per_mtok,
       cache_read_per_mtok = excluded.cache_read_per_mtok,
       cache_write_per_mtok = excluded.cache_write_per_mtok,
+      cache_write_1h_per_mtok = excluded.cache_write_1h_per_mtok,
       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
   `),
   deletePricing: db.prepare("DELETE FROM model_pricing WHERE model_pattern = ?"),

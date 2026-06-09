@@ -762,6 +762,7 @@ function createOpenApiSpec() {
             "output_per_mtok",
             "cache_read_per_mtok",
             "cache_write_per_mtok",
+            "cache_write_1h_per_mtok",
             "updated_at",
           ],
           properties: {
@@ -770,7 +771,11 @@ function createOpenApiSpec() {
             input_per_mtok: { type: "number" },
             output_per_mtok: { type: "number" },
             cache_read_per_mtok: { type: "number" },
-            cache_write_per_mtok: { type: "number" },
+            cache_write_per_mtok: { type: "number", description: "5m ephemeral cache-write rate" },
+            cache_write_1h_per_mtok: {
+              type: "number",
+              description: "1h ephemeral cache-write rate",
+            },
             updated_at: { type: "string", format: "date-time" },
           },
         },
@@ -783,7 +788,11 @@ function createOpenApiSpec() {
             input_per_mtok: { type: "number" },
             output_per_mtok: { type: "number" },
             cache_read_per_mtok: { type: "number" },
-            cache_write_per_mtok: { type: "number" },
+            cache_write_per_mtok: { type: "number", description: "5m ephemeral cache-write rate" },
+            cache_write_1h_per_mtok: {
+              type: "number",
+              description: "1h ephemeral cache-write rate",
+            },
           },
         },
         PricingListResponse: {

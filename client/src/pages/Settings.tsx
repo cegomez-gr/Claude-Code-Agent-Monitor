@@ -100,6 +100,7 @@ interface EditRow {
   output_per_mtok: string;
   cache_read_per_mtok: string;
   cache_write_per_mtok: string;
+  cache_write_1h_per_mtok: string;
 }
 
 const emptyRow: EditRow = {
@@ -109,6 +110,7 @@ const emptyRow: EditRow = {
   output_per_mtok: "0",
   cache_read_per_mtok: "0",
   cache_write_per_mtok: "0",
+  cache_write_1h_per_mtok: "0",
 };
 
 interface SystemInfo {
@@ -439,6 +441,7 @@ export function Settings() {
       output_per_mtok: String(rule.output_per_mtok),
       cache_read_per_mtok: String(rule.cache_read_per_mtok),
       cache_write_per_mtok: String(rule.cache_write_per_mtok),
+      cache_write_1h_per_mtok: String(rule.cache_write_1h_per_mtok),
     });
   };
 
@@ -469,6 +472,7 @@ export function Settings() {
         output_per_mtok: parseFloat(editRow.output_per_mtok) || 0,
         cache_read_per_mtok: parseFloat(editRow.cache_read_per_mtok) || 0,
         cache_write_per_mtok: parseFloat(editRow.cache_write_per_mtok) || 0,
+        cache_write_1h_per_mtok: parseFloat(editRow.cache_write_1h_per_mtok) || 0,
       });
       setEditingPattern(null);
       setAdding(false);
@@ -630,6 +634,16 @@ export function Settings() {
           min="0"
           value={editRow.cache_write_per_mtok}
           onChange={(e) => setEditRow((r) => ({ ...r, cache_write_per_mtok: e.target.value }))}
+          className="input w-full text-sm text-right font-mono"
+        />
+      </td>
+      <td className="px-4 py-3">
+        <input
+          type="number"
+          step="0.01"
+          min="0"
+          value={editRow.cache_write_1h_per_mtok}
+          onChange={(e) => setEditRow((r) => ({ ...r, cache_write_1h_per_mtok: e.target.value }))}
           className="input w-full text-sm text-right font-mono"
         />
       </td>
@@ -821,7 +835,7 @@ export function Settings() {
         {actionBanner(["reset-pricing"])}
 
         <div className="card overflow-x-auto mt-4">
-          <table className="w-full min-w-[700px]">
+          <table className="w-full min-w-[820px]">
             <thead>
               <tr className="border-b border-border text-left">
                 <th className="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
@@ -840,7 +854,10 @@ export function Settings() {
                   {t("common:token.cacheRead")}
                 </th>
                 <th className="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-right">
-                  {t("common:token.cacheWrite")}
+                  {t("pricing.cacheWrite5m")}
+                </th>
+                <th className="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-right">
+                  {t("pricing.cacheWrite1h")}
                 </th>
                 <th className="w-24 px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
                   {t("common:actions")}
@@ -873,6 +890,9 @@ export function Settings() {
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-400 text-right font-mono">
                       ${rule.cache_write_per_mtok}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-400 text-right font-mono">
+                      ${rule.cache_write_1h_per_mtok}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 transition-opacity">

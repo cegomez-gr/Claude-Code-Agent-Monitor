@@ -129,6 +129,7 @@ export interface ModelPricing {
   output_per_mtok: number;
   cache_read_per_mtok: number;
   cache_write_per_mtok: number;
+  cache_write_1h_per_mtok: number;
   updated_at: string;
 }
 
