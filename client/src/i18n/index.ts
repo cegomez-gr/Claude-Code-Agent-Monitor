@@ -47,6 +47,9 @@ import ccConfig_vi from "./locales/vi/ccConfig.json";
 import run_en from "./locales/en/run.json";
 import run_zh from "./locales/zh/run.json";
 import run_vi from "./locales/vi/run.json";
+import alerts_en from "./locales/en/alerts.json";
+import alerts_zh from "./locales/zh/alerts.json";
+import alerts_vi from "./locales/vi/alerts.json";
 
 i18n
   .use(LanguageDetector)
@@ -67,6 +70,7 @@ i18n
         updates: updates_en,
         ccConfig: ccConfig_en,
         run: run_en,
+        alerts: alerts_en,
       },
       zh: {
         common: common_zh,
@@ -82,6 +86,7 @@ i18n
         updates: updates_zh,
         ccConfig: ccConfig_zh,
         run: run_zh,
+        alerts: alerts_zh,
       },
       vi: {
         common: common_vi,
@@ -97,6 +102,7 @@ i18n
         updates: updates_vi,
         ccConfig: ccConfig_vi,
         run: run_vi,
+        alerts: alerts_vi,
       },
     },
     supportedLngs: ["en", "zh", "vi"],
@@ -116,6 +122,7 @@ i18n
       "updates",
       "ccConfig",
       "run",
+      "alerts",
     ],
     defaultNS: "common",
     interpolation: { escapeValue: false },

@@ -6,6 +6,8 @@
 
 import type {
   Agent,
+  AlertEvent,
+  AlertRule,
   Analytics,
   CostResult,
   DashboardEvent,
@@ -346,6 +348,50 @@ export const api = {
       }),
     kill: (id: string) =>
       request<{ ok: true }>(`/run/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  },
+
+  alerts: {
+    list: (params?: { unacked?: boolean; limit?: number; offset?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.unacked) qs.set("unacked", "true");
+      if (params?.limit) qs.set("limit", String(params.limit));
+      if (params?.offset) qs.set("offset", String(params.offset));
+      const q = qs.toString();
+      return request<{
+        alerts: AlertEvent[];
+        total: number;
+        unacked: number;
+        limit: number;
+        offset: number;
+      }>(`/alerts${q ? `?${q}` : ""}`);
+    },
+    ack: (id: number) => request<{ alert: AlertEvent }>(`/alerts/${id}/ack`, { method: "POST" }),
+    ackAll: () =>
+      request<{ ok: true; acknowledged: number }>("/alerts/ack-all", { method: "POST" }),
+    rules: {
+      list: () => request<{ rules: AlertRule[] }>("/alerts/rules"),
+      create: (rule: {
+        name: string;
+        rule_type: AlertRule["rule_type"];
+        config: AlertRule["config"];
+        enabled?: boolean;
+        cooldown_seconds?: number;
+      }) =>
+        request<{ rule: AlertRule }>("/alerts/rules", {
+          method: "POST",
+          body: JSON.stringify(rule),
+        }),
+      update: (
+        id: string,
+        patch: Partial<Pick<AlertRule, "name" | "config" | "enabled" | "cooldown_seconds">>
+      ) =>
+        request<{ rule: AlertRule }>(`/alerts/rules/${encodeURIComponent(id)}`, {
+          method: "PATCH",
+          body: JSON.stringify(patch),
+        }),
+      remove: (id: string) =>
+        request<{ ok: true }>(`/alerts/rules/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    },
   },
 };
 

@@ -1,0 +1,65 @@
+{
+  "title": "Cảnh báo",
+  "subtitle": "Cảnh báo theo quy tắc cho phiên, agent, sự kiện và mức dùng token",
+  "refresh": "Làm mới",
+  "ackAll": "Xác nhận tất cả ({{count}})",
+  "ruleTypes": {
+    "event_pattern": "Mẫu sự kiện",
+    "inactivity": "Không hoạt động",
+    "status_duration": "Agent bị kẹt",
+    "token_threshold": "Ngưỡng token"
+  },
+  "ruleTypeHints": {
+    "event_pattern": "Kích hoạt khi một sự kiện khớp với mẫu. Đặt số lần lớn hơn 1 để yêu cầu N sự kiện khớp trong khung thời gian (ví dụ: hơn 5 lỗi trong 2 phút).",
+    "inactivity": "Kích hoạt khi một phiên đang hoạt động không nhận được sự kiện nào trong số phút đã cấu hình.",
+    "status_duration": "Kích hoạt khi một agent giữ nguyên trạng thái đã chọn mà không có hoạt động trong số phút đã cấu hình.",
+    "token_threshold": "Kích hoạt khi tổng mức dùng token của phiên (đầu vào + đầu ra + bộ nhớ đệm) vượt ngưỡng."
+  },
+  "ruleDesc": {
+    "eventPattern": "Khớp {{pattern}}",
+    "eventPatternCount": "≥{{count}} × {{pattern}} trong {{window}} phút",
+    "inactivity": "Phiên không hoạt động trong {{minutes}} phút",
+    "statusDuration": "Agent kẹt ở trạng thái {{status}} trong {{minutes}} phút",
+    "tokenThreshold": "Token của phiên vượt {{tokens}}"
+  },
+  "rules": {
+    "title": "Quy tắc cảnh báo",
+    "add": "Thêm quy tắc",
+    "cancel": "Hủy",
+    "create": "Tạo quy tắc",
+    "saving": "Đang lưu…",
+    "empty": "Chưa có quy tắc cảnh báo nào. Thêm một quy tắc để bắt đầu theo dõi agent bị kẹt, lỗi dồn dập, phiên nhàn rỗi hoặc token tăng vọt.",
+    "enabled": "Đang bật",
+    "disabled": "Đang tắt",
+    "enable": "Bật quy tắc",
+    "disable": "Tắt quy tắc",
+    "delete": "Xóa quy tắc",
+    "confirmDelete": "Xóa quy tắc \"{{name}}\" và lịch sử cảnh báo của nó?",
+    "cooldown": "thời gian chờ {{seconds}}s",
+    "form": {
+      "name": "Tên quy tắc",
+      "namePlaceholder": "ví dụ: Lỗi dồn dập",
+      "type": "Loại quy tắc",
+      "eventType": "Loại sự kiện (chính xác)",
+      "toolName": "Tên công cụ (chính xác)",
+      "summaryContains": "Tóm tắt chứa",
+      "count": "Số lần kích hoạt",
+      "windowMinutes": "Khung thời gian (phút)",
+      "agentStatus": "Trạng thái agent",
+      "minutes": "Phút",
+      "totalTokens": "Tổng token",
+      "cooldown": "Thời gian chờ (giây)"
+    }
+  },
+  "feed": {
+    "title": "Luồng cảnh báo",
+    "unackedCount": "{{count}} chưa xác nhận",
+    "unackedOnly": "Chỉ chưa xác nhận",
+    "ack": "Xác nhận",
+    "viewSession": "Xem phiên",
+    "loadMore": "Tải thêm ({{shown}} / {{total}})",
+    "emptyTitle": "Không có cảnh báo",
+    "emptyDescription": "Cảnh báo do các quy tắc của bạn kích hoạt sẽ hiển thị tại đây theo thời gian thực.",
+    "emptyUnacked": "Tất cả đã được xác nhận. Cảnh báo mới sẽ hiển thị tại đây khi được kích hoạt."
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "title": "Alerts",
+  "subtitle": "Rules-based alerting for sessions, agents, events, and token usage",
+  "refresh": "Refresh",
+  "ackAll": "Acknowledge all ({{count}})",
+  "ruleTypes": {
+    "event_pattern": "Event pattern",
+    "inactivity": "Inactivity",
+    "status_duration": "Stuck agent",
+    "token_threshold": "Token threshold"
+  },
+  "ruleTypeHints": {
+    "event_pattern": "Fires when an ingested event matches the pattern. Set a count above 1 to require N matching events within a time window (e.g. more than 5 errors in 2 minutes).",
+    "inactivity": "Fires when an active session has received no events for the configured number of minutes.",
+    "status_duration": "Fires when an agent has remained in the selected status with no activity for the configured number of minutes.",
+    "token_threshold": "Fires when a session's total token usage (input + output + cache) exceeds the threshold."
+  },
+  "ruleDesc": {
+    "eventPattern": "Matches {{pattern}}",
+    "eventPatternCount": "≥{{count}} × {{pattern}} within {{window}} min",
+    "inactivity": "No session activity for {{minutes}} min",
+    "statusDuration": "Agent stuck in {{status}} for {{minutes}} min",
+    "tokenThreshold": "Session tokens exceed {{tokens}}"
+  },
+  "rules": {
+    "title": "Alert rules",
+    "add": "Add rule",
+    "cancel": "Cancel",
+    "create": "Create rule",
+    "saving": "Saving…",
+    "empty": "No alert rules yet. Add one to start monitoring for stuck agents, error bursts, idle sessions, or token spikes.",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "enable": "Enable rule",
+    "disable": "Disable rule",
+    "delete": "Delete rule",
+    "confirmDelete": "Delete rule \"{{name}}\" and its alert history?",
+    "cooldown": "{{seconds}}s cooldown",
+    "form": {
+      "name": "Rule name",
+      "namePlaceholder": "e.g. Error burst",
+      "type": "Rule type",
+      "eventType": "Event type (exact)",
+      "toolName": "Tool name (exact)",
+      "summaryContains": "Summary contains",
+      "count": "Trigger count",
+      "windowMinutes": "Window (minutes)",
+      "agentStatus": "Agent status",
+      "minutes": "Minutes",
+      "totalTokens": "Total tokens",
+      "cooldown": "Cooldown (seconds)"
+    }
+  },
+  "feed": {
+    "title": "Alert feed",
+    "unackedCount": "{{count}} unacknowledged",
+    "unackedOnly": "Unacknowledged only",
+    "ack": "Acknowledge",
+    "viewSession": "View session",
+    "loadMore": "Load more ({{shown}} of {{total}})",
+    "emptyTitle": "No alerts",
+    "emptyDescription": "Alerts fired by your rules will appear here in real time.",
+    "emptyUnacked": "Everything is acknowledged. New alerts will appear here as they fire."
+  }
+}

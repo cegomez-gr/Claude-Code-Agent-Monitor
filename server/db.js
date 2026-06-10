@@ -149,6 +149,41 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_agents_session_type ON agents(session_id, type);
   CREATE INDEX IF NOT EXISTS idx_dashboard_runs_started ON dashboard_runs(started_at DESC);
   CREATE INDEX IF NOT EXISTS idx_dashboard_runs_session ON dashboard_runs(session_id);
+
+  -- Rules-based alerting engine. Rules are evaluated server-side: event-driven
+  -- types (event_pattern, token_threshold) on hook ingest, time-based types
+  -- (inactivity, status_duration) on a periodic sweep in server/lib/alerts.js.
+  CREATE TABLE IF NOT EXISTS alert_rules (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    rule_type TEXT NOT NULL CHECK(rule_type IN ('event_pattern','inactivity','status_duration','token_threshold')),
+    config TEXT NOT NULL DEFAULT '{}',
+    enabled INTEGER NOT NULL DEFAULT 1,
+    cooldown_seconds INTEGER NOT NULL DEFAULT 300,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  );
+
+  -- Fired alerts. rule_name/rule_type are snapshotted so history stays
+  -- readable after a rule is edited. session_id intentionally has no FK:
+  -- alerts are an audit trail and must survive session cleanup.
+  CREATE TABLE IF NOT EXISTS alert_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    rule_id TEXT NOT NULL,
+    rule_name TEXT NOT NULL,
+    rule_type TEXT NOT NULL,
+    session_id TEXT,
+    agent_id TEXT,
+    message TEXT NOT NULL,
+    details TEXT,
+    triggered_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    acknowledged_at TEXT,
+    FOREIGN KEY (rule_id) REFERENCES alert_rules(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_alert_events_triggered ON alert_events(triggered_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_alert_events_rule ON alert_events(rule_id);
+  CREATE INDEX IF NOT EXISTS idx_alert_events_session ON alert_events(session_id);
 `);
 
 // Default model pricing — shared by initial seed + startup top-up + reset endpoint
@@ -719,6 +754,46 @@ const stmts = {
     FROM token_usage
     WHERE session_id = ?
   `),
+
+  // ── Alerting engine ───────────────────────────────────────────────────────
+  listAlertRules: db.prepare("SELECT * FROM alert_rules ORDER BY created_at DESC"),
+  listEnabledAlertRules: db.prepare("SELECT * FROM alert_rules WHERE enabled = 1"),
+  getAlertRule: db.prepare("SELECT * FROM alert_rules WHERE id = ?"),
+  insertAlertRule: db.prepare(
+    "INSERT INTO alert_rules (id, name, rule_type, config, enabled, cooldown_seconds) VALUES (?, ?, ?, ?, ?, ?)"
+  ),
+  updateAlertRule: db.prepare(
+    "UPDATE alert_rules SET name = COALESCE(?, name), config = COALESCE(?, config), enabled = COALESCE(?, enabled), cooldown_seconds = COALESCE(?, cooldown_seconds), updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?"
+  ),
+  deleteAlertRule: db.prepare("DELETE FROM alert_rules WHERE id = ?"),
+
+  insertAlertEvent: db.prepare(
+    "INSERT INTO alert_events (rule_id, rule_name, rule_type, session_id, agent_id, message, details) VALUES (?, ?, ?, ?, ?, ?, ?)"
+  ),
+  getAlertEvent: db.prepare("SELECT * FROM alert_events WHERE id = ?"),
+  listAlertEvents: db.prepare(
+    "SELECT * FROM alert_events ORDER BY triggered_at DESC, id DESC LIMIT ? OFFSET ?"
+  ),
+  listUnackedAlertEvents: db.prepare(
+    "SELECT * FROM alert_events WHERE acknowledged_at IS NULL ORDER BY triggered_at DESC, id DESC LIMIT ? OFFSET ?"
+  ),
+  countAlertEvents: db.prepare("SELECT COUNT(*) as count FROM alert_events"),
+  countUnackedAlertEvents: db.prepare(
+    "SELECT COUNT(*) as count FROM alert_events WHERE acknowledged_at IS NULL"
+  ),
+  ackAlertEvent: db.prepare(
+    "UPDATE alert_events SET acknowledged_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND acknowledged_at IS NULL"
+  ),
+  ackAllAlertEvents: db.prepare(
+    "UPDATE alert_events SET acknowledged_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE acknowledged_at IS NULL"
+  ),
+  // Cooldown lookup: most recent firing of a rule for a given scope (session,
+  // or session+agent for per-agent rules). COALESCE folds NULL scopes to ''.
+  lastAlertFor: db.prepare(
+    `SELECT triggered_at FROM alert_events
+     WHERE rule_id = ? AND COALESCE(session_id, '') = COALESCE(?, '') AND COALESCE(agent_id, '') = COALESCE(?, '')
+     ORDER BY triggered_at DESC, id DESC LIMIT 1`
+  ),
 };
 
 module.exports = { db, stmts, DB_PATH, DEFAULT_PRICING };

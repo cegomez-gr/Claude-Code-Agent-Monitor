@@ -223,6 +223,45 @@ export interface CcConfigChangedPayload {
   paths?: string[];
 }
 
+// ── Alerting ──
+
+export type AlertRuleType = "event_pattern" | "inactivity" | "status_duration" | "token_threshold";
+
+export interface AlertRuleConfig {
+  event_type?: string;
+  tool_name?: string;
+  summary_contains?: string;
+  count?: number;
+  window_minutes?: number;
+  minutes?: number;
+  status?: "working" | "waiting";
+  total_tokens?: number;
+}
+
+export interface AlertRule {
+  id: string;
+  name: string;
+  rule_type: AlertRuleType;
+  config: AlertRuleConfig;
+  enabled: boolean;
+  cooldown_seconds: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AlertEvent {
+  id: number;
+  rule_id: string;
+  rule_name: string;
+  rule_type: AlertRuleType;
+  session_id: string | null;
+  agent_id: string | null;
+  message: string;
+  details: string | null;
+  triggered_at: string;
+  acknowledged_at: string | null;
+}
+
 export interface WSMessage {
   type:
     | "session_created"
@@ -235,7 +274,9 @@ export interface WSMessage {
     | "run_stream"
     | "run_status"
     | "run_input_ack"
-    | "cc_config_changed";
+    | "cc_config_changed"
+    | "alert_triggered"
+    | "alert_updated";
   data:
     | Session
     | Agent
@@ -245,7 +286,8 @@ export interface WSMessage {
     | RunStreamPayload
     | RunStatusPayload
     | RunInputAckPayload
-    | CcConfigChangedPayload;
+    | CcConfigChangedPayload
+    | AlertEvent;
   timestamp: string;
 }
 

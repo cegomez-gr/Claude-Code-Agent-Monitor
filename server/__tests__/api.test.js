@@ -50,6 +50,11 @@ const EXPECTED_API_PATHS = [
   "/api/import/upload",
   "/api/updates/status",
   "/api/updates/check",
+  "/api/alerts",
+  "/api/alerts/rules",
+  "/api/alerts/rules/{id}",
+  "/api/alerts/{id}/ack",
+  "/api/alerts/ack-all",
   "/api/openapi.json",
 ];
 

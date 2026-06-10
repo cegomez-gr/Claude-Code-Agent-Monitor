@@ -263,6 +263,7 @@ The dashboard offers a comprehensive set of features to monitor and analyze your
 | **Cost Tracking**                  | Per-model cost estimation with configurable pricing rules and per-session breakdowns. Compaction-aware token accounting preserves totals across context compressions. Transcript reads are cached with incremental byte-offset updates for efficient token extraction        |
 | **Transcript Cache**               | Real-time extraction from JSONL transcripts: tokens, compactions, API errors (`isApiErrorMessage` entries stored as `APIError` events), turn durations (stored as `TurnDuration` events), thinking block counts, and usage extras (service_tier, speed, inference_geo). Per-entry growable arrays are tail-capped at `TRANSCRIPT_CACHE_MAX_ARRAY_LEN` (default `1000`, configurable) — both during parse and at finalize — so even a session that runs for days cannot grow a single cache entry without bound. Each entry stores only `{mtimeMs, size, bytesRead, result}`, so there's no shadow copy of the same data at both the top level and inside `result`. Session metadata is enriched with these fields in real-time |
 | **Notifications**                  | Full Web Push (VAPID) pipeline for reliable delivery. Arrive even when the tab is backgrounded or the browser is closed. Explicitly configured for macOS audio support. Configurable per-event toggles with subscription management |
+| **Alerts**                         | Rules-based alerting engine (`/alerts`): define alert rules with four condition types — **event pattern** (match event type / tool name / summary text, optionally requiring N matching events inside a time window, e.g. "more than 5 errors in 2 minutes"), **inactivity** (active session with no events for N minutes), **stuck agent** (agent sitting in `working`/`waiting` with no activity for N minutes), and **token threshold** (session total tokens past a limit). Event-driven rules evaluate server-side on every hook ingest (after the ingest transaction — alerting can never slow down or fail hook delivery); time-based rules run on a 60 s sweep. Fired alerts are persisted to `alert_events` with per-rule + per-session **cooldown dedup** (default 300 s), broadcast as `alert_triggered` WebSocket messages, and surface in a live alert feed with acknowledge / acknowledge-all, an unacknowledged-only filter, and per-alert "View session" links. Rules support enable/disable toggling and cascade their history on delete |
 | **Update Notifier**                | Server periodically runs a non-blocking `git fetch` and compares the local checkout to `origin/master`/`origin/main`/`origin/HEAD`. When upstream is ahead, the UI surfaces a modal with the exact `git pull && npm run setup` command and a one-click **Copy** button; the Sidebar gets a persistent "Check for updates" button with live badge. The dashboard never pulls or restarts itself — the user runs the command in a terminal — so the mechanism cannot break dev sessions, pm2/systemd/Docker supervision, or leave orphaned processes |
 | **Settings**                       | System info, hook status, model pricing management, notification preferences, data export, session cleanup. The Model Pricing section exposes an info popover (the `i` icon next to the title) explaining how rule lookup works (first matching pattern wins), the SQL-style `%` wildcard syntax with concrete examples (`claude-opus-4-7%`, `claude-%-haiku`, exact ids), and that prices must be updated manually when Anthropic publishes new rates — already-stored sessions keep the price applied at ingest time. The CLAUDE_HOME box and Import History panel are fully i18n-driven across en/vi/zh |
 | **MCP Server (Local)**             | Enterprise-grade local MCP server in `mcp/` with three transport modes (stdio, HTTP+SSE, interactive REPL), 25 typed tools across 6 domains, strict input schemas, retry/backoff, localhost-only API enforcement, and tiered mutation/destructive safety gates. HTTP mode serves Streamable HTTP (2025-11-25) and legacy SSE (2024-11-05) on configurable port. REPL mode provides tab-completed interactive tool invocation with colored output |
@@ -892,6 +893,18 @@ The OpenAPI document is generated from `server/openapi.js`, and Swagger UI is se
 | `GET`  | `/api/workflows`              | Aggregate workflow data (orchestration, tools, patterns). Optional `?status=active\|completed` query param filters all 11 data sections by session status |
 | `GET`  | `/api/workflows/session/:id`  | Per-session drill-in (agent tree, tool timeline, events) |
 
+### Alerts
+
+| Method   | Path                     | Description                                                            |
+| -------- | ------------------------ | ---------------------------------------------------------------------- |
+| `GET`    | `/api/alerts`            | Fired-alert feed, newest first (`?unacked=true`, `limit`, `offset`)    |
+| `POST`   | `/api/alerts/:id/ack`    | Acknowledge one alert                                                  |
+| `POST`   | `/api/alerts/ack-all`    | Acknowledge every unacked alert                                        |
+| `GET`    | `/api/alerts/rules`      | List alert rules                                                       |
+| `POST`   | `/api/alerts/rules`      | Create a rule (`event_pattern` \| `inactivity` \| `status_duration` \| `token_threshold`) |
+| `PATCH`  | `/api/alerts/rules/:id`  | Update name / config / enabled / cooldown (rule type is immutable)     |
+| `DELETE` | `/api/alerts/rules/:id`  | Delete a rule and its fired-alert history                              |
+
 ### Settings
 
 | Method | Path                           | Description                                      |
@@ -1066,7 +1079,7 @@ Connect to `ws://localhost:4820/ws` to receive real-time push messages:
 }
 ```
 
-**Message types:** `session_created`, `session_updated`, `agent_created`, `agent_updated`, `new_event`
+**Message types:** `session_created`, `session_updated`, `agent_created`, `agent_updated`, `new_event`, `alert_triggered`, `alert_updated`
 
 ```mermaid
 stateDiagram-v2

@@ -736,6 +736,15 @@ router.post("/event", (req, res) => {
 
   res.json({ ok: true, event: result });
 
+  // Evaluate event-driven alert rules after the ingest transaction committed
+  // and the response is on its way — alerting must never slow down or fail
+  // hook ingestion (evaluateEvent itself is also internally fail-safe).
+  try {
+    require("../lib/alerts").evaluateEvent(result);
+  } catch {
+    /* non-fatal */
+  }
+
   // After SubagentStop, scan the session's subagent JSONL files and ingest any
   // tool calls that aren't yet in the events table. Subagent tool_use blocks
   // never fire hooks on the parent session — this scan is the only path that

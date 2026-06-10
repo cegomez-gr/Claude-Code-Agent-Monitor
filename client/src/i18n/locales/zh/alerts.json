@@ -1,0 +1,65 @@
+{
+  "title": "警报",
+  "subtitle": "针对会话、Agent、事件和 Token 用量的规则化警报",
+  "refresh": "刷新",
+  "ackAll": "全部确认（{{count}}）",
+  "ruleTypes": {
+    "event_pattern": "事件模式",
+    "inactivity": "无活动",
+    "status_duration": "卡住的 Agent",
+    "token_threshold": "Token 阈值"
+  },
+  "ruleTypeHints": {
+    "event_pattern": "当摄入的事件匹配该模式时触发。将次数设为大于 1 可要求在时间窗口内出现 N 次匹配（例如 2 分钟内超过 5 个错误）。",
+    "inactivity": "当活跃会话在配置的分钟数内没有收到任何事件时触发。",
+    "status_duration": "当 Agent 在所选状态下保持无活动达到配置的分钟数时触发。",
+    "token_threshold": "当会话的总 Token 用量（输入 + 输出 + 缓存）超过阈值时触发。"
+  },
+  "ruleDesc": {
+    "eventPattern": "匹配 {{pattern}}",
+    "eventPatternCount": "{{window}} 分钟内 ≥{{count}} 次 {{pattern}}",
+    "inactivity": "会话 {{minutes}} 分钟无活动",
+    "statusDuration": "Agent 在 {{status}} 状态卡住 {{minutes}} 分钟",
+    "tokenThreshold": "会话 Token 超过 {{tokens}}"
+  },
+  "rules": {
+    "title": "警报规则",
+    "add": "添加规则",
+    "cancel": "取消",
+    "create": "创建规则",
+    "saving": "保存中…",
+    "empty": "还没有警报规则。添加一条规则即可开始监控卡住的 Agent、错误爆发、空闲会话或 Token 激增。",
+    "enabled": "已启用",
+    "disabled": "已禁用",
+    "enable": "启用规则",
+    "disable": "禁用规则",
+    "delete": "删除规则",
+    "confirmDelete": "删除规则“{{name}}”及其警报历史？",
+    "cooldown": "冷却 {{seconds}} 秒",
+    "form": {
+      "name": "规则名称",
+      "namePlaceholder": "例如：错误爆发",
+      "type": "规则类型",
+      "eventType": "事件类型（精确匹配）",
+      "toolName": "工具名称（精确匹配）",
+      "summaryContains": "摘要包含",
+      "count": "触发次数",
+      "windowMinutes": "时间窗口（分钟）",
+      "agentStatus": "Agent 状态",
+      "minutes": "分钟",
+      "totalTokens": "Token 总量",
+      "cooldown": "冷却时间（秒）"
+    }
+  },
+  "feed": {
+    "title": "警报信息流",
+    "unackedCount": "{{count}} 条未确认",
+    "unackedOnly": "仅显示未确认",
+    "ack": "确认",
+    "viewSession": "查看会话",
+    "loadMore": "加载更多（{{shown}} / {{total}}）",
+    "emptyTitle": "暂无警报",
+    "emptyDescription": "规则触发的警报会实时显示在这里。",
+    "emptyUnacked": "所有警报均已确认。新警报触发后会显示在这里。"
+  }
+}
