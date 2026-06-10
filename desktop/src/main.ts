@@ -30,7 +30,7 @@ import {
 } from "./server-host";
 import { ensureUserPath } from "./shell-path";
 import { createTray } from "./tray";
-import { createDashboardWindow } from "./window";
+import { appIconPath, createDashboardWindow } from "./window";
 
 interface AppState {
   serverHandle: ServerHandle | null;
@@ -146,6 +146,21 @@ function showFatalDialog(message: string, detail?: string): void {
 }
 
 async function boot(): Promise<void> {
+  // macOS only shows the bundle's .icns in the Dock; an unpackaged `desktop:dev`
+  // run otherwise displays the generic Electron icon. Set it explicitly so the
+  // dev Dock matches the packaged app (Windows/Linux get theirs via the
+  // BrowserWindow `icon`). Wrapped in try/catch — purely cosmetic.
+  if (process.platform === "darwin" && !app.isPackaged) {
+    const icon = appIconPath();
+    if (icon) {
+      try {
+        app.dock?.setIcon(icon);
+      } catch (err) {
+        log.warn("could not set dev dock icon", err);
+      }
+    }
+  }
+
   // Recover the user's shell PATH before the server boots — a Finder/Dock or
   // login-launched app only inherits launchd's minimal PATH, which makes the
   // "Run Claude" feature unable to find the `claude` CLI.
