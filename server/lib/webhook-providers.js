@@ -92,22 +92,41 @@ function formatDiscord(alert) {
   };
 }
 
-// Microsoft Teams — legacy O365-connector MessageCard (classic Incoming Webhook
-// connector). For the newer Power Automate "Workflows" connector, use a
-// `generic` target pointed at the flow.
+// Microsoft Teams — Adaptive Card delivered via a Power Automate "Workflows"
+// webhook. The legacy O365 Connector + MessageCard transport was retired
+// (connectors progressively disabled May 18–22 2026), so the target URL is a
+// Workflows "When a Teams webhook request is received" URL and the body is the
+// {type:"message", attachments:[adaptive card]} envelope that flow expects.
 function formatTeams(alert) {
-  const facts = [{ name: "Type", value: alert.rule_type }];
-  if (alert.session_id) facts.push({ name: "Session", value: alert.session_id });
-  if (alert.agent_id) facts.push({ name: "Agent", value: alert.agent_id });
-  facts.push({ name: "Triggered", value: alert.triggered_at });
+  const facts = [{ title: "Type", value: alert.rule_type }];
+  if (alert.session_id) facts.push({ title: "Session", value: truncate(alert.session_id, 256) });
+  if (alert.agent_id) facts.push({ title: "Agent", value: truncate(alert.agent_id, 256) });
+  facts.push({ title: "Triggered", value: alert.triggered_at });
   return {
-    "@type": "MessageCard",
-    "@context": "http://schema.org/extensions",
-    themeColor: "EF4444",
-    summary: truncate(`${alert.rule_name}: ${alert.message}`, 200),
-    title: `🔔 ${alert.rule_name}`,
-    text: truncate(alert.message, 4000),
-    sections: [{ facts, markdown: false }],
+    type: "message",
+    attachments: [
+      {
+        contentType: "application/vnd.microsoft.card.adaptive",
+        contentUrl: null,
+        content: {
+          $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
+          type: "AdaptiveCard",
+          version: "1.4",
+          body: [
+            {
+              type: "TextBlock",
+              size: "Large",
+              weight: "Bolder",
+              color: "Attention",
+              text: truncate(`🔔 ${alert.rule_name}`, 500),
+              wrap: true,
+            },
+            { type: "TextBlock", text: truncate(alert.message, 4000), wrap: true },
+            { type: "FactSet", facts },
+          ],
+        },
+      },
+    ],
   };
 }
 
@@ -273,6 +292,8 @@ const PROVIDERS = {
     family: "chat",
     needsUrl: true,
     https: true,
+    urlHint:
+      "Power Automate Workflows URL (Teams → Workflows → 'Post to a channel when a webhook request is received')",
     format: formatTeams,
   },
   google_chat: {
@@ -359,6 +380,21 @@ const PROVIDERS = {
       },
     ],
     format: formatSplunkOnCall,
+    // VictorOps returns HTTP 200 even when it rejects the event — the real
+    // outcome is in the body ({ result: "success" | "failure" }). Inspect it so
+    // a logical failure isn't silently recorded as delivered.
+    verifyResponse: (text) => {
+      if (!text) return { ok: true };
+      try {
+        const j = JSON.parse(text);
+        if (j && typeof j.result === "string" && j.result.toLowerCase() === "failure") {
+          return { ok: false, error: j.message || "Splunk On-Call reported failure" };
+        }
+      } catch {
+        /* non-JSON 200 body — trust the status */
+      }
+      return { ok: true };
+    },
   },
 
   zapier: {

@@ -33,6 +33,7 @@ let BASE;
 // Mock receiver — records every inbound request; behavior is tunable per-test.
 const received = [];
 let nextStatus = 200;
+let nextBody = "ok"; // response body the mock returns (for body-veto tests)
 let failTimes = 0; // respond 500 this many times before honoring nextStatus
 let recvServer;
 let RECV_URL;
@@ -40,6 +41,7 @@ let RECV_URL;
 function resetReceiver() {
   received.length = 0;
   nextStatus = 200;
+  nextBody = "ok";
   failTimes = 0;
 }
 
@@ -116,7 +118,7 @@ before(async () => {
         status = 500;
       }
       res.statusCode = status;
-      res.end("ok");
+      res.end(nextBody);
     });
   });
   await new Promise((r) => recvServer.listen(0, "127.0.0.1", r));
@@ -155,10 +157,14 @@ describe("payload formatting", () => {
     assert.ok(p.embeds[0].fields.some((f) => f.name === "Session"));
   });
 
-  it("teams: MessageCard with facts", () => {
+  it("teams: Adaptive Card wrapped in the Workflows message envelope", () => {
     const p = webhooks.formatPayload("teams", SAMPLE_ALERT);
-    assert.equal(p["@type"], "MessageCard");
-    assert.ok(p.sections[0].facts.some((f) => f.name === "Type"));
+    assert.equal(p.type, "message");
+    assert.equal(p.attachments[0].contentType, "application/vnd.microsoft.card.adaptive");
+    const card = p.attachments[0].content;
+    assert.equal(card.type, "AdaptiveCard");
+    const factSet = card.body.find((b) => b.type === "FactSet");
+    assert.ok(factSet.facts.some((f) => f.title === "Type"));
   });
 
   it("generic: stable envelope with parsed details", () => {
@@ -495,6 +501,42 @@ describe("URL resolution", () => {
       providers.resolveUrl({ type: "pagerduty", config: {} }),
       "https://events.pagerduty.com/v2/enqueue"
     );
+  });
+});
+
+describe("Splunk On-Call response-body veto", () => {
+  it("verifyResponse flags result=failure, trusts everything else", () => {
+    const vr = providers.PROVIDERS.splunk_oncall.verifyResponse;
+    assert.equal(vr('{"result":"failure","message":"bad routing key"}').ok, false);
+    assert.equal(vr('{"result":"success","entity_id":"x"}').ok, true);
+    assert.equal(vr("").ok, true); // empty body trusted
+    assert.equal(vr("not json").ok, true); // non-JSON 200 trusted
+  });
+
+  it("deliver() records a 200-with-result:failure as failed (no retry)", async () => {
+    resetReceiver();
+    nextStatus = 200;
+    nextBody = JSON.stringify({ result: "failure", message: "bad routing key" });
+    // Insert directly (splunk is https-only, can't go through the http-mock route).
+    const id = "splunk-veto-test";
+    stmts.insertWebhookTarget.run(
+      id,
+      "splunk",
+      "splunk_oncall",
+      RECV_URL,
+      1,
+      null,
+      null,
+      null,
+      JSON.stringify({ severity: "WARNING" })
+    );
+    webhooks.invalidateWebhookCache();
+    const target = webhooks.normalizeTarget(stmts.getWebhookTarget.get(id));
+    const res = await webhooks.deliver(target, SAMPLE_ALERT);
+    assert.equal(res.ok, false);
+    assert.match(res.error, /failure|bad routing key/i);
+    assert.equal(received.length, 1); // no retry on a logical rejection
+    assert.equal(stmts.lastWebhookDeliveryForTarget.get(id).status, "failed");
   });
 });
 

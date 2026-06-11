@@ -133,19 +133,28 @@ async function postOnce(url, body, headers) {
       signal: controller.signal,
       redirect: "follow",
     });
-    // Drain the body so the socket frees promptly; ignore decode errors.
+    // Read the response body — some providers (Splunk On-Call) signal failure
+    // in the body despite a 200, so deliver() may need to inspect it. Also
+    // frees the socket promptly. (Named distinctly from the `body` param.)
+    let responseBody = "";
     try {
-      await res.text();
+      responseBody = await res.text();
     } catch {
-      /* body drain is best-effort */
+      /* body read is best-effort */
     }
-    return { ok: res.status >= 200 && res.status < 300, status: res.status, error: null };
+    return {
+      ok: res.status >= 200 && res.status < 300,
+      status: res.status,
+      error: null,
+      body: responseBody,
+    };
   } catch (err) {
     const timedOut = err?.name === "AbortError";
     return {
       ok: false,
       status: null,
       error: timedOut ? "timeout" : err?.message || "network error",
+      body: "",
     };
   } finally {
     clearTimeout(timer);
@@ -193,6 +202,7 @@ async function deliver(target, alert) {
   let attempts = 0;
   let status = null;
   let error = null;
+  const verifyResponse = PROVIDERS[target.type]?.verifyResponse;
 
   while (attempts < MAX_ATTEMPTS) {
     attempts += 1;
@@ -200,13 +210,21 @@ async function deliver(target, alert) {
     status = res.status;
     error = res.error;
     if (res.ok) {
-      recordDelivery(target, alert.id, {
-        status: "success",
-        statusCode: status,
-        attempts,
-        error: null,
-      });
-      return { ok: true, status, attempts };
+      // Some providers (Splunk On-Call) return 200 even on rejection — let the
+      // provider veto a "successful" status by inspecting the response body.
+      const verdict = verifyResponse ? verifyResponse(res.body) : { ok: true };
+      if (verdict.ok) {
+        recordDelivery(target, alert.id, {
+          status: "success",
+          statusCode: status,
+          attempts,
+          error: null,
+        });
+        return { ok: true, status, attempts };
+      }
+      // A logical rejection won't fix on retry — fail immediately.
+      error = verdict.error || "provider reported failure";
+      break;
     }
     const retryable = status == null || status === 429 || status >= 500;
     if (!retryable || attempts >= MAX_ATTEMPTS) break;
