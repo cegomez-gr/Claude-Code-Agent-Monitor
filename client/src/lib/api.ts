@@ -19,6 +19,10 @@ import type {
   TranscriptListResult,
   TranscriptResult,
   UpdateStatusPayload,
+  WebhookDelivery,
+  WebhookTarget,
+  WebhookTestResult,
+  WebhookType,
   WorkflowData,
 } from "./types";
 
@@ -391,6 +395,51 @@ export const api = {
         }),
       remove: (id: string) =>
         request<{ ok: true }>(`/alerts/rules/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    },
+  },
+
+  webhooks: {
+    list: () => request<{ targets: WebhookTarget[] }>("/webhooks"),
+    create: (target: {
+      name: string;
+      type: WebhookType;
+      url: string;
+      enabled?: boolean;
+      secret?: string;
+      headers?: Record<string, string>;
+      rule_ids?: string[];
+    }) =>
+      request<{ target: WebhookTarget }>("/webhooks", {
+        method: "POST",
+        body: JSON.stringify(target),
+      }),
+    update: (
+      id: string,
+      patch: {
+        name?: string;
+        url?: string;
+        enabled?: boolean;
+        secret?: string | null;
+        headers?: Record<string, string>;
+        rule_ids?: string[];
+      }
+    ) =>
+      request<{ target: WebhookTarget }>(`/webhooks/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: JSON.stringify(patch),
+      }),
+    remove: (id: string) =>
+      request<{ ok: true }>(`/webhooks/${encodeURIComponent(id)}`, { method: "DELETE" }),
+    test: (id: string) =>
+      request<WebhookTestResult>(`/webhooks/${encodeURIComponent(id)}/test`, { method: "POST" }),
+    deliveries: (id: string, params?: { limit?: number; offset?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.limit) qs.set("limit", String(params.limit));
+      if (params?.offset) qs.set("offset", String(params.offset));
+      const q = qs.toString();
+      return request<{ deliveries: WebhookDelivery[]; limit: number; offset: number }>(
+        `/webhooks/${encodeURIComponent(id)}/deliveries${q ? `?${q}` : ""}`
+      );
     },
   },
 };

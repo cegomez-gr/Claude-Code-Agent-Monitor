@@ -73,6 +73,11 @@ function createOpenApiSpec() {
         name: "Alerts",
         description: "Rules-based alerting: rule CRUD, fired-alert feed, acknowledgement",
       },
+      {
+        name: "Webhooks",
+        description:
+          "Universal webhook delivery for fired alerts: target CRUD (Slack/Discord/Teams/generic), test probe, and delivery log. Secrets are never returned.",
+      },
       { name: "Documentation", description: "OpenAPI/Swagger endpoints" },
     ],
     components: {
@@ -2442,6 +2447,153 @@ function createOpenApiSpec() {
                 },
               },
             },
+          },
+        },
+      },
+      "/api/webhooks": {
+        get: {
+          tags: ["Webhooks"],
+          summary: "List webhook targets (URLs masked, secrets redacted)",
+          operationId: "listWebhooks",
+          responses: {
+            200: {
+              description: "All configured webhook targets",
+              content: {
+                "application/json": { schema: { type: "object", additionalProperties: true } },
+              },
+            },
+          },
+        },
+        post: {
+          tags: ["Webhooks"],
+          summary: "Create a webhook target",
+          operationId: "createWebhook",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  required: ["name", "type", "url"],
+                  properties: {
+                    name: { type: "string" },
+                    type: { type: "string", enum: ["slack", "discord", "teams", "generic"] },
+                    url: { type: "string", format: "uri" },
+                    enabled: { type: "boolean", default: true },
+                    secret: {
+                      type: "string",
+                      description: "Generic only: HMAC-SHA256 signing secret",
+                    },
+                    headers: {
+                      type: "object",
+                      additionalProperties: { type: "string" },
+                      description: "Generic only: extra request headers",
+                    },
+                    rule_ids: {
+                      type: "array",
+                      items: { type: "string" },
+                      description: "Optional: scope to specific alert rules (omit for all)",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: "Created target (redacted)",
+              content: {
+                "application/json": { schema: { type: "object", additionalProperties: true } },
+              },
+            },
+            400: { description: "Validation error" },
+          },
+        },
+      },
+      "/api/webhooks/{id}": {
+        patch: {
+          tags: ["Webhooks"],
+          summary: "Update a webhook target (partial; type is immutable)",
+          operationId: "updateWebhook",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    name: { type: "string" },
+                    url: { type: "string", format: "uri", description: "Omit to keep current" },
+                    enabled: { type: "boolean" },
+                    secret: {
+                      type: ["string", "null"],
+                      description: "Generic only: omit to keep, null to clear",
+                    },
+                    headers: { type: "object", additionalProperties: { type: "string" } },
+                    rule_ids: { type: "array", items: { type: "string" } },
+                  },
+                },
+              },
+            },
+          },
+          responses: {
+            200: {
+              description: "Updated target (redacted)",
+              content: {
+                "application/json": { schema: { type: "object", additionalProperties: true } },
+              },
+            },
+            400: { description: "Validation error" },
+            404: { description: "Target not found" },
+          },
+        },
+        delete: {
+          tags: ["Webhooks"],
+          summary: "Delete a webhook target and its delivery log",
+          operationId: "deleteWebhook",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+          responses: {
+            200: { description: "Deleted" },
+            404: { description: "Target not found" },
+          },
+        },
+      },
+      "/api/webhooks/{id}/test": {
+        post: {
+          tags: ["Webhooks"],
+          summary: "Send a synthetic test alert to a target",
+          operationId: "testWebhook",
+          parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
+          responses: {
+            200: {
+              description: "Delivery result (ok flag carries the downstream outcome)",
+              content: {
+                "application/json": { schema: { type: "object", additionalProperties: true } },
+              },
+            },
+            404: { description: "Target not found" },
+          },
+        },
+      },
+      "/api/webhooks/{id}/deliveries": {
+        get: {
+          tags: ["Webhooks"],
+          summary: "Recent delivery log for a target",
+          operationId: "listWebhookDeliveries",
+          parameters: [
+            { name: "id", in: "path", required: true, schema: { type: "string" } },
+            { name: "limit", in: "query", schema: { type: "integer", default: 20 } },
+            { name: "offset", in: "query", schema: { type: "integer", default: 0 } },
+          ],
+          responses: {
+            200: {
+              description: "Delivery rows, newest first",
+              content: {
+                "application/json": { schema: { type: "object", additionalProperties: true } },
+              },
+            },
+            404: { description: "Target not found" },
           },
         },
       },

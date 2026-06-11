@@ -184,6 +184,50 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_alert_events_triggered ON alert_events(triggered_at DESC);
   CREATE INDEX IF NOT EXISTS idx_alert_events_rule ON alert_events(rule_id);
   CREATE INDEX IF NOT EXISTS idx_alert_events_session ON alert_events(session_id);
+
+  -- Universal webhook delivery for fired alerts. A target is an outbound
+  -- destination (Slack / Discord / Teams / any generic HTTP endpoint). When an
+  -- alert fires, server/lib/webhooks.js formats a per-platform payload and
+  -- POSTs it to every enabled target (optionally scoped to specific rules).
+  -- Targets are user configuration and survive Clear Data, like alert_rules.
+  CREATE TABLE IF NOT EXISTS webhook_targets (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL CHECK(type IN ('slack','discord','teams','generic')),
+    url TEXT NOT NULL,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    -- optional HMAC-SHA256 signing secret (generic targets): when set, the raw
+    -- request body is signed and sent as X-Webhook-Signature.
+    secret TEXT,
+    -- optional JSON object of extra request headers (generic targets only).
+    headers TEXT,
+    -- optional JSON array of alert_rule ids this target is scoped to. NULL or
+    -- empty array means "all rules".
+    rule_ids TEXT,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+  );
+
+  -- Delivery audit log: one row per completed delivery attempt-chain. alert_id
+  -- intentionally has no FK (like alert_events.session_id) — deliveries are an
+  -- audit trail and the referenced alert may be wiped by Clear Data. NULL
+  -- alert_id marks a manual "Send test" ping.
+  CREATE TABLE IF NOT EXISTS webhook_deliveries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    target_id TEXT NOT NULL,
+    target_name TEXT NOT NULL,
+    target_type TEXT NOT NULL,
+    alert_id INTEGER,
+    status TEXT NOT NULL CHECK(status IN ('success','failed')),
+    status_code INTEGER,
+    attempts INTEGER NOT NULL DEFAULT 1,
+    error TEXT,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    FOREIGN KEY (target_id) REFERENCES webhook_targets(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_target ON webhook_deliveries(target_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_created ON webhook_deliveries(created_at DESC);
 `);
 
 // Default model pricing — shared by initial seed + startup top-up + reset endpoint
@@ -793,6 +837,46 @@ const stmts = {
     `SELECT triggered_at FROM alert_events
      WHERE rule_id = ? AND COALESCE(session_id, '') = COALESCE(?, '') AND COALESCE(agent_id, '') = COALESCE(?, '')
      ORDER BY triggered_at DESC, id DESC LIMIT 1`
+  ),
+
+  // ── Webhook delivery ──────────────────────────────────────────────────────
+  listWebhookTargets: db.prepare("SELECT * FROM webhook_targets ORDER BY created_at DESC"),
+  listEnabledWebhookTargets: db.prepare("SELECT * FROM webhook_targets WHERE enabled = 1"),
+  getWebhookTarget: db.prepare("SELECT * FROM webhook_targets WHERE id = ?"),
+  insertWebhookTarget: db.prepare(
+    "INSERT INTO webhook_targets (id, name, type, url, enabled, secret, headers, rule_ids) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+  ),
+  // Partial update: COALESCE keeps the existing value when a column arg is
+  // NULL. url/secret/headers/rule_ids are nullable *values*, so they use a
+  // companion "_set" flag arg to distinguish "leave alone" from "clear".
+  updateWebhookTarget: db.prepare(
+    `UPDATE webhook_targets SET
+       name = COALESCE(?, name),
+       url = COALESCE(?, url),
+       enabled = COALESCE(?, enabled),
+       secret = CASE WHEN ? = 1 THEN ? ELSE secret END,
+       headers = CASE WHEN ? = 1 THEN ? ELSE headers END,
+       rule_ids = CASE WHEN ? = 1 THEN ? ELSE rule_ids END,
+       updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+     WHERE id = ?`
+  ),
+  deleteWebhookTarget: db.prepare("DELETE FROM webhook_targets WHERE id = ?"),
+
+  insertWebhookDelivery: db.prepare(
+    "INSERT INTO webhook_deliveries (target_id, target_name, target_type, alert_id, status, status_code, attempts, error) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+  ),
+  listWebhookDeliveriesForTarget: db.prepare(
+    "SELECT * FROM webhook_deliveries WHERE target_id = ? ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?"
+  ),
+  lastWebhookDeliveryForTarget: db.prepare(
+    "SELECT * FROM webhook_deliveries WHERE target_id = ? ORDER BY created_at DESC, id DESC LIMIT 1"
+  ),
+  // Keep the delivery log bounded — prune everything older than the newest
+  // 2000 rows after each insert (cheap with the created_at index).
+  pruneWebhookDeliveries: db.prepare(
+    `DELETE FROM webhook_deliveries WHERE id NOT IN (
+       SELECT id FROM webhook_deliveries ORDER BY created_at DESC, id DESC LIMIT 2000
+     )`
   ),
 };
 

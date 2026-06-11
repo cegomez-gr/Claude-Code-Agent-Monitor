@@ -262,6 +262,55 @@ export interface AlertEvent {
   acknowledged_at: string | null;
 }
 
+// ── Webhooks ──
+
+export type WebhookType = "slack" | "discord" | "teams" | "generic";
+
+export interface WebhookDeliverySummary {
+  status: "success" | "failed";
+  status_code: number | null;
+  attempts: number;
+  error: string | null;
+  created_at: string;
+}
+
+export interface WebhookTarget {
+  id: string;
+  name: string;
+  type: WebhookType;
+  enabled: boolean;
+  /** Masked: host + last 4 chars. The full URL is never returned by the API. */
+  url_preview: string;
+  has_secret: boolean;
+  /** Generic targets only; values are masked ("••••"). */
+  headers: Record<string, string> | null;
+  /** Rule ids this target is scoped to; null = all rules. */
+  rule_ids: string[] | null;
+  created_at: string;
+  updated_at: string;
+  last_delivery: WebhookDeliverySummary | null;
+}
+
+export interface WebhookDelivery {
+  id: number;
+  target_id: string;
+  target_name: string;
+  target_type: WebhookType;
+  alert_id: number | null;
+  status: "success" | "failed";
+  status_code: number | null;
+  attempts: number;
+  error: string | null;
+  created_at: string;
+}
+
+export interface WebhookTestResult {
+  ok: boolean;
+  status: number | null;
+  attempts: number;
+  error: string | null;
+}
+
 export interface WSMessage {
   type:
     | "session_created"

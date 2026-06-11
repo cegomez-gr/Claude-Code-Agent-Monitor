@@ -134,6 +134,9 @@ router.post("/clear-data", (_req, res) => {
   // Fired alerts reference the cleared sessions — wipe the feed too. Alert
   // *rules* survive: they're user configuration, like model_pricing.
   db.prepare("DELETE FROM alert_events").run();
+  // Webhook delivery log is an audit trail of those fired alerts — wipe it too.
+  // Webhook *targets* survive, like alert rules and pricing.
+  db.prepare("DELETE FROM webhook_deliveries").run();
   db.pragma("foreign_keys = ON");
   res.json({ ok: true, cleared: counts });
 });

@@ -126,6 +126,17 @@ function fireAlert(rule, { sessionId = null, agentId = null, message, details = 
   );
   const alert = stmts.getAlertEvent.get(info.lastInsertRowid);
   broadcast("alert_triggered", alert);
+
+  // Fan out to configured webhook targets. Detached and fail-safe — webhook
+  // delivery must never slow or break alert firing. Lazy-required to keep the
+  // module graph acyclic and tolerate any load-order edge case.
+  try {
+    const { dispatchAlert } = require("./webhooks");
+    Promise.resolve(dispatchAlert(alert)).catch(() => {});
+  } catch (err) {
+    console.warn("[ALERTS] webhook dispatch failed:", err?.message || err);
+  }
+
   return alert;
 }
 
