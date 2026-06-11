@@ -227,7 +227,9 @@
     "enabledOnSave": "启用",
     "save": "保存",
     "create": "创建",
-    "cancel": "取消"
+    "cancel": "取消",
+    "urlOptional": "可选覆盖",
+    "urlAuto": "URL 将根据下方凭据自动设置。"
   },
   "alertsHub": {
     "title": "告警与通知",

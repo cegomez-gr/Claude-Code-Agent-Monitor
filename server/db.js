@@ -193,7 +193,11 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS webhook_targets (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
-    type TEXT NOT NULL CHECK(type IN ('slack','discord','teams','generic')),
+    -- provider key (slack, discord, teams, telegram, pagerduty, …). Not a DB
+    -- CHECK: the provider registry in server/lib/webhook-providers.js is the
+    -- single source of truth and the route validates against it, so a CHECK
+    -- here would just be a second list to keep in sync.
+    type TEXT NOT NULL,
     url TEXT NOT NULL,
     enabled INTEGER NOT NULL DEFAULT 1,
     -- optional HMAC-SHA256 signing secret (generic targets): when set, the raw
@@ -204,6 +208,11 @@ db.exec(`
     -- optional JSON array of alert_rule ids this target is scoped to. NULL or
     -- empty array means "all rules".
     rule_ids TEXT,
+    -- optional JSON object of provider-specific config (e.g. Telegram chat_id,
+    -- PagerDuty routing_key, Opsgenie api_key + region). Schema is per-provider
+    -- and lives in server/lib/webhook-providers.js. Secret fields are redacted
+    -- in API responses.
+    config TEXT,
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
     updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
   );
@@ -383,6 +392,45 @@ db.exec(
    ON sessions(status, transcript_path)
    WHERE status='active' AND transcript_path IS NOT NULL`
 );
+
+// Migrate webhook_targets for first-class providers. Earlier installs created
+// the table with a 4-value `type` CHECK (slack/discord/teams/generic) and no
+// `config` column. SQLite can't drop a CHECK in place, so rebuild the table
+// when the legacy constraint is present; otherwise just add the column.
+{
+  const meta = db
+    .prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='webhook_targets'")
+    .get();
+  const hasLegacyCheck =
+    meta && meta.sql && meta.sql.includes("'slack','discord','teams','generic'");
+  if (hasLegacyCheck) {
+    db.exec(`
+      ALTER TABLE webhook_targets RENAME TO webhook_targets_old;
+      CREATE TABLE webhook_targets (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL,
+        url TEXT NOT NULL,
+        enabled INTEGER NOT NULL DEFAULT 1,
+        secret TEXT,
+        headers TEXT,
+        rule_ids TEXT,
+        config TEXT,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+        updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+      );
+      INSERT INTO webhook_targets (id, name, type, url, enabled, secret, headers, rule_ids, config, created_at, updated_at)
+        SELECT id, name, type, url, enabled, secret, headers, rule_ids, NULL, created_at, updated_at FROM webhook_targets_old;
+      DROP TABLE webhook_targets_old;
+    `);
+  } else {
+    try {
+      db.prepare("SELECT config FROM webhook_targets LIMIT 1").get();
+    } catch {
+      db.prepare("ALTER TABLE webhook_targets ADD COLUMN config TEXT").run();
+    }
+  }
+}
 
 // Migrate: replace legacy idle/connected agent statuses with waiting/working
 // and update the CHECK constraint to the 4-status model.
@@ -844,11 +892,11 @@ const stmts = {
   listEnabledWebhookTargets: db.prepare("SELECT * FROM webhook_targets WHERE enabled = 1"),
   getWebhookTarget: db.prepare("SELECT * FROM webhook_targets WHERE id = ?"),
   insertWebhookTarget: db.prepare(
-    "INSERT INTO webhook_targets (id, name, type, url, enabled, secret, headers, rule_ids) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    "INSERT INTO webhook_targets (id, name, type, url, enabled, secret, headers, rule_ids, config) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
   ),
   // Partial update: COALESCE keeps the existing value when a column arg is
-  // NULL. url/secret/headers/rule_ids are nullable *values*, so they use a
-  // companion "_set" flag arg to distinguish "leave alone" from "clear".
+  // NULL. url/secret/headers/rule_ids/config are nullable *values*, so they use
+  // a companion "_set" flag arg to distinguish "leave alone" from "clear".
   updateWebhookTarget: db.prepare(
     `UPDATE webhook_targets SET
        name = COALESCE(?, name),
@@ -857,6 +905,7 @@ const stmts = {
        secret = CASE WHEN ? = 1 THEN ? ELSE secret END,
        headers = CASE WHEN ? = 1 THEN ? ELSE headers END,
        rule_ids = CASE WHEN ? = 1 THEN ? ELSE rule_ids END,
+       config = CASE WHEN ? = 1 THEN ? ELSE config END,
        updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
      WHERE id = ?`
   ),

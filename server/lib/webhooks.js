@@ -1,9 +1,11 @@
 /**
  * @file Universal webhook delivery for fired alerts. A "target" is an outbound
- * destination — Slack, Discord, Microsoft Teams, or any generic HTTP endpoint.
+ * destination described by the provider registry (server/lib/webhook-providers.js)
+ * — Slack, Discord, Teams, Mattermost, Rocket.Chat, Telegram, PagerDuty,
+ * Opsgenie, Splunk On-Call, Zapier, Make, n8n, Pipedream, or a generic endpoint.
  * When the alerting engine fires an alert (server/lib/alerts.js), it calls
- * dispatchAlert(), which formats a per-platform payload and POSTs it to every
- * enabled target (optionally scoped to specific rules) with a timeout and
+ * dispatchAlert(), which formats the provider-native payload and POSTs it to
+ * every enabled target (optionally scoped to specific rules) with a timeout and
  * bounded retry/backoff. Every attempt-chain is recorded in webhook_deliveries.
  *
  * Delivery is detached and fully fail-safe: it never throws into, slows, or
@@ -13,8 +15,15 @@
 
 const crypto = require("crypto");
 const { stmts } = require("../db");
-
-const WEBHOOK_TYPES = ["slack", "discord", "teams", "generic"];
+const {
+  PROVIDERS,
+  WEBHOOK_TYPES,
+  isGenericFamily,
+  resolveUrl,
+  resolveAuthHeaders,
+  formatPayload,
+  truncate,
+} = require("./webhook-providers");
 
 // Tunables (env-overridable so tests can shrink timeouts/backoff). All read at
 // module load — restart to change.
@@ -39,6 +48,7 @@ function normalizeTarget(row) {
   if (!row) return null;
   let headers = null;
   let ruleIds = null;
+  let config = null;
   try {
     headers = row.headers ? JSON.parse(row.headers) : null;
   } catch {
@@ -49,7 +59,12 @@ function normalizeTarget(row) {
   } catch {
     /* tolerate bad JSON — target falls back to "all rules" */
   }
-  return { ...row, enabled: row.enabled === 1, headers, rule_ids: ruleIds };
+  try {
+    config = row.config ? JSON.parse(row.config) : null;
+  } catch {
+    /* tolerate bad JSON — provider config falls back to empty */
+  }
+  return { ...row, enabled: row.enabled === 1, headers, rule_ids: ruleIds, config };
 }
 
 function loadEnabledTargets() {
@@ -58,153 +73,43 @@ function loadEnabledTargets() {
   return targetsCache;
 }
 
-// ── Payload formatting ──────────────────────────────────────────────────────
-
-function truncate(value, max) {
-  const s = String(value == null ? "" : value);
-  return s.length > max ? `${s.slice(0, max - 1)}…` : s;
-}
-
-function parseDetails(alert) {
-  if (alert.details == null) return null;
-  if (typeof alert.details === "object") return alert.details;
-  try {
-    return JSON.parse(alert.details);
-  } catch {
-    return alert.details;
-  }
-}
-
-// Slack incoming webhook: header + section + context. `text` is the required
-// notification/fallback string.
-function formatSlack(alert) {
-  const ctx = [`Type: \`${alert.rule_type}\``];
-  if (alert.session_id) ctx.push(`Session: \`${truncate(alert.session_id, 64)}\``);
-  if (alert.agent_id) ctx.push(`Agent: \`${truncate(alert.agent_id, 64)}\``);
-  ctx.push(alert.triggered_at);
-  return {
-    text: truncate(`🔔 ${alert.rule_name}: ${alert.message}`, 3000),
-    blocks: [
-      {
-        type: "header",
-        text: { type: "plain_text", text: truncate(`🔔 ${alert.rule_name}`, 150), emoji: true },
-      },
-      { type: "section", text: { type: "mrkdwn", text: truncate(alert.message, 2900) } },
-      { type: "context", elements: [{ type: "mrkdwn", text: truncate(ctx.join("  •  "), 1900) }] },
-    ],
-  };
-}
-
-// Discord webhook: a single rich embed. Field values cap at 1024, description
-// at 4096, title at 256.
-function formatDiscord(alert) {
-  const fields = [{ name: "Type", value: truncate(alert.rule_type, 1024), inline: true }];
-  if (alert.session_id) {
-    fields.push({ name: "Session", value: truncate(alert.session_id, 1024), inline: true });
-  }
-  if (alert.agent_id) {
-    fields.push({ name: "Agent", value: truncate(alert.agent_id, 1024), inline: true });
-  }
-  return {
-    username: "Claude Code Monitor",
-    embeds: [
-      {
-        title: truncate(`🔔 ${alert.rule_name}`, 256),
-        description: truncate(alert.message, 4000),
-        color: 0xef4444,
-        fields,
-        footer: { text: "Claude Code Agent Monitor" },
-        timestamp: alert.triggered_at,
-      },
-    ],
-  };
-}
-
-// Microsoft Teams: legacy O365-connector MessageCard format, accepted by the
-// classic "Incoming Webhook" connector (*.webhook.office.com). For the newer
-// Power Automate "Workflows" connector, use a `generic` target with a flow.
-function formatTeams(alert) {
-  const facts = [{ name: "Type", value: alert.rule_type }];
-  if (alert.session_id) facts.push({ name: "Session", value: alert.session_id });
-  if (alert.agent_id) facts.push({ name: "Agent", value: alert.agent_id });
-  facts.push({ name: "Triggered", value: alert.triggered_at });
-  return {
-    "@type": "MessageCard",
-    "@context": "http://schema.org/extensions",
-    themeColor: "EF4444",
-    summary: truncate(`${alert.rule_name}: ${alert.message}`, 200),
-    title: `🔔 ${alert.rule_name}`,
-    text: truncate(alert.message, 4000),
-    sections: [{ facts, markdown: false }],
-  };
-}
-
-// Generic endpoint: clean, stable JSON envelope. Works for custom servers,
-// Zapier, n8n, Power Automate, etc.
-function formatGeneric(alert) {
-  return {
-    event: "alert.triggered",
-    source: "claude-code-agent-monitor",
-    sent_at: new Date().toISOString(),
-    alert: {
-      id: alert.id ?? null,
-      rule_id: alert.rule_id ?? null,
-      rule_name: alert.rule_name,
-      rule_type: alert.rule_type,
-      session_id: alert.session_id ?? null,
-      agent_id: alert.agent_id ?? null,
-      message: alert.message,
-      details: parseDetails(alert),
-      triggered_at: alert.triggered_at,
-    },
-  };
-}
-
-function formatPayload(type, alert) {
-  switch (type) {
-    case "slack":
-      return formatSlack(alert);
-    case "discord":
-      return formatDiscord(alert);
-    case "teams":
-      return formatTeams(alert);
-    case "generic":
-    default:
-      return formatGeneric(alert);
-  }
-}
-
 /**
- * Build the HTTP request for a target + alert: the serialized body and headers,
- * including custom headers and an optional HMAC-SHA256 signature for generic
- * targets. Exported for testing.
+ * Build the HTTP request for a target + alert: resolved URL, provider-native
+ * serialized body, and headers (provider auth headers, plus custom headers and
+ * an optional HMAC-SHA256 signature for the generic family). Exported for tests.
  */
 function buildRequest(target, alert) {
-  const payload = formatPayload(target.type, alert);
+  const url = resolveUrl(target);
+  if (!url) throw new Error(`no URL resolved for webhook type "${target.type}"`);
+
+  const payload = formatPayload(target.type, alert, target.config || {});
   const body = JSON.stringify(payload);
+
   const headers = {
     "Content-Type": "application/json",
     "User-Agent": "claude-code-agent-monitor/webhooks",
+    ...resolveAuthHeaders(target),
   };
 
-  if (target.type === "generic" && target.headers && typeof target.headers === "object") {
-    for (const [k, v] of Object.entries(target.headers)) {
-      // Never let a custom header clobber Content-Type or the signature.
-      if (typeof k !== "string" || typeof v !== "string") continue;
-      const lower = k.toLowerCase();
-      if (lower === "content-type" || lower === "x-webhook-signature") continue;
-      headers[k] = v;
+  if (isGenericFamily(target.type)) {
+    if (target.headers && typeof target.headers === "object") {
+      for (const [k, v] of Object.entries(target.headers)) {
+        if (typeof k !== "string" || typeof v !== "string") continue;
+        // Never let a custom header clobber Content-Type or the signature.
+        const lower = k.toLowerCase();
+        if (lower === "content-type" || lower === "x-webhook-signature") continue;
+        headers[k] = v;
+      }
+    }
+    if (target.secret) {
+      const ts = new Date().toISOString();
+      const sig = crypto.createHmac("sha256", target.secret).update(`${ts}.${body}`).digest("hex");
+      headers["X-Webhook-Timestamp"] = ts;
+      headers["X-Webhook-Signature"] = `sha256=${sig}`;
     }
   }
 
-  if (target.type === "generic" && target.secret) {
-    const ts = new Date().toISOString();
-    const sig = crypto.createHmac("sha256", target.secret).update(`${ts}.${body}`).digest("hex");
-    headers["X-Webhook-Timestamp"] = ts;
-    headers["X-Webhook-Signature"] = `sha256=${sig}`;
-  }
-
-  return { url: target.url, body, headers };
+  return { url, body, headers };
 }
 
 // ── Delivery ────────────────────────────────────────────────────────────────
@@ -280,9 +185,9 @@ async function deliver(target, alert) {
       status: "failed",
       statusCode: null,
       attempts: 0,
-      error: `payload build failed: ${err?.message || err}`,
+      error: `request build failed: ${err?.message || err}`,
     });
-    return { ok: false, status: null, attempts: 0, error: "payload build failed" };
+    return { ok: false, status: null, attempts: 0, error: "request build failed" };
   }
 
   let attempts = 0;
@@ -372,6 +277,7 @@ function sendTest(target) {
 }
 
 module.exports = {
+  PROVIDERS,
   WEBHOOK_TYPES,
   invalidateWebhookCache,
   loadEnabledTargets,

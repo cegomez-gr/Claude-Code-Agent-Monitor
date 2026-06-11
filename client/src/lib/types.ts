@@ -264,7 +264,46 @@ export interface AlertEvent {
 
 // ── Webhooks ──
 
-export type WebhookType = "slack" | "discord" | "teams" | "generic";
+export type WebhookType =
+  | "slack"
+  | "discord"
+  | "teams"
+  | "google_chat"
+  | "mattermost"
+  | "rocketchat"
+  | "telegram"
+  | "pagerduty"
+  | "opsgenie"
+  | "splunk_oncall"
+  | "zapier"
+  | "make"
+  | "n8n"
+  | "pipedream"
+  | "generic";
+
+export interface WebhookProviderField {
+  key: string;
+  label: string;
+  secret: boolean;
+  required: boolean;
+  type: "string" | "enum";
+  options: string[] | null;
+  default: string | null;
+}
+
+export interface WebhookProvider {
+  type: WebhookType;
+  label: string;
+  family: "chat" | "api" | "generic";
+  url_required: boolean;
+  has_default_url: boolean;
+  derives_url: boolean;
+  allow_http: boolean;
+  url_hint: string | null;
+  supports_secret: boolean;
+  supports_headers: boolean;
+  fields: WebhookProviderField[];
+}
 
 export interface WebhookDeliverySummary {
   status: "success" | "failed";
@@ -284,6 +323,8 @@ export interface WebhookTarget {
   has_secret: boolean;
   /** Generic targets only; values are masked ("••••"). */
   headers: Record<string, string> | null;
+  /** Provider config (Telegram chat_id, PagerDuty routing_key, …); secret values masked. */
+  config: Record<string, string> | null;
   /** Rule ids this target is scoped to; null = all rules. */
   rule_ids: string[] | null;
   created_at: string;

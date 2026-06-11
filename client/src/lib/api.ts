@@ -20,6 +20,7 @@ import type {
   TranscriptResult,
   UpdateStatusPayload,
   WebhookDelivery,
+  WebhookProvider,
   WebhookTarget,
   WebhookTestResult,
   WebhookType,
@@ -400,13 +401,15 @@ export const api = {
 
   webhooks: {
     list: () => request<{ targets: WebhookTarget[] }>("/webhooks"),
+    providers: () => request<{ providers: WebhookProvider[] }>("/webhooks/providers"),
     create: (target: {
       name: string;
       type: WebhookType;
-      url: string;
+      url?: string;
       enabled?: boolean;
       secret?: string;
       headers?: Record<string, string>;
+      config?: Record<string, string>;
       rule_ids?: string[];
     }) =>
       request<{ target: WebhookTarget }>("/webhooks", {
@@ -421,6 +424,7 @@ export const api = {
         enabled?: boolean;
         secret?: string | null;
         headers?: Record<string, string>;
+        config?: Record<string, string>;
         rule_ids?: string[];
       }
     ) =>

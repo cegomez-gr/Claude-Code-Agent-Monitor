@@ -2450,6 +2450,21 @@ function createOpenApiSpec() {
           },
         },
       },
+      "/api/webhooks/providers": {
+        get: {
+          tags: ["Webhooks"],
+          summary: "List supported providers + their config fields (for the UI)",
+          operationId: "listWebhookProviders",
+          responses: {
+            200: {
+              description: "Provider catalog: label, family, url requirements, fields",
+              content: {
+                "application/json": { schema: { type: "object", additionalProperties: true } },
+              },
+            },
+          },
+        },
+      },
       "/api/webhooks": {
         get: {
           tags: ["Webhooks"],
@@ -2474,20 +2489,50 @@ function createOpenApiSpec() {
               "application/json": {
                 schema: {
                   type: "object",
-                  required: ["name", "type", "url"],
+                  required: ["name", "type"],
                   properties: {
                     name: { type: "string" },
-                    type: { type: "string", enum: ["slack", "discord", "teams", "generic"] },
-                    url: { type: "string", format: "uri" },
+                    type: {
+                      type: "string",
+                      enum: [
+                        "slack",
+                        "discord",
+                        "teams",
+                        "google_chat",
+                        "mattermost",
+                        "rocketchat",
+                        "telegram",
+                        "pagerduty",
+                        "opsgenie",
+                        "splunk_oncall",
+                        "zapier",
+                        "make",
+                        "n8n",
+                        "pipedream",
+                        "generic",
+                      ],
+                    },
+                    url: {
+                      type: "string",
+                      format: "uri",
+                      description:
+                        "Required for most providers; omit for those that derive their URL (Telegram, Opsgenie) or default it (PagerDuty). See GET /api/webhooks/providers.",
+                    },
                     enabled: { type: "boolean", default: true },
+                    config: {
+                      type: "object",
+                      additionalProperties: true,
+                      description:
+                        "Provider-specific params, e.g. { chat_id } (Telegram), { routing_key, severity } (PagerDuty), { api_key, region } (Opsgenie).",
+                    },
                     secret: {
                       type: "string",
-                      description: "Generic only: HMAC-SHA256 signing secret",
+                      description: "Generic family only: HMAC-SHA256 signing secret",
                     },
                     headers: {
                       type: "object",
                       additionalProperties: { type: "string" },
-                      description: "Generic only: extra request headers",
+                      description: "Generic family only: extra request headers",
                     },
                     rule_ids: {
                       type: "array",
@@ -2526,9 +2571,15 @@ function createOpenApiSpec() {
                     name: { type: "string" },
                     url: { type: "string", format: "uri", description: "Omit to keep current" },
                     enabled: { type: "boolean" },
+                    config: {
+                      type: "object",
+                      additionalProperties: true,
+                      description:
+                        "Provider params; merged over existing (secrets kept if omitted)",
+                    },
                     secret: {
                       type: ["string", "null"],
-                      description: "Generic only: omit to keep, null to clear",
+                      description: "Generic family only: omit to keep, null to clear",
                     },
                     headers: { type: "object", additionalProperties: { type: "string" } },
                     rule_ids: { type: "array", items: { type: "string" } },

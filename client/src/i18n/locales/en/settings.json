@@ -227,7 +227,9 @@
     "enabledOnSave": "Enabled",
     "save": "Save",
     "create": "Create",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "urlOptional": "optional override",
+    "urlAuto": "URL is set automatically from the credentials below."
   },
   "alertsHub": {
     "title": "Alerts & Notifications",

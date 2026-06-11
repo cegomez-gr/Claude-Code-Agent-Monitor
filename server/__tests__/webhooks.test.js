@@ -25,6 +25,7 @@ process.env.WEBHOOK_TIMEOUT_MS = "3000";
 const { createApp, startServer } = require("../index");
 const { db, stmts } = require("../db");
 const webhooks = require("../lib/webhooks");
+const providers = require("../lib/webhook-providers");
 
 let server;
 let BASE;
@@ -367,5 +368,202 @@ describe("test probe + clear-data", () => {
     await post("/api/settings/clear-data");
     assert.equal(stmts.lastWebhookDeliveryForTarget.get(created.body.target.id), undefined);
     assert.ok(stmts.getWebhookTarget.get(created.body.target.id)); // target survives
+  });
+});
+
+describe("provider registry", () => {
+  it("exposes 14 first-class providers (+ generic = 15 types)", () => {
+    const firstClass = [
+      "slack",
+      "discord",
+      "teams",
+      "google_chat",
+      "mattermost",
+      "rocketchat",
+      "telegram",
+      "pagerduty",
+      "opsgenie",
+      "splunk_oncall",
+      "zapier",
+      "make",
+      "n8n",
+      "pipedream",
+    ];
+    assert.equal(firstClass.length, 14);
+    for (const t of firstClass) {
+      assert.ok(providers.WEBHOOK_TYPES.includes(t), `${t} missing`);
+    }
+    assert.ok(providers.WEBHOOK_TYPES.includes("generic"));
+    assert.equal(providers.WEBHOOK_TYPES.length, 15);
+  });
+
+  it("GET /api/webhooks/providers returns redacted metadata", async () => {
+    const res = await fetchJson("/api/webhooks/providers");
+    assert.equal(res.status, 200);
+    const pd = res.body.providers.find((p) => p.type === "pagerduty");
+    assert.equal(pd.url_required, false); // has default URL
+    assert.ok(pd.fields.find((f) => f.key === "routing_key" && f.secret));
+    const slack = res.body.providers.find((p) => p.type === "slack");
+    assert.equal(slack.url_required, true);
+  });
+});
+
+describe("provider payload formatting", () => {
+  it("mattermost: Slack-style attachments", () => {
+    const p = providers.formatPayload("mattermost", SAMPLE_ALERT);
+    assert.ok(Array.isArray(p.attachments));
+    assert.ok(p.attachments[0].fields.some((f) => f.title === "Type"));
+  });
+
+  it("rocketchat: text + attachments", () => {
+    const p = providers.formatPayload("rocketchat", SAMPLE_ALERT);
+    assert.ok(p.text.includes("Too many errors"));
+    assert.ok(Array.isArray(p.attachments));
+  });
+
+  it("google_chat: simple text message", () => {
+    const p = providers.formatPayload("google_chat", SAMPLE_ALERT);
+    assert.ok(typeof p.text === "string" && p.text.includes("Too many errors"));
+  });
+
+  it("telegram: sendMessage shape with chat_id + HTML escaping", () => {
+    const p = providers.formatPayload(
+      "telegram",
+      { ...SAMPLE_ALERT, rule_name: "a<b>c" },
+      { chat_id: "123" }
+    );
+    assert.equal(p.chat_id, "123");
+    assert.equal(p.parse_mode, "HTML");
+    assert.ok(p.text.includes("a&lt;b&gt;c")); // escaped
+  });
+
+  it("pagerduty: Events API v2 with routing_key, severity, dedup_key", () => {
+    const p = providers.formatPayload("pagerduty", SAMPLE_ALERT, {
+      routing_key: "RK",
+      severity: "critical",
+    });
+    assert.equal(p.routing_key, "RK");
+    assert.equal(p.event_action, "trigger");
+    assert.equal(p.payload.severity, "critical");
+    assert.ok(p.dedup_key.includes(SAMPLE_ALERT.rule_id));
+  });
+
+  it("opsgenie: message + alias; api_key goes in the GenieKey header, not body", () => {
+    const p = providers.formatPayload("opsgenie", SAMPLE_ALERT, { api_key: "KEY" });
+    assert.ok(p.message.includes("Too many errors"));
+    assert.ok(!JSON.stringify(p).includes("KEY")); // key not in body
+    const headers = providers.resolveAuthHeaders({ type: "opsgenie", config: { api_key: "KEY" } });
+    assert.equal(headers.Authorization, "GenieKey KEY");
+  });
+
+  it("splunk_oncall: VictorOps message_type + entity", () => {
+    const p = providers.formatPayload("splunk_oncall", SAMPLE_ALERT, { severity: "CRITICAL" });
+    assert.equal(p.message_type, "CRITICAL");
+    assert.ok(p.entity_id.includes(SAMPLE_ALERT.rule_id));
+  });
+
+  it("generic family (zapier) uses the JSON envelope", () => {
+    const p = providers.formatPayload("zapier", SAMPLE_ALERT);
+    assert.equal(p.event, "alert.triggered");
+  });
+});
+
+describe("URL resolution", () => {
+  it("telegram derives its URL from the bot token", () => {
+    const url = providers.resolveUrl({
+      type: "telegram",
+      config: { bot_token: "TOK", chat_id: "1" },
+    });
+    assert.equal(url, "https://api.telegram.org/botTOK/sendMessage");
+  });
+
+  it("opsgenie picks the EU host when region=eu", () => {
+    assert.ok(
+      providers
+        .resolveUrl({ type: "opsgenie", config: { region: "eu" } })
+        .includes("api.eu.opsgenie.com")
+    );
+    assert.ok(
+      providers
+        .resolveUrl({ type: "opsgenie", config: { region: "us" } })
+        .includes("api.opsgenie.com")
+    );
+  });
+
+  it("pagerduty defaults to the Events API URL", () => {
+    assert.equal(
+      providers.resolveUrl({ type: "pagerduty", config: {} }),
+      "https://events.pagerduty.com/v2/enqueue"
+    );
+  });
+});
+
+describe("provider CRUD + config redaction", () => {
+  it("creates a telegram target without a URL and redacts the bot token", async () => {
+    const res = await post("/api/webhooks", {
+      name: "tg",
+      type: "telegram",
+      config: { bot_token: "12345:SECRETTOKEN", chat_id: "999" },
+    });
+    assert.equal(res.status, 201);
+    const t = res.body.target;
+    assert.equal(t.config.bot_token, "••••"); // redacted
+    assert.equal(t.config.chat_id, "999"); // shown
+    assert.ok(!JSON.stringify(t).includes("SECRETTOKEN"));
+    assert.ok(t.url_preview.includes("api.telegram.org"));
+  });
+
+  it("requires routing_key for pagerduty", async () => {
+    const res = await post("/api/webhooks", { name: "pd", type: "pagerduty", config: {} });
+    assert.equal(res.status, 400);
+  });
+
+  it("rejects an unknown severity enum", async () => {
+    const res = await post("/api/webhooks", {
+      name: "pd2",
+      type: "pagerduty",
+      config: { routing_key: "RK", severity: "nope" },
+    });
+    assert.equal(res.status, 400);
+  });
+
+  it("patches opsgenie region without re-sending the api_key", async () => {
+    const created = await post("/api/webhooks", {
+      name: "og",
+      type: "opsgenie",
+      config: { api_key: "AAA", region: "us" },
+    });
+    const id = created.body.target.id;
+    const res = await patch(`/api/webhooks/${id}`, { config: { region: "eu" } });
+    assert.equal(res.status, 200);
+    assert.equal(res.body.target.config.region, "eu");
+    assert.equal(
+      stmts.getWebhookTarget.get(id) && JSON.parse(stmts.getWebhookTarget.get(id).config).api_key,
+      "AAA"
+    );
+  });
+
+  // pagerduty/opsgenie endpoints are https-only and (opsgenie) derive their own
+  // URL, so they can't point at the http test mock — assert the built request
+  // (URL + headers + body) directly instead.
+  it("buildRequest: pagerduty hits the Events API with the routing key in the body", () => {
+    const req = webhooks.buildRequest(
+      { type: "pagerduty", config: { routing_key: "RK123", severity: "error" } },
+      SAMPLE_ALERT
+    );
+    assert.equal(req.url, "https://events.pagerduty.com/v2/enqueue");
+    const body = JSON.parse(req.body);
+    assert.equal(body.routing_key, "RK123");
+    assert.equal(body.payload.severity, "error");
+  });
+
+  it("buildRequest: opsgenie targets the region host and sets the GenieKey header", () => {
+    const req = webhooks.buildRequest(
+      { type: "opsgenie", config: { api_key: "KEY9", region: "eu" } },
+      SAMPLE_ALERT
+    );
+    assert.ok(req.url.includes("api.eu.opsgenie.com"));
+    assert.equal(req.headers.Authorization, "GenieKey KEY9");
+    assert.ok(!req.body.includes("KEY9")); // key only in the header
   });
 });

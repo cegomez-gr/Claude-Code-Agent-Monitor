@@ -227,7 +227,9 @@
     "enabledOnSave": "Bật",
     "save": "Lưu",
     "create": "Tạo",
-    "cancel": "Hủy"
+    "cancel": "Hủy",
+    "urlOptional": "ghi đè tùy chọn",
+    "urlAuto": "URL được đặt tự động từ thông tin xác thực bên dưới."
   },
   "alertsHub": {
     "title": "Cảnh báo & Thông báo",

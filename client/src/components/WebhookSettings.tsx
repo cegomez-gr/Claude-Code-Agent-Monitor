@@ -1,14 +1,17 @@
 /**
  * @file WebhookSettings.tsx
- * @description Settings-page panel for universal webhook notifications. Lets the
- * user register outbound destinations (Slack / Discord / Teams / generic HTTP)
- * that receive fired alerts, test them with a live probe, optionally scope them
- * to specific alert rules, and review each target's last delivery. Secrets are
- * never returned by the API — URLs are shown masked and re-entered to change.
+ * @description Settings-page panel for universal webhook notifications across 14
+ * first-class providers (Slack, Discord, Teams, Google Chat, Mattermost,
+ * Rocket.Chat, Telegram, PagerDuty, Opsgenie, Splunk On-Call, Zapier, Make, n8n,
+ * Pipedream) plus a generic endpoint. The form is driven by provider metadata
+ * fetched from the server (`/api/webhooks/providers`): each provider declares
+ * whether it needs a URL and which credential fields to render, so adding a
+ * provider server-side surfaces here with no UI change. Secrets are never
+ * returned by the API — URLs are masked and re-entered to change.
  * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Webhook,
@@ -25,16 +28,28 @@ import {
 } from "lucide-react";
 import { api } from "../lib/api";
 import { timeAgo } from "../lib/format";
-import type { AlertRule, WebhookTarget, WebhookType, WebhookTestResult } from "../lib/types";
+import type {
+  AlertRule,
+  WebhookProvider,
+  WebhookTarget,
+  WebhookType,
+  WebhookTestResult,
+} from "../lib/types";
 
-const WEBHOOK_TYPES: WebhookType[] = ["slack", "discord", "teams", "generic"];
-
-const TYPE_STYLES: Record<WebhookType, string> = {
+// Brand-ish accent per provider type; anything unmapped falls back to neutral.
+const TYPE_STYLES: Partial<Record<WebhookType, string>> = {
   slack: "text-[#E01E5A] bg-[#E01E5A]/10 border-[#E01E5A]/20",
   discord: "text-[#5865F2] bg-[#5865F2]/10 border-[#5865F2]/20",
   teams: "text-[#6264A7] bg-[#6264A7]/10 border-[#6264A7]/20",
-  generic: "text-gray-300 bg-surface-2 border-border",
+  google_chat: "text-[#1A73E8] bg-[#1A73E8]/10 border-[#1A73E8]/20",
+  mattermost: "text-[#0058CC] bg-[#0058CC]/10 border-[#0058CC]/20",
+  rocketchat: "text-[#F5455C] bg-[#F5455C]/10 border-[#F5455C]/20",
+  telegram: "text-[#26A5E4] bg-[#26A5E4]/10 border-[#26A5E4]/20",
+  pagerduty: "text-[#06AC38] bg-[#06AC38]/10 border-[#06AC38]/20",
+  opsgenie: "text-[#2684FF] bg-[#2684FF]/10 border-[#2684FF]/20",
+  splunk_oncall: "text-[#F99D1C] bg-[#F99D1C]/10 border-[#F99D1C]/20",
 };
+const NEUTRAL_STYLE = "text-gray-300 bg-surface-2 border-border";
 
 interface HeaderRow {
   key: string;
@@ -49,23 +64,18 @@ interface FormState {
   secret: string;
   headerRows: HeaderRow[];
   replaceHeaders: boolean;
+  config: Record<string, string>;
   scopeAll: boolean;
   ruleIds: string[];
   enabled: boolean;
 }
 
-const EMPTY_FORM: FormState = {
-  id: null,
-  name: "",
-  type: "slack",
-  url: "",
-  secret: "",
-  headerRows: [],
-  replaceHeaders: true,
-  scopeAll: true,
-  ruleIds: [],
-  enabled: true,
-};
+function defaultsFor(provider: WebhookProvider | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!provider) return out;
+  for (const f of provider.fields) if (f.default != null) out[f.key] = f.default;
+  return out;
+}
 
 function Toggle({
   checked,
@@ -98,15 +108,21 @@ function Toggle({
 export function WebhookSettings() {
   const { t } = useTranslation("settings");
   const [targets, setTargets] = useState<WebhookTarget[]>([]);
+  const [providers, setProviders] = useState<WebhookProvider[]>([]);
   const [rules, setRules] = useState<AlertRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
-  const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [form, setForm] = useState<FormState | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<Record<string, WebhookTestResult>>({});
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+
+  const providerOf = useCallback(
+    (type: WebhookType) => providers.find((p) => p.type === type),
+    [providers]
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -124,23 +140,49 @@ export function WebhookSettings() {
     load();
   }, [load]);
 
-  // Rules are only needed for the optional per-rule scoping UI.
   useEffect(() => {
+    api.webhooks
+      .providers()
+      .then((res) => setProviders(res.providers))
+      .catch(() => setProviders([]));
     api.alerts.rules
       .list()
       .then((res) => setRules(res.rules))
       .catch(() => setRules([]));
   }, []);
 
-  const set = (patch: Partial<FormState>) => setForm((prev) => ({ ...prev, ...patch }));
+  const set = (patch: Partial<FormState>) =>
+    setForm((prev) => (prev ? { ...prev, ...patch } : prev));
 
   const openCreate = () => {
-    setForm(EMPTY_FORM);
+    const first = providers[0];
+    setForm({
+      id: null,
+      name: "",
+      type: (first?.type as WebhookType) || "slack",
+      url: "",
+      secret: "",
+      headerRows: [],
+      replaceHeaders: true,
+      config: defaultsFor(first),
+      scopeAll: true,
+      ruleIds: [],
+      enabled: true,
+    });
     setFormError(null);
     setFormOpen(true);
   };
 
   const openEdit = (target: WebhookTarget) => {
+    const provider = providerOf(target.type);
+    // Prefill non-secret config (region, chat_id, severity, …); leave secret
+    // fields blank — they're redacted and re-entered only to change.
+    const config: Record<string, string> = {};
+    for (const f of provider?.fields || []) {
+      if (f.secret) continue;
+      const v = target.config?.[f.key];
+      config[f.key] = v != null ? String(v) : (f.default ?? "");
+    }
     setForm({
       id: target.id,
       name: target.name,
@@ -149,6 +191,7 @@ export function WebhookSettings() {
       secret: "",
       headerRows: [],
       replaceHeaders: false,
+      config,
       scopeAll: !target.rule_ids || target.rule_ids.length === 0,
       ruleIds: target.rule_ids || [],
       enabled: target.enabled,
@@ -159,30 +202,55 @@ export function WebhookSettings() {
 
   const closeForm = () => {
     setFormOpen(false);
-    setForm(EMPTY_FORM);
+    setForm(null);
     setFormError(null);
   };
 
-  const isEdit = form.id != null;
-  const isGeneric = form.type === "generic";
+  const provider = form ? providerOf(form.type) : undefined;
+  const isEdit = !!form?.id;
+  const showUrl = !!provider && (provider.url_required || provider.has_default_url);
+  const urlOptional = !!provider && !provider.url_required;
 
-  // Mirror server validation: name always required; URL required on create.
-  const canSubmit = form.name.trim().length > 0 && (isEdit || form.url.trim().length > 0);
+  const canSubmit = useMemo(() => {
+    if (!form || !provider) return false;
+    if (!form.name.trim()) return false;
+    if (isEdit) return true; // server merge — existing values fill the gaps
+    if (provider.url_required && !form.url.trim()) return false;
+    for (const f of provider.fields) {
+      if (f.required && f.type !== "enum" && !(form.config[f.key] || "").trim()) return false;
+    }
+    return true;
+  }, [form, provider, isEdit]);
 
-  const buildHeaders = (): Record<string, string> | undefined => {
-    const entries = form.headerRows.filter((r) => r.key.trim());
-    if (entries.length === 0) return {};
+  const buildConfigObj = (): Record<string, string> | undefined => {
+    if (!form || !provider || provider.fields.length === 0) return undefined;
     const out: Record<string, string> = {};
-    for (const r of entries) out[r.key.trim()] = r.value;
+    for (const f of provider.fields) {
+      const v = (form.config[f.key] ?? "").toString();
+      if (f.type === "enum") {
+        if (v) out[f.key] = v;
+      } else if (v.trim()) {
+        out[f.key] = v.trim();
+      }
+    }
+    return out;
+  };
+
+  const buildHeaders = (): Record<string, string> => {
+    if (!form) return {};
+    const out: Record<string, string> = {};
+    for (const r of form.headerRows) if (r.key.trim()) out[r.key.trim()] = r.value;
     return out;
   };
 
   const onSubmit = async () => {
-    if (saving || !canSubmit) return;
+    if (!form || !provider || saving || !canSubmit) return;
     setSaving(true);
     setFormError(null);
     try {
       const ruleIds = form.scopeAll ? [] : form.ruleIds;
+      const config = buildConfigObj();
+      const genericFamily = provider.supports_secret || provider.supports_headers;
       if (isEdit && form.id) {
         const patch: Parameters<typeof api.webhooks.update>[1] = {
           name: form.name.trim(),
@@ -190,17 +258,19 @@ export function WebhookSettings() {
           rule_ids: ruleIds,
         };
         if (form.url.trim()) patch.url = form.url.trim();
-        if (isGeneric && form.secret.trim()) patch.secret = form.secret.trim();
-        if (isGeneric && form.replaceHeaders) patch.headers = buildHeaders();
+        if (config) patch.config = config;
+        if (genericFamily && form.secret.trim()) patch.secret = form.secret.trim();
+        if (provider.supports_headers && form.replaceHeaders) patch.headers = buildHeaders();
         await api.webhooks.update(form.id, patch);
       } else {
         await api.webhooks.create({
           name: form.name.trim(),
           type: form.type,
-          url: form.url.trim(),
+          url: form.url.trim() || undefined,
           enabled: form.enabled,
-          secret: isGeneric && form.secret.trim() ? form.secret.trim() : undefined,
-          headers: isGeneric ? buildHeaders() : undefined,
+          secret: genericFamily && form.secret.trim() ? form.secret.trim() : undefined,
+          headers: provider.supports_headers ? buildHeaders() : undefined,
+          config,
           rule_ids: ruleIds.length ? ruleIds : undefined,
         });
       }
@@ -249,9 +319,11 @@ export function WebhookSettings() {
       }));
     } finally {
       setTesting(null);
-      load(); // refresh last_delivery pill
+      load();
     }
   };
+
+  const labelOf = (type: WebhookType) => providerOf(type)?.label || type;
 
   return (
     <div className="card p-5 space-y-4">
@@ -263,7 +335,8 @@ export function WebhookSettings() {
         {!formOpen && (
           <button
             onClick={openCreate}
-            className="btn-ghost border border-border inline-flex items-center gap-1.5 text-xs"
+            disabled={providers.length === 0}
+            className="btn-ghost border border-border inline-flex items-center gap-1.5 text-xs disabled:opacity-50"
           >
             <Plus className="w-3.5 h-3.5" />
             {t("webhooks.add")}
@@ -290,9 +363,11 @@ export function WebhookSettings() {
               >
                 <div className="flex items-center gap-3 flex-wrap">
                   <span
-                    className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded border ${TYPE_STYLES[target.type]}`}
+                    className={`inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded border ${
+                      TYPE_STYLES[target.type] || NEUTRAL_STYLE
+                    }`}
                   >
-                    {target.type}
+                    {labelOf(target.type)}
                   </span>
                   <span className="text-sm text-gray-200 font-medium">{target.name}</span>
                   <code className="text-[11px] text-gray-500 font-mono truncate max-w-[220px]">
@@ -400,7 +475,7 @@ export function WebhookSettings() {
       )}
 
       {/* Create / edit form */}
-      {formOpen && (
+      {formOpen && form && provider && (
         <div className="border border-border rounded-lg p-4 space-y-3 bg-surface-1">
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-semibold text-gray-300 uppercase tracking-wide">
@@ -426,36 +501,92 @@ export function WebhookSettings() {
               <select
                 value={form.type}
                 disabled={isEdit}
-                onChange={(e) => set({ type: e.target.value as WebhookType })}
+                onChange={(e) => {
+                  const type = e.target.value as WebhookType;
+                  set({
+                    type,
+                    config: defaultsFor(providerOf(type)),
+                    url: "",
+                    secret: "",
+                    headerRows: [],
+                  });
+                }}
                 className="input w-full mt-1 text-sm disabled:opacity-60"
               >
-                {WEBHOOK_TYPES.map((ty) => (
-                  <option key={ty} value={ty}>
-                    {t(`webhooks.type.${ty}`)}
+                {providers.map((p) => (
+                  <option key={p.type} value={p.type}>
+                    {p.label}
                   </option>
                 ))}
               </select>
             </label>
           </div>
 
-          <label className="block">
-            <span className="text-[11px] text-gray-500">
-              {t("webhooks.fieldUrl")}
-              {isEdit && <span className="text-gray-600"> — {t("webhooks.urlKeepHint")}</span>}
-            </span>
-            <input
-              value={form.url}
-              onChange={(e) => set({ url: e.target.value })}
-              placeholder={
-                isEdit
-                  ? t("webhooks.urlKeepPlaceholder")
-                  : t(`webhooks.urlPlaceholder.${form.type}`)
-              }
-              className="input w-full mt-1 text-sm font-mono"
-            />
-          </label>
+          {/* URL (hidden for providers that derive their own URL) */}
+          {showUrl && (
+            <label className="block">
+              <span className="text-[11px] text-gray-500">
+                {t("webhooks.fieldUrl")}
+                {isEdit ? (
+                  <span className="text-gray-600"> — {t("webhooks.urlKeepHint")}</span>
+                ) : urlOptional ? (
+                  <span className="text-gray-600"> — {t("webhooks.urlOptional")}</span>
+                ) : null}
+              </span>
+              <input
+                value={form.url}
+                onChange={(e) => set({ url: e.target.value })}
+                placeholder={
+                  isEdit ? t("webhooks.urlKeepPlaceholder") : provider.url_hint || "https://…"
+                }
+                className="input w-full mt-1 text-sm font-mono"
+              />
+            </label>
+          )}
+          {!showUrl && (
+            <p className="text-[11px] text-gray-600 flex items-center gap-1.5">
+              <Webhook className="w-3 h-3" />
+              {t("webhooks.urlAuto")}
+            </p>
+          )}
 
-          {isGeneric && (
+          {/* Provider-specific config fields */}
+          {provider.fields.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-border">
+              {provider.fields.map((f) => (
+                <label key={f.key} className="block">
+                  <span className="text-[11px] text-gray-500">
+                    {f.label}
+                    {f.required && <span className="text-red-400"> *</span>}
+                  </span>
+                  {f.type === "enum" && f.options ? (
+                    <select
+                      value={form.config[f.key] ?? f.default ?? ""}
+                      onChange={(e) => set({ config: { ...form.config, [f.key]: e.target.value } })}
+                      className="input w-full mt-1 text-sm"
+                    >
+                      {f.options.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type={f.secret ? "password" : "text"}
+                      value={form.config[f.key] ?? ""}
+                      onChange={(e) => set({ config: { ...form.config, [f.key]: e.target.value } })}
+                      placeholder={f.secret && isEdit ? t("webhooks.secretKeepPlaceholder") : ""}
+                      className="input w-full mt-1 text-sm font-mono"
+                    />
+                  )}
+                </label>
+              ))}
+            </div>
+          )}
+
+          {/* Generic family: HMAC secret + custom headers */}
+          {provider.supports_secret && (
             <div className="space-y-3 pt-1 border-t border-border">
               <label className="block">
                 <span className="text-[11px] text-gray-500">{t("webhooks.fieldSecret")}</span>

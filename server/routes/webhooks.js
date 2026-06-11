@@ -1,29 +1,35 @@
 /**
- * @file Express router for universal webhook targets: CRUD for outbound
- * destinations (Slack / Discord / Teams / generic HTTP), a synchronous "send
- * test" probe, and a per-target delivery log. Secrets are never returned —
- * URLs are masked and secret/header values are redacted in every response.
- * Delivery formatting and dispatch live in server/lib/webhooks.js.
+ * @file Express router for universal webhook targets across 14 providers
+ * (Slack, Discord, Teams, Google Chat, Mattermost, Rocket.Chat, Telegram,
+ * PagerDuty, Opsgenie, Splunk On-Call, Zapier, Make, n8n, Pipedream, generic).
+ * Provides target CRUD, a synchronous "send test" probe, a per-target delivery
+ * log, and redacted provider metadata for the UI. Secrets are never returned —
+ * URLs are masked and secret config / header values are redacted in every
+ * response. Delivery + provider definitions live in server/lib/.
  * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
 const { Router } = require("express");
 const { v4: uuidv4 } = require("uuid");
 const { stmts } = require("../db");
+const { invalidateWebhookCache, normalizeTarget, sendTest } = require("../lib/webhooks");
 const {
+  PROVIDERS,
   WEBHOOK_TYPES,
-  invalidateWebhookCache,
-  normalizeTarget,
-  sendTest,
-} = require("../lib/webhooks");
+  isGenericFamily,
+  resolveUrl,
+  urlRequired,
+  publicProviders,
+} = require("../lib/webhook-providers");
 
 const router = Router();
 
 // ── Serialization (redacted) ──────────────────────────────────────────────
 
 // Reveal the host + last 4 chars so a user can recognize which webhook this is
-// without exposing the embedded secret token.
+// without exposing any embedded secret token.
 function maskUrl(url) {
+  if (!url) return "…";
   try {
     const u = new URL(url);
     const tail = url.length > 4 ? url.slice(-4) : "";
@@ -33,7 +39,7 @@ function maskUrl(url) {
   }
 }
 
-// Header values can carry auth tokens — return only the keys, values masked.
+// Custom header values can carry auth tokens — return only the keys, masked.
 function redactHeaders(headers) {
   if (!headers || typeof headers !== "object") return null;
   const keys = Object.keys(headers);
@@ -41,6 +47,17 @@ function redactHeaders(headers) {
   const out = {};
   for (const k of keys) out[k] = "••••";
   return out;
+}
+
+// Mask provider config fields flagged secret (routing keys, api keys, tokens);
+// show the rest (chat_id, region, severity, …).
+function redactConfig(type, config) {
+  if (!config || typeof config !== "object") return null;
+  const fields = PROVIDERS[type]?.fields || [];
+  const secretKeys = new Set(fields.filter((f) => f.secret).map((f) => f.key));
+  const out = {};
+  for (const [k, v] of Object.entries(config)) out[k] = secretKeys.has(k) ? "••••" : v;
+  return Object.keys(out).length ? out : null;
 }
 
 function serializeTarget(row) {
@@ -56,9 +73,10 @@ function serializeTarget(row) {
     name: t.name,
     type: t.type,
     enabled: t.enabled,
-    url_preview: maskUrl(t.url),
+    url_preview: maskUrl(resolveUrl(t)),
     has_secret: !!t.secret,
-    headers: t.type === "generic" ? redactHeaders(t.headers) : null,
+    headers: isGenericFamily(t.type) ? redactHeaders(t.headers) : null,
+    config: redactConfig(t.type, t.config),
     rule_ids: t.rule_ids && t.rule_ids.length ? t.rule_ids : null,
     created_at: t.created_at,
     updated_at: t.updated_at,
@@ -91,11 +109,53 @@ function validateUrl(url, type) {
   if (u.protocol !== "https:" && u.protocol !== "http:") {
     return { ok: false, error: "url must use http or https" };
   }
-  // Slack / Discord / Teams endpoints are always https.
-  if (type !== "generic" && u.protocol !== "https:") {
+  // Most providers' endpoints are https-only; only the generic family with
+  // https:false (generic, n8n) permits http (for local/self-hosted testing).
+  const allowHttp = PROVIDERS[type]?.https === false;
+  if (!allowHttp && u.protocol !== "https:") {
     return { ok: false, error: `${type} webhook URL must use https` };
   }
   return { ok: true, url: url.trim() };
+}
+
+// Validate (and normalize) provider config, merging supplied values over a base
+// (the existing config on PATCH) so a single field can change without re-sending
+// secrets. Returns { ok, value } where value is the full config object or null.
+function validateConfig(type, input, base = {}) {
+  const fields = PROVIDERS[type]?.fields || [];
+  if (input != null && (typeof input !== "object" || Array.isArray(input))) {
+    return { ok: false, error: "config must be an object" };
+  }
+  const supplied = input || {};
+  const out = {};
+  for (const f of fields) {
+    // Effective value: a non-empty supplied value wins, else fall back to base.
+    let v = supplied[f.key];
+    if (v == null || v === "") v = base[f.key];
+
+    if (v == null || v === "") {
+      if (f.default != null) {
+        out[f.key] = f.default;
+        continue;
+      }
+      if (f.required) return { ok: false, error: `${f.label} is required` };
+      continue;
+    }
+    if (f.type === "enum") {
+      if (!f.options.includes(v)) {
+        return { ok: false, error: `${f.label} must be one of: ${f.options.join(", ")}` };
+      }
+    } else {
+      if (typeof v !== "string") return { ok: false, error: `${f.label} must be a string` };
+      v = v.trim();
+      if (!v) {
+        if (f.required) return { ok: false, error: `${f.label} is required` };
+        continue;
+      }
+    }
+    out[f.key] = v;
+  }
+  return { ok: true, value: Object.keys(out).length ? out : null };
 }
 
 function validateHeaders(headers) {
@@ -108,9 +168,7 @@ function validateHeaders(headers) {
     if (typeof k !== "string" || !k.trim()) {
       return { ok: false, error: "header names must be non-empty strings" };
     }
-    if (typeof v !== "string") {
-      return { ok: false, error: `header "${k}" value must be a string` };
-    }
+    if (typeof v !== "string") return { ok: false, error: `header "${k}" value must be a string` };
     out[k] = v;
   }
   return { ok: true, value: Object.keys(out).length ? out : null };
@@ -129,6 +187,11 @@ function validateRuleIds(ruleIds) {
 
 // ── Routes ──────────────────────────────────────────────────────────────────
 
+// GET /api/webhooks/providers — redacted provider catalog for the UI
+router.get("/providers", (_req, res) => {
+  res.json({ providers: publicProviders() });
+});
+
 // GET /api/webhooks — list targets (redacted)
 router.get("/", (_req, res) => {
   res.json({ targets: stmts.listWebhookTargets.all().map(serializeTarget) });
@@ -136,23 +199,38 @@ router.get("/", (_req, res) => {
 
 // POST /api/webhooks — create a target
 router.post("/", (req, res) => {
-  const { name, type, url, enabled, secret, headers, rule_ids } = req.body || {};
+  const { name, type, url, enabled, secret, headers, rule_ids, config } = req.body || {};
 
   if (!name || typeof name !== "string" || !name.trim()) return bad(res, "name is required");
   if (!WEBHOOK_TYPES.includes(type)) {
     return bad(res, `type must be one of: ${WEBHOOK_TYPES.join(", ")}`);
   }
-  const u = validateUrl(url, type);
-  if (!u.ok) return bad(res, u.error);
 
-  // secret + custom headers only apply to generic targets.
-  const h = validateHeaders(type === "generic" ? headers : null);
+  // URL: required for some providers, derived/defaulted for others (Telegram,
+  // Opsgenie, PagerDuty). Stored as "" when not user-supplied.
+  let storedUrl = "";
+  if (urlRequired(type)) {
+    const u = validateUrl(url, type);
+    if (!u.ok) return bad(res, u.error);
+    storedUrl = u.url;
+  } else if (url != null && String(url).trim()) {
+    const u = validateUrl(url, type);
+    if (!u.ok) return bad(res, u.error);
+    storedUrl = u.url;
+  }
+
+  const cfg = validateConfig(type, config);
+  if (!cfg.ok) return bad(res, cfg.error);
+
+  // secret + custom headers only apply to the generic family.
+  const generic = isGenericFamily(type);
+  const h = validateHeaders(generic ? headers : null);
   if (!h.ok) return bad(res, h.error);
   const r = validateRuleIds(rule_ids);
   if (!r.ok) return bad(res, r.error);
 
   let sec = null;
-  if (type === "generic" && secret != null) {
+  if (generic && secret != null) {
     if (typeof secret !== "string") return bad(res, "secret must be a string");
     sec = secret.trim() || null;
   }
@@ -162,18 +240,19 @@ router.post("/", (req, res) => {
     id,
     name.trim(),
     type,
-    u.url,
+    storedUrl,
     enabled === false ? 0 : 1,
     sec,
     h.value ? JSON.stringify(h.value) : null,
-    r.value ? JSON.stringify(r.value) : null
+    r.value ? JSON.stringify(r.value) : null,
+    cfg.value ? JSON.stringify(cfg.value) : null
   );
   invalidateWebhookCache();
   res.status(201).json({ target: serializeTarget(stmts.getWebhookTarget.get(id)) });
 });
 
-// PATCH /api/webhooks/:id — partial update. url/secret/headers/rule_ids are
-// only changed when their key is present in the body (omit = leave as-is).
+// PATCH /api/webhooks/:id — partial update. url/secret/headers/rule_ids/config
+// are only changed when their key is present in the body (omit = leave as-is).
 router.patch("/:id", (req, res) => {
   const existing = stmts.getWebhookTarget.get(req.params.id);
   if (!existing) {
@@ -182,7 +261,8 @@ router.patch("/:id", (req, res) => {
       .json({ error: { code: "NOT_FOUND", message: "Webhook target not found" } });
   }
   const body = req.body || {};
-  const { name, url, enabled, secret, headers, rule_ids } = body;
+  const { name, url, enabled, secret, headers, rule_ids, config } = body;
+  const generic = isGenericFamily(existing.type);
 
   if (name != null && (typeof name !== "string" || !name.trim())) {
     return bad(res, "name must be a non-empty string");
@@ -195,19 +275,36 @@ router.patch("/:id", (req, res) => {
     urlVal = u.url;
   }
 
-  // For each nullable-value column, a "set" flag tells SQL whether to overwrite.
+  // config: merge supplied fields over the existing config, then re-validate,
+  // so e.g. region can change without re-sending the api_key.
+  let configSet = 0;
+  let configVal = null;
+  if ("config" in body) {
+    let base = {};
+    try {
+      base = existing.config ? JSON.parse(existing.config) : {};
+    } catch {
+      base = {};
+    }
+    const cfg = validateConfig(existing.type, config, base);
+    if (!cfg.ok) return bad(res, cfg.error);
+    configSet = 1;
+    configVal = cfg.value ? JSON.stringify(cfg.value) : null;
+  }
+
   let secretSet = 0;
   let secretVal = null;
-  if ("secret" in body && existing.type === "generic") {
-    if (secret !== null && typeof secret !== "string")
+  if ("secret" in body && generic) {
+    if (secret !== null && typeof secret !== "string") {
       return bad(res, "secret must be a string or null");
+    }
     secretSet = 1;
     secretVal = secret ? String(secret).trim() || null : null;
   }
 
   let headersSet = 0;
   let headersVal = null;
-  if ("headers" in body && existing.type === "generic") {
+  if ("headers" in body && generic) {
     const h = validateHeaders(headers);
     if (!h.ok) return bad(res, h.error);
     headersSet = 1;
@@ -233,6 +330,8 @@ router.patch("/:id", (req, res) => {
     headersVal,
     ruleSet,
     ruleVal,
+    configSet,
+    configVal,
     req.params.id
   );
   invalidateWebhookCache();
