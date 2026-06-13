@@ -235,7 +235,10 @@
     "urlOptional": "ghi đè tùy chọn",
     "urlAuto": "URL được đặt tự động từ thông tin xác thực bên dưới.",
     "deleteTitle": "Xóa webhook?",
-    "deleteMessage": "Xóa \"{{name}}\"? Cảnh báo sẽ ngừng được gửi tới đích này. Không thể hoàn tác."
+    "deleteMessage": "Xóa \"{{name}}\"? Cảnh báo sẽ ngừng được gửi tới đích này. Không thể hoàn tác.",
+    "guideToggle": "Cách thiết lập {{provider}}",
+    "guideDocs": "Tài liệu chính thức của {{provider}}",
+    "guideStaleNote": "Giao diện thiết lập của nhà cung cấp thường thay đổi nên các bước này có thể đã lỗi thời — hãy luôn kiểm tra tài liệu chính thức."
   },
   "alertsHub": {
     "title": "Cảnh báo",

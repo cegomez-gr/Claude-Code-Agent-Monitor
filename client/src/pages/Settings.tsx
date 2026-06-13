@@ -865,7 +865,7 @@ export function Settings() {
 
       {/* In-page section navigation — Settings is dense, so this TOC jumps to
           and scroll-spies each section. */}
-      <nav className="sticky top-0 z-20 -mx-1 -mt-8 px-1 py-2 bg-surface-0/85 backdrop-blur border-b border-border/60 flex items-center gap-1.5">
+      <nav className="sticky top-0 z-20 -mx-1 !mt-2 px-1 py-2 bg-surface-0/85 backdrop-blur border-b border-border/60 flex items-center gap-1.5">
         <span className="flex-shrink-0 pl-1 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
           {t("jumpTo", "Jump to")}
         </span>

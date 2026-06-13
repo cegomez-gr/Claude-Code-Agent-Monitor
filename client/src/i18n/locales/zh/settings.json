@@ -235,7 +235,10 @@
     "urlOptional": "可选覆盖",
     "urlAuto": "URL 将根据下方凭据自动设置。",
     "deleteTitle": "删除 Webhook？",
-    "deleteMessage": "删除“{{name}}”？触发的告警将不再投递到此目标。此操作无法撤销。"
+    "deleteMessage": "删除“{{name}}”？触发的告警将不再投递到此目标。此操作无法撤销。",
+    "guideToggle": "如何设置 {{provider}}",
+    "guideDocs": "{{provider}} 官方文档",
+    "guideStaleNote": "各服务的设置界面经常变动，这些步骤可能已过时——请务必以官方文档为准。"
   },
   "alertsHub": {
     "title": "告警",

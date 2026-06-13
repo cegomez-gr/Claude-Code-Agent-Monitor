@@ -25,11 +25,16 @@ import {
   CheckCircle,
   XCircle,
   Loader2,
+  BookOpen,
+  ChevronDown,
+  ExternalLink,
+  Info,
 } from "lucide-react";
 import { api } from "../lib/api";
 import { Select } from "./Select";
 import { ConfirmModal } from "./ConfirmModal";
 import { Checkbox } from "./Checkbox";
+import { WEBHOOK_GUIDES } from "./webhookGuides";
 import { timeAgo } from "../lib/format";
 import type {
   AlertRule,
@@ -121,6 +126,7 @@ export function WebhookSettings() {
   const [testing, setTesting] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<Record<string, WebhookTestResult>>({});
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const providerOf = useCallback(
     (type: WebhookType) => providers.find((p) => p.type === type),
@@ -529,6 +535,47 @@ export function WebhookSettings() {
               {t("webhooks.urlAuto")}
             </p>
           )}
+
+          {/* Collapsible per-provider setup guide */}
+          <div className="rounded-lg border border-border bg-surface-2/40 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setGuideOpen((o) => !o)}
+              className="w-full flex items-center justify-between gap-2 px-3 py-2 text-[11px] text-gray-300 hover:bg-surface-3 transition-colors"
+            >
+              <span className="inline-flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5 text-gray-500" />
+                {t("webhooks.guideToggle", { provider: provider.label })}
+              </span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-gray-500 transition-transform ${guideOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+            {guideOpen && (
+              <div className="px-3 pb-3 pt-2 space-y-2.5 border-t border-border">
+                <ol className="list-decimal list-inside space-y-1 text-[11px] leading-relaxed text-gray-400 marker:text-gray-600">
+                  {WEBHOOK_GUIDES[form.type].steps.map((s, i) => (
+                    <li key={i}>{s}</li>
+                  ))}
+                </ol>
+                {WEBHOOK_GUIDES[form.type].docsUrl && (
+                  <a
+                    href={WEBHOOK_GUIDES[form.type].docsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] text-accent hover:underline"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    {t("webhooks.guideDocs", { provider: provider.label })}
+                  </a>
+                )}
+                <p className="flex items-start gap-1.5 text-[10px] text-gray-500 leading-relaxed pt-2 border-t border-border">
+                  <Info className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                  {t("webhooks.guideStaleNote")}
+                </p>
+              </div>
+            )}
+          </div>
 
           {/* Provider-specific config fields */}
           {provider.fields.length > 0 && (

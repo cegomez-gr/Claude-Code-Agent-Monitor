@@ -235,7 +235,10 @@
     "urlOptional": "optional override",
     "urlAuto": "URL is set automatically from the credentials below.",
     "deleteTitle": "Delete webhook?",
-    "deleteMessage": "Delete \"{{name}}\"? Fired alerts will stop being delivered to this target. This cannot be undone."
+    "deleteMessage": "Delete \"{{name}}\"? Fired alerts will stop being delivered to this target. This cannot be undone.",
+    "guideToggle": "How to set up {{provider}}",
+    "guideDocs": "Official {{provider}} docs",
+    "guideStaleNote": "Provider setup screens change often, so these steps may be out of date — always confirm against the official docs."
   },
   "alertsHub": {
     "title": "Alerts",
