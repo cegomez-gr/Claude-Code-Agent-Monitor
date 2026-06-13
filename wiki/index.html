@@ -583,9 +583,11 @@
           <a href="#vscode-ext" class="nav-link"><span class="nav-icon">◈</span>VS Code Extension</a>
           <a href="#desktop-app" class="nav-link"><span class="nav-icon">◈</span>Desktop App (macOS &amp; Windows)</a>
           <a href="#settings-page" class="nav-link"><span class="nav-icon">◈</span>Settings Page</a>
+          <a href="#alerts-webhooks" class="nav-link"><span class="nav-icon">🔔</span>Alerts &amp; Webhooks</a>
           <a href="#update-notifier" class="nav-link"><span class="nav-icon">◈</span>Update Notifier</a>
           <a href="#connection-status" class="nav-link"><span class="nav-icon">◈</span>Connection Status</a>
           <a href="#tabby" class="nav-link"><span class="nav-icon">🐾</span>Tabby</a>
+          <a href="#i18n" class="nav-link"><span class="nav-icon">🌐</span>Internationalization</a>
 
           <div class="nav-section">Ops & Reference</div>
           <a href="#deployment" class="nav-link"><span class="nav-icon">◈</span>Deployment Modes</a>
@@ -4680,6 +4682,167 @@ xattr -cr "/Applications/Claude Code Monitor.app"</code></pre>
           </div>
         </section>
 
+        <!-- ─── Alerts & Webhooks ──────────────────────────────────────────── -->
+        <section id="alerts-webhooks">
+          <div class="section-label">◈ Integrations</div>
+          <h2>Alerts &amp; Webhooks</h2>
+
+          <p>
+            Turns the dashboard from passive viewing into active monitoring. A rules-based alerting
+            engine evaluates the live event stream <strong>server-side</strong>, and fired alerts
+            fan out to outbound <strong>webhook channels</strong>. Everything lives in one place —
+            <strong>Settings → Alerts</strong> — behind a segmented control with three tabs:
+            <strong>Rules</strong> (what triggers an alert), <strong>Channels</strong> (where alerts
+            are delivered), and <strong>Activity</strong> (the live fired-alert feed with
+            acknowledge / acknowledge-all).
+          </p>
+
+          <div class="feature-grid">
+            <div class="feature-card">
+              <div class="feature-icon ic-amber">📐</div>
+              <h3>Rule types</h3>
+              <p>
+                Four condition types: <strong>event pattern</strong> (match
+                <code>event_type</code> / <code>tool_name</code> / a summary substring, optionally
+                requiring ≥ N matches within a rolling window — e.g. "5 errors in 2 minutes"),
+                <strong>inactivity</strong> (an active session goes quiet for N minutes),
+                <strong>status duration</strong> (an agent is stuck in <code>working</code> /
+                <code>waiting</code> for N minutes), and <strong>token threshold</strong> (a
+                session's cumulative tokens cross a limit). Each rule has a configurable
+                <strong>cooldown</strong> that dedups repeat alerts per (rule, session, agent).
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon ic-emerald">⚙️</div>
+              <h3>Evaluation engine</h3>
+              <p>
+                Event-driven rules (<code>event_pattern</code>, <code>token_threshold</code>) run on
+                every hook ingest — <em>after</em> the transaction commits and the response is sent,
+                fully try/catch-guarded, so alerting can never slow or fail hook delivery.
+                Time-based rules (<code>inactivity</code>, <code>status_duration</code>) run on an
+                unref'd 60-second sweep. Enabled rules are cached in memory and invalidated on every
+                edit. Fired alerts persist to <code>alert_events</code> and broadcast an
+                <code>alert_triggered</code> WebSocket message.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon ic-indigo">🔗</div>
+              <h3>14 first-class providers</h3>
+              <p>
+                Slack, Discord, Microsoft Teams, Google Chat, Mattermost, Rocket.Chat, Telegram,
+                PagerDuty, Opsgenie, Splunk On-Call, Zapier, Make, n8n, and Pipedream — plus a
+                generic JSON endpoint. A declarative <strong>provider registry</strong> describes
+                each one's payload formatter, URL resolution, auth headers, and credential fields,
+                so adding a provider is a single server-side entry that surfaces in the UI with no
+                front-end change.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon ic-cyan">📡</div>
+              <h3>Delivery engine</h3>
+              <p>
+                Each delivery POSTs with an <code>AbortController</code> timeout and bounded
+                retry/backoff (retries transport errors, 429, and 5xx — never other 4xx), then
+                records the attempt-chain in <code>webhook_deliveries</code>. A provider can also
+                veto a 2xx whose body signals failure (Splunk On-Call returns 200 with
+                <code>result:"failure"</code>). Delivery is <strong>detached and fail-safe</strong> —
+                it never throws into, slows, or blocks the alert path.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon ic-rose">🔒</div>
+              <h3>Security</h3>
+              <p>
+                Target URLs are masked (host + last 4 chars), and secrets / credential fields
+                (routing keys, API keys, bot tokens) plus custom-header values are redacted in every
+                API response — the full URL and secrets are stored server-side and never leave it.
+                Generic endpoints support optional <strong>HMAC-SHA256</strong> body signing
+                (<code>X-Webhook-Signature</code> + <code>X-Webhook-Timestamp</code>) so receivers
+                can verify authenticity.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon ic-violet">🧭</div>
+              <h3>Guided setup</h3>
+              <p>
+                Every alert-rule field has a help tooltip — the event-type, tool-name, and
+                summary-contains fields include example chips of real hook events and built-in tool
+                names. Each webhook provider ships a collapsible step-by-step setup guide linking to
+                the official docs. A one-click <strong>"Send test"</strong> probe fires a synthetic
+                alert and reports the delivery result inline, and targets can be scoped to specific
+                rules. Fully localized (en / zh / vi).
+              </p>
+            </div>
+          </div>
+
+          <h3>Provider payloads</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Provider(s)</th>
+                <th>Payload format</th>
+                <th>URL / credentials</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td>Slack</td><td>Block Kit (header + section + context)</td><td>Incoming Webhook URL</td></tr>
+              <tr><td>Discord</td><td>Rich embed</td><td>Webhook URL</td></tr>
+              <tr><td>Microsoft Teams</td><td>Adaptive Card in a Workflows <code>message</code> envelope</td><td>Power Automate Workflows URL</td></tr>
+              <tr><td>Google Chat</td><td>Text message (basic markdown)</td><td>Space webhook URL</td></tr>
+              <tr><td>Mattermost · Rocket.Chat</td><td>Slack-style legacy attachments</td><td>Incoming Webhook URL</td></tr>
+              <tr><td>Telegram</td><td>Bot API <code>sendMessage</code> (HTML)</td><td>Bot token + chat ID (URL derived)</td></tr>
+              <tr><td>PagerDuty</td><td>Events API v2 trigger (with <code>dedup_key</code>)</td><td>Routing key (URL prefilled)</td></tr>
+              <tr><td>Opsgenie</td><td>Alert API</td><td>API key (GenieKey header) + region</td></tr>
+              <tr><td>Splunk On-Call</td><td>VictorOps REST</td><td>REST endpoint URL (key embedded)</td></tr>
+              <tr><td>Zapier · Make · n8n · Pipedream · generic</td><td>Stable <code>{ event, alert }</code> JSON envelope</td><td>Endpoint URL (+ optional HMAC &amp; headers)</td></tr>
+            </tbody>
+          </table>
+
+          <div class="code-header"><span class="code-lang">json — generic webhook payload</span></div>
+          <pre><code>{
+  "event": "alert.triggered",
+  "source": "claude-code-agent-monitor",
+  "sent_at": "2026-06-13T17:00:00.000Z",
+  "alert": {
+    "id": 42,
+    "rule_name": "Too many errors",
+    "rule_type": "event_pattern",
+    "session_id": "sess-1",
+    "agent_id": "agent-1",
+    "message": "5 matching events in 2 min (threshold 5)",
+    "details": { "observed_count": 5 },
+    "triggered_at": "2026-06-13T17:00:00.000Z"
+  }
+}</code></pre>
+
+          <div class="callout callout-info">
+            <div class="callout-icon">ℹ</div>
+            <div class="callout-body">
+              <strong>Additive &amp; non-blocking by design</strong>
+              <p>
+                Two new tables — <code>webhook_targets</code> (config; survives Clear Data like
+                alert rules) and <code>webhook_deliveries</code> (audit log) — with no changes to
+                existing tables, response shapes, or WebSocket message types. Webhook dispatch is
+                fire-and-forget off the alert path, so a slow or failing endpoint can never slow or
+                break alert firing or hook ingestion.
+              </p>
+            </div>
+          </div>
+
+          <div class="callout callout-warning">
+            <div class="callout-icon">⚠</div>
+            <div class="callout-body">
+              <strong>Provider setup steps can drift</strong>
+              <p>
+                Microsoft retired classic Office 365 connectors in 2025, so Teams uses an Adaptive
+                Card delivered via Power Automate <strong>Workflows</strong>. More broadly, provider
+                setup UIs change often — the in-app guides say so and link to each provider's
+                official docs. Always confirm against the source.
+              </p>
+            </div>
+          </div>
+        </section>
+
         <!-- ─── Update Notifier ────────────────────────────────────────────── -->
         <section id="update-notifier">
           <div class="section-label">◈ Integrations</div>
@@ -5006,6 +5169,84 @@ xattr -cr "/Applications/Claude Code Monitor.app"</code></pre>
               Degrades gracefully to a calm, dimmed disconnected state when offline.
             </li>
           </ul>
+        </section>
+
+        <!-- ─── Internationalization ──────────────────────────────────────── -->
+        <section id="i18n">
+          <div class="section-label">◈ Integrations</div>
+          <h2>Internationalization (i18n)</h2>
+
+          <p>
+            The entire UI ships in <strong>three languages — English, 简体中文, and Tiếng Việt</strong>
+            — built on <code>i18next</code> + <code>react-i18next</code> with
+            <code>i18next-browser-languagedetector</code>. Coverage is end-to-end: every page, chart
+            tooltip, Settings flow, Workflow narrative, Config Explorer tab, Run page, and the Alerts
+            rule-help tooltips + webhook setup guides are translated. Switch languages from the
+            sidebar (EN / 中文 / VI) — the choice persists in <code>localStorage</code>.
+          </p>
+
+          <div class="feature-grid">
+            <div class="feature-card">
+              <div class="feature-icon ic-indigo">🗂️</div>
+              <h3>Namespaced resources</h3>
+              <p>
+                Translations are split into per-area JSON namespaces (<code>common</code>,
+                <code>nav</code>, <code>dashboard</code>, <code>sessions</code>,
+                <code>analytics</code>, <code>workflows</code>, <code>settings</code>,
+                <code>kanban</code>, <code>run</code>, <code>ccConfig</code>, <code>alerts</code>,
+                <code>errors</code>, <code>updates</code>) under
+                <code>client/src/i18n/locales/&lt;lng&gt;/</code>. Components load only the
+                namespaces they need via <code>useTranslation("…")</code>.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon ic-emerald">🔎</div>
+              <h3>Detection &amp; fallback</h3>
+              <p>
+                Language is detected from <code>localStorage</code> (<code>i18nextLng</code>) then
+                the browser's <code>navigator</code> setting, and the choice is cached back to
+                <code>localStorage</code>. <code>fallbackLng</code> is English and
+                <code>nonExplicitSupportedLngs</code> resolves regional tags (e.g.
+                <code>vi-VN</code> → <code>vi</code>), so any unmapped key falls back gracefully
+                rather than rendering a raw key.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon ic-amber">🔢</div>
+              <h3>Locale-aware formatting</h3>
+              <p>
+                Numbers, costs, dates, and relative times format against the active locale via a
+                shared <code>getCurrentLocale()</code> helper, and plurals use i18next's
+                <code>_one</code> / <code>_other</code> suffixes. Interpolated values
+                (<code>{{count}}</code>, <code>{{provider}}</code>, …) keep sentences natural across
+                languages.
+              </p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon ic-rose">🔤</div>
+              <h3>Technical terms preserved</h3>
+              <p>
+                Domain terms that are proper nouns or code stay untranslated in every locale —
+                <em>Agent</em>, <em>Subagent</em>, hook event names (<code>PostToolUse</code>),
+                tool names (<code>Bash</code>), and webhook provider names (Slack, PagerDuty). Only
+                the surrounding prose is localized, so instructions stay accurate.
+              </p>
+            </div>
+          </div>
+
+          <div class="callout callout-info">
+            <div class="callout-icon">ℹ</div>
+            <div class="callout-body">
+              <strong>Adding a language</strong>
+              <p>
+                Copy <code>client/src/i18n/locales/en/</code> to a new locale folder, translate the
+                JSON values (leaving keys and technical terms intact), then register the bundle and
+                add the tag to <code>supportedLngs</code> in <code>client/src/i18n/index.ts</code>.
+                Missing keys fall back to English automatically, so even a partial translation ships
+                cleanly.
+              </p>
+            </div>
+          </div>
         </section>
 
         <!-- ─── Deployment ─────────────────────────────────────────────────── -->
