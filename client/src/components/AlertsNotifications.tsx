@@ -32,6 +32,7 @@ import { eventBus } from "../lib/eventBus";
 import { EmptyState } from "./EmptyState";
 import { Skeleton } from "./Skeleton";
 import { WebhookSettings } from "./WebhookSettings";
+import { ConfirmModal } from "./ConfirmModal";
 import { timeAgo } from "../lib/format";
 import type { AlertEvent, AlertRule, AlertRuleType, WSMessage } from "../lib/types";
 
@@ -138,6 +139,7 @@ export function AlertsNotifications() {
   const [form, setForm] = useState<RuleFormState>(EMPTY_FORM);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [confirmRule, setConfirmRule] = useState<AlertRule | null>(null);
 
   // Feed
   const [alerts, setAlerts] = useState<AlertEvent[]>([]);
@@ -243,9 +245,9 @@ export function AlertsNotifications() {
   };
 
   const onDeleteRule = async (rule: AlertRule) => {
-    if (!window.confirm(t("rules.confirmDelete", { name: rule.name }))) return;
     try {
       await api.alerts.rules.remove(rule.id);
+      setConfirmRule(null);
       loadRules();
       loadAlerts();
     } catch (err) {
@@ -569,7 +571,7 @@ export function AlertsNotifications() {
                       {rule.enabled ? t("rules.enabled") : t("rules.disabled")}
                     </button>
                     <button
-                      onClick={() => onDeleteRule(rule)}
+                      onClick={() => setConfirmRule(rule)}
                       className="p-1.5 rounded-md text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                       title={t("rules.delete")}
                       aria-label={t("rules.delete")}
@@ -698,6 +700,16 @@ export function AlertsNotifications() {
           )}
         </div>
       )}
+
+      <ConfirmModal
+        open={!!confirmRule}
+        title={t("rules.deleteTitle", "Delete alert rule?")}
+        message={confirmRule ? t("rules.confirmDelete", { name: confirmRule.name }) : ""}
+        confirmLabel={t("rules.delete")}
+        cancelLabel={t("rules.cancel")}
+        onCancel={() => setConfirmRule(null)}
+        onConfirm={() => confirmRule && onDeleteRule(confirmRule)}
+      />
     </div>
   );
 }

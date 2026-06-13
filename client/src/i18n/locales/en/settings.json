@@ -233,7 +233,9 @@
     "create": "Create",
     "cancel": "Cancel",
     "urlOptional": "optional override",
-    "urlAuto": "URL is set automatically from the credentials below."
+    "urlAuto": "URL is set automatically from the credentials below.",
+    "deleteTitle": "Delete webhook?",
+    "deleteMessage": "Delete \"{{name}}\"? Fired alerts will stop being delivered to this target. This cannot be undone."
   },
   "alertsHub": {
     "title": "Alerts",

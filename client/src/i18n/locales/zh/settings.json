@@ -233,7 +233,9 @@
     "create": "创建",
     "cancel": "取消",
     "urlOptional": "可选覆盖",
-    "urlAuto": "URL 将根据下方凭据自动设置。"
+    "urlAuto": "URL 将根据下方凭据自动设置。",
+    "deleteTitle": "删除 Webhook？",
+    "deleteMessage": "删除“{{name}}”？触发的告警将不再投递到此目标。此操作无法撤销。"
   },
   "alertsHub": {
     "title": "告警",

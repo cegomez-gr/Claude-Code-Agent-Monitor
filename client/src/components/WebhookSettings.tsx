@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { api } from "../lib/api";
 import { Select } from "./Select";
+import { ConfirmModal } from "./ConfirmModal";
 import { timeAgo } from "../lib/format";
 import type {
   AlertRule,
@@ -425,31 +426,13 @@ export function WebhookSettings() {
                     <Pencil className="w-3 h-3" />
                     {t("webhooks.edit")}
                   </button>
-                  {confirmDelete === target.id ? (
-                    <span className="inline-flex items-center gap-1.5">
-                      <button
-                        onClick={() => onDelete(target.id)}
-                        className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md text-red-400 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-colors"
-                      >
-                        <Check className="w-3 h-3" />
-                        {t("webhooks.confirmDelete")}
-                      </button>
-                      <button
-                        onClick={() => setConfirmDelete(null)}
-                        className="inline-flex items-center text-[11px] px-2 py-1 rounded-md text-gray-400 hover:text-gray-200 border border-border transition-colors"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ) : (
-                    <button
-                      onClick={() => setConfirmDelete(target.id)}
-                      className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md text-gray-500 hover:text-red-400 hover:bg-red-500/10 border border-border transition-colors"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                      {t("webhooks.delete")}
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setConfirmDelete(target.id)}
+                    className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md text-gray-500 hover:text-red-400 hover:bg-red-500/10 border border-border transition-colors"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    {t("webhooks.delete")}
+                  </button>
                   {result && (
                     <span
                       className={`inline-flex items-center gap-1 text-[11px] ${
@@ -731,6 +714,18 @@ export function WebhookSettings() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        open={!!confirmDelete}
+        title={t("webhooks.deleteTitle")}
+        message={t("webhooks.deleteMessage", {
+          name: targets.find((x) => x.id === confirmDelete)?.name ?? "",
+        })}
+        confirmLabel={t("webhooks.delete")}
+        cancelLabel={t("webhooks.cancel")}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => confirmDelete && onDelete(confirmDelete)}
+      />
     </div>
   );
 }
