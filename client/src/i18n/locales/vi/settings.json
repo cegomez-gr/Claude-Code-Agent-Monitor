@@ -236,7 +236,7 @@
     "urlAuto": "URL được đặt tự động từ thông tin xác thực bên dưới."
   },
   "alertsHub": {
-    "title": "Cảnh báo & Thông báo",
+    "title": "Cảnh báo",
     "description": "Định nghĩa quy tắc cảnh báo, định tuyến tới các kênh webhook và xem những gì đã kích hoạt — tất cả ở một nơi.",
     "tabRules": "Quy tắc",
     "tabChannels": "Kênh",

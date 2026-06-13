@@ -1,7 +1,7 @@
 /**
  * @file AlertsNotifications.tsx
- * @description Unified "Alerts & Notifications" control center embedded in the
- * Settings page (replaces the standalone /alerts route). A segmented tab UI
+ * @description Unified "Alerts" control center embedded in the Settings page
+ * (replaces the standalone /alerts route). A segmented tab UI
  * combines three concerns that used to be split across a page and a panel:
  *   • Rules    — define what conditions trigger an alert
  *   • Channels — webhook targets that receive fired alerts (Slack/Discord/…)

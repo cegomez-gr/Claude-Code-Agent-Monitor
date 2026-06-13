@@ -1249,7 +1249,7 @@ export function Settings() {
         </div>
       </section>
 
-      {/* ─── ALERTS & NOTIFICATIONS ─── */}
+      {/* ─── ALERTS ─── */}
       <section>
         <h3 className="text-sm font-medium text-gray-300 flex items-center gap-2 mb-1">
           <BellRing className="w-4 h-4 text-gray-500" />

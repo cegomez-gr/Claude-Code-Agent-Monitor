@@ -236,7 +236,7 @@
     "urlAuto": "URL 将根据下方凭据自动设置。"
   },
   "alertsHub": {
-    "title": "告警与通知",
+    "title": "告警",
     "description": "在一个地方定义告警规则、将其路由到 Webhook 渠道，并查看已触发的告警。",
     "tabRules": "规则",
     "tabChannels": "渠道",

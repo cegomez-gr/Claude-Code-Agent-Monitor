@@ -494,7 +494,7 @@ export function WebhookSettings() {
                 value={form.name}
                 onChange={(e) => set({ name: e.target.value })}
                 placeholder={t("webhooks.fieldNamePlaceholder")}
-                className="input w-full mt-1 text-sm"
+                className="input w-full mt-1 py-1.5 text-[11px]"
               />
             </label>
             <label className="block">
@@ -535,7 +535,7 @@ export function WebhookSettings() {
                 placeholder={
                   isEdit ? t("webhooks.urlKeepPlaceholder") : provider.url_hint || "https://…"
                 }
-                className="input w-full mt-1 text-sm font-mono"
+                className="input w-full mt-1 py-1.5 text-[11px] font-mono"
               />
             </label>
           )}
@@ -569,7 +569,7 @@ export function WebhookSettings() {
                       value={form.config[f.key] ?? ""}
                       onChange={(e) => set({ config: { ...form.config, [f.key]: e.target.value } })}
                       placeholder={f.secret && isEdit ? t("webhooks.secretKeepPlaceholder") : ""}
-                      className="input w-full mt-1 text-sm font-mono"
+                      className="input w-full mt-1 py-1.5 text-[11px] font-mono"
                     />
                   )}
                 </label>
@@ -589,7 +589,7 @@ export function WebhookSettings() {
                   placeholder={
                     isEdit ? t("webhooks.secretKeepPlaceholder") : t("webhooks.secretPlaceholder")
                   }
-                  className="input w-full mt-1 text-sm font-mono"
+                  className="input w-full mt-1 py-1.5 text-[11px] font-mono"
                 />
                 <span className="text-[10px] text-gray-600">{t("webhooks.secretHint")}</span>
               </label>
@@ -622,7 +622,7 @@ export function WebhookSettings() {
                             })
                           }
                           placeholder={t("webhooks.headerKey")}
-                          className="input flex-1 text-xs font-mono"
+                          className="input flex-1 py-1.5 text-[11px] font-mono"
                         />
                         <input
                           value={row.value}
@@ -634,7 +634,7 @@ export function WebhookSettings() {
                             })
                           }
                           placeholder={t("webhooks.headerValue")}
-                          className="input flex-1 text-xs font-mono"
+                          className="input flex-1 py-1.5 text-[11px] font-mono"
                         />
                         <button
                           onClick={() =>

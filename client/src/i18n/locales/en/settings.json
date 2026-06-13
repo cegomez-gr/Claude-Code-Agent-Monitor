@@ -236,7 +236,7 @@
     "urlAuto": "URL is set automatically from the credentials below."
   },
   "alertsHub": {
-    "title": "Alerts & Notifications",
+    "title": "Alerts",
     "description": "Define alert rules, route them to webhook channels, and review what has fired — all in one place.",
     "tabRules": "Rules",
     "tabChannels": "Channels",

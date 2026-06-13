@@ -8623,7 +8623,7 @@ exports[`screen snapshots > Settings 1`] = `
             d="M4 2C2.8 3.7 2 5.7 2 8"
           />
         </svg>
-        Alerts & Notifications
+        Alerts
       </h3>
       <p
         class="text-xs text-gray-500 mb-4"
