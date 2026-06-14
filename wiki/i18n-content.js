@@ -1080,6 +1080,85 @@ window.__WIKI_CONTENT_I18N = {
       "所有查询都使用带参数化值的预处理语句——不进行字符串插值",
     "Request size": "请求大小",
     "Express JSON body parser limited to 1MB": "Express JSON 请求体解析器限制为 1MB",
+    "Dashboard — stats, active agents, recent events":
+      "Dashboard — 统计数据、活跃的智能体、近期事件",
+    "KanbanBoard — agent status columns": "KanbanBoard — 智能体状态列",
+    "Sessions — searchable, filterable table": "Sessions — 可搜索、可筛选的表格",
+    "SessionDetail — agents + full event timeline": "SessionDetail — 智能体及完整事件时间线",
+    "ActivityFeed — real-time streaming event log": "ActivityFeed — 实时流式事件日志",
+    "Analytics — token usage, heatmap (day-of-week aligned), tool charts, donut charts":
+      "Analytics — 令牌用量、热力图（按星期对齐）、工具图表、环形图",
+    "Workflows — D3.js visualizations, cross-filtering, status filter, session drill-in":
+      "Workflows — D3.js 可视化、交叉筛选、状态筛选、会话下钻",
+    "Settings — model pricing, hook status, data export, session cleanup":
+      "Settings — 模型定价、钩子状态、数据导出、会话清理",
+    'Returns <code>{ "status": "ok", "timestamp": "..." }</code>':
+      '返回 <code>{ "status": "ok", "timestamp": "..." }</code>',
+    "List sessions with agent counts and per-session cost. Params: <code>status</code>, <code>q</code> (case-insensitive search across <code>id</code>/<code>name</code>/<code>cwd</code>), <code>limit</code> (default 50, max 10000), <code>offset</code>. Response includes <code>total</code> for paginators.":
+      "列出会话，附带智能体数量及每个会话的成本。参数：<code>status</code>、<code>q</code>（在 <code>id</code>/<code>name</code>/<code>cwd</code> 上进行不区分大小写的搜索）、<code>limit</code>（默认 50，最大 10000）、<code>offset</code>。响应中包含 <code>total</code> 以供分页器使用。",
+    "Session detail with agents and events": "会话详情，附带智能体和事件",
+    "Create session (idempotent on <code>id</code>)": "创建会话（基于 <code>id</code> 幂等）",
+    "Update session status / metadata": "更新会话状态 / 元数据",
+    "List agents — params: <code>status</code>, <code>session_id</code>, <code>limit</code>, <code>offset</code>":
+      "列出智能体 — 参数：<code>status</code>、<code>session_id</code>、<code>limit</code>、<code>offset</code>",
+    "Single agent detail": "单个智能体详情",
+    "Create agent": "创建智能体",
+    "Update agent status / task / current_tool": "更新智能体的状态 / 任务 / current_tool",
+    "List events newest-first — params: <code>session_id</code>, <code>limit</code>, <code>offset</code>":
+      "按最新优先列出事件 — 参数：<code>session_id</code>、<code>limit</code>、<code>offset</code>",
+    "Aggregate counts + status distributions + WS connections": "聚合计数 + 状态分布 + WS 连接数",
+    "Token totals, tool usage, daily trends, agent types, event types, averages":
+      "令牌总量、工具用量、每日趋势、智能体类型、事件类型、平均值",
+    "Receive and process a Claude Code hook event (called by hook-handler.js)":
+      "接收并处理 Claude Code 钩子事件（由 hook-handler.js 调用）",
+    "List all model pricing rules": "列出所有模型定价规则",
+    "Create or update a pricing rule": "创建或更新一条定价规则",
+    "Delete a pricing rule": "删除一条定价规则",
+    "Total cost across all sessions": "所有会话的总成本",
+    "Cost breakdown for a specific session": "特定会话的成本明细",
+    "System info, DB stats, hook installation status": "系统信息、DB 统计、钩子安装状态",
+    "Delete all sessions, agents, events, token usage": "删除所有会话、智能体、事件、令牌用量",
+    "Reinstall Claude Code hooks": "重新安装 Claude Code 钩子",
+    "Reset pricing rules to defaults": "将定价规则重置为默认值",
+    "Export all data as JSON download": "将所有数据导出为 JSON 下载",
+    "Abandon stale sessions (by hours), purge old data (by days)":
+      "放弃陈旧会话（按小时），清除旧数据（按天）",
+    "OS-aware paths, archive command, supported extensions, step-by-step instructions; includes live stats for the default <code>~/.claude/projects</code> folder":
+      "感知 OS 的路径、归档命令、支持的扩展名、分步说明；包含默认 <code>~/.claude/projects</code> 文件夹的实时统计",
+    "Re-scan the default <code>~/.claude/projects</code> directory; safe to re-run (idempotent via session-ID dedup)":
+      "重新扫描默认的 <code>~/.claude/projects</code> 目录；可安全重复运行（通过会话 ID 去重实现幂等）",
+    "Scan any absolute directory (body <code>{ path }</code>); tilde (<code>~</code>) is expanded; walks subdirectories recursively and imports every <code>.jsonl</code> found":
+      "扫描任意绝对路径目录（请求体 <code>{ path }</code>）；波浪号（<code>~</code>）会被展开；递归遍历子目录并导入找到的每个 <code>.jsonl</code>",
+    "Multipart upload of <code>.jsonl</code>, <code>.meta.json</code>, <code>.zip</code>, <code>.tar</code>, <code>.tar.gz</code>, <code>.tgz</code>, <code>.gz</code>. Per-request staging dir, path-traversal and extraction-size guards. Returns 413 <code>EXTRACTION_LIMIT_EXCEEDED</code> on suspected bomb archives":
+      "分块上传 <code>.jsonl</code>、<code>.meta.json</code>、<code>.zip</code>、<code>.tar</code>、<code>.tar.gz</code>、<code>.tgz</code>、<code>.gz</code>。为每个请求设置暂存目录，并提供路径穿越和解压大小防护。对疑似炸弹归档返回 413 <code>EXTRACTION_LIMIT_EXCEEDED</code>",
+    "Aggregate workflow data — orchestration graphs, tool flows, effectiveness, patterns, model delegation, error propagation, concurrency, complexity, compaction impact. Accepts <code>?status=active|completed</code> query param to filter by workflow status":
+      "聚合工作流数据 — 编排图、工具流、有效性、模式、模型委派、错误传播、并发、复杂度、压缩影响。接受 <code>?status=active|completed</code> 查询参数以按工作流状态筛选",
+    "Per-session drill-in — agent tree, tool timeline, event details":
+      "按会话下钻 — 智能体树、工具时间线、事件详情",
+    "Fired-alert feed, newest first (<code>?unacked=true</code>, <code>limit</code>, <code>offset</code>; carries <code>total</code> and <code>unacked</code> counts)":
+      "已触发告警的信息流，最新优先（<code>?unacked=true</code>、<code>limit</code>、<code>offset</code>；携带 <code>total</code> 和 <code>unacked</code> 计数）",
+    "Acknowledge one alert": "确认一条告警",
+    "Acknowledge every unacked alert": "确认每一条未确认的告警",
+    "List alert rules": "列出告警规则",
+    "Create a rule (<code>event_pattern</code> | <code>inactivity</code> | <code>status_duration</code> | <code>token_threshold</code>)":
+      "创建一条规则（<code>event_pattern</code> | <code>inactivity</code> | <code>status_duration</code> | <code>token_threshold</code>）",
+    "Update name / config / enabled / cooldown": "更新名称 / 配置 / 启用状态 / 冷却时间",
+    "Delete a rule and its fired-alert history": "删除一条规则及其已触发告警的历史记录",
+    "Supported providers + their config fields (drives the UI form)":
+      "支持的提供方及其配置字段（驱动 UI 表单）",
+    "List webhook targets (URLs masked, secrets redacted)":
+      "列出 webhook 目标（URL 已掩码、密钥已脱敏）",
+    "Create a target — 14 first-class providers (Slack, Discord, Teams, Google Chat, Mattermost, Rocket.Chat, Telegram, PagerDuty, Opsgenie, Splunk On-Call, Zapier, Make, n8n, Pipedream) + a generic JSON endpoint":
+      "创建一个目标 — 14 个一等支持的提供方（Slack、Discord、Teams、Google Chat、Mattermost、Rocket.Chat、Telegram、PagerDuty、Opsgenie、Splunk On-Call、Zapier、Make、n8n、Pipedream）以及一个通用 JSON 端点",
+    "Update name / url / enabled / secret / headers / config / rule scope (<code>type</code> is immutable)":
+      "更新名称 / url / 启用状态 / 密钥 / 请求头 / 配置 / 规则范围（<code>type</code> 不可变）",
+    "Delete a target and its delivery log": "删除一个目标及其投递日志",
+    "Send a synthetic test alert and report the result": "发送一条合成的测试告警并报告结果",
+    "Recent delivery log for a target": "某个目标的近期投递日志",
+    Documentation: "文档",
+    Architecture: "架构",
+    "Relevant Links": "相关链接",
+    "GitHub Repo": "GitHub 仓库",
   },
   vi: {
     '<span class="caption-icon">📡</span> Live dashboard — real-time agent cards, stats, and activity feed':
@@ -2181,6 +2260,94 @@ window.__WIKI_CONTENT_I18N = {
     "Request size": "Kích thước yêu cầu",
     "Express JSON body parser limited to 1MB":
       "Bộ phân tích thân JSON của Express bị giới hạn ở 1MB",
+    "Dashboard — stats, active agents, recent events":
+      "Dashboard — số liệu thống kê, agent đang hoạt động, sự kiện gần đây",
+    "KanbanBoard — agent status columns": "KanbanBoard — các cột trạng thái agent",
+    "Sessions — searchable, filterable table": "Sessions — bảng có thể tìm kiếm và lọc",
+    "SessionDetail — agents + full event timeline":
+      "SessionDetail — các agent và dòng thời gian sự kiện đầy đủ",
+    "ActivityFeed — real-time streaming event log":
+      "ActivityFeed — nhật ký sự kiện truyền phát theo thời gian thực",
+    "Analytics — token usage, heatmap (day-of-week aligned), tool charts, donut charts":
+      "Analytics — mức dùng token, bản đồ nhiệt (căn theo ngày trong tuần), biểu đồ công cụ, biểu đồ vành khuyên",
+    "Workflows — D3.js visualizations, cross-filtering, status filter, session drill-in":
+      "Workflows — trực quan hóa D3.js, lọc chéo, lọc theo trạng thái, đi sâu vào phiên",
+    "Settings — model pricing, hook status, data export, session cleanup":
+      "Settings — định giá mô hình, trạng thái hook, xuất dữ liệu, dọn dẹp phiên",
+    'Returns <code>{ "status": "ok", "timestamp": "..." }</code>':
+      'Trả về <code>{ "status": "ok", "timestamp": "..." }</code>',
+    "List sessions with agent counts and per-session cost. Params: <code>status</code>, <code>q</code> (case-insensitive search across <code>id</code>/<code>name</code>/<code>cwd</code>), <code>limit</code> (default 50, max 10000), <code>offset</code>. Response includes <code>total</code> for paginators.":
+      "Liệt kê các phiên kèm số lượng agent và chi phí mỗi phiên. Tham số: <code>status</code>, <code>q</code> (tìm kiếm không phân biệt hoa thường trên <code>id</code>/<code>name</code>/<code>cwd</code>), <code>limit</code> (mặc định 50, tối đa 10000), <code>offset</code>. Phản hồi bao gồm <code>total</code> cho bộ phân trang.",
+    "Session detail with agents and events": "Chi tiết phiên kèm các agent và sự kiện",
+    "Create session (idempotent on <code>id</code>)": "Tạo phiên (idempotent theo <code>id</code>)",
+    "Update session status / metadata": "Cập nhật trạng thái / metadata của phiên",
+    "List agents — params: <code>status</code>, <code>session_id</code>, <code>limit</code>, <code>offset</code>":
+      "Liệt kê các agent — tham số: <code>status</code>, <code>session_id</code>, <code>limit</code>, <code>offset</code>",
+    "Single agent detail": "Chi tiết một agent",
+    "Create agent": "Tạo agent",
+    "Update agent status / task / current_tool":
+      "Cập nhật trạng thái / tác vụ / current_tool của agent",
+    "List events newest-first — params: <code>session_id</code>, <code>limit</code>, <code>offset</code>":
+      "Liệt kê sự kiện mới nhất trước — tham số: <code>session_id</code>, <code>limit</code>, <code>offset</code>",
+    "Aggregate counts + status distributions + WS connections":
+      "Số liệu tổng hợp + phân bố trạng thái + kết nối WS",
+    "Token totals, tool usage, daily trends, agent types, event types, averages":
+      "Tổng số token, mức dùng công cụ, xu hướng theo ngày, loại agent, loại sự kiện, giá trị trung bình",
+    "Receive and process a Claude Code hook event (called by hook-handler.js)":
+      "Nhận và xử lý một sự kiện hook của Claude Code (được hook-handler.js gọi)",
+    "List all model pricing rules": "Liệt kê tất cả quy tắc định giá mô hình",
+    "Create or update a pricing rule": "Tạo hoặc cập nhật một quy tắc định giá",
+    "Delete a pricing rule": "Xóa một quy tắc định giá",
+    "Total cost across all sessions": "Tổng chi phí trên tất cả các phiên",
+    "Cost breakdown for a specific session": "Phân tích chi phí cho một phiên cụ thể",
+    "System info, DB stats, hook installation status":
+      "Thông tin hệ thống, số liệu DB, trạng thái cài đặt hook",
+    "Delete all sessions, agents, events, token usage":
+      "Xóa tất cả phiên, agent, sự kiện, mức dùng token",
+    "Reinstall Claude Code hooks": "Cài đặt lại các hook của Claude Code",
+    "Reset pricing rules to defaults": "Đặt lại quy tắc định giá về mặc định",
+    "Export all data as JSON download": "Xuất tất cả dữ liệu dưới dạng tải về JSON",
+    "Abandon stale sessions (by hours), purge old data (by days)":
+      "Bỏ các phiên cũ (theo giờ), xóa dữ liệu cũ (theo ngày)",
+    "OS-aware paths, archive command, supported extensions, step-by-step instructions; includes live stats for the default <code>~/.claude/projects</code> folder":
+      "Đường dẫn nhận biết OS, lệnh lưu trữ, các phần mở rộng được hỗ trợ, hướng dẫn từng bước; bao gồm số liệu trực tiếp cho thư mục mặc định <code>~/.claude/projects</code>",
+    "Re-scan the default <code>~/.claude/projects</code> directory; safe to re-run (idempotent via session-ID dedup)":
+      "Quét lại thư mục mặc định <code>~/.claude/projects</code>; an toàn để chạy lại (idempotent nhờ khử trùng lặp theo ID phiên)",
+    "Scan any absolute directory (body <code>{ path }</code>); tilde (<code>~</code>) is expanded; walks subdirectories recursively and imports every <code>.jsonl</code> found":
+      "Quét bất kỳ thư mục đường dẫn tuyệt đối nào (thân yêu cầu <code>{ path }</code>); dấu ngã (<code>~</code>) được mở rộng; duyệt đệ quy các thư mục con và nhập mọi <code>.jsonl</code> tìm thấy",
+    "Multipart upload of <code>.jsonl</code>, <code>.meta.json</code>, <code>.zip</code>, <code>.tar</code>, <code>.tar.gz</code>, <code>.tgz</code>, <code>.gz</code>. Per-request staging dir, path-traversal and extraction-size guards. Returns 413 <code>EXTRACTION_LIMIT_EXCEEDED</code> on suspected bomb archives":
+      "Tải lên nhiều phần các tệp <code>.jsonl</code>, <code>.meta.json</code>, <code>.zip</code>, <code>.tar</code>, <code>.tar.gz</code>, <code>.tgz</code>, <code>.gz</code>. Có thư mục tạm cho mỗi yêu cầu, cùng cơ chế bảo vệ chống path-traversal và giới hạn kích thước giải nén. Trả về 413 <code>EXTRACTION_LIMIT_EXCEEDED</code> đối với các kho lưu trữ nghi là bom",
+    "Aggregate workflow data — orchestration graphs, tool flows, effectiveness, patterns, model delegation, error propagation, concurrency, complexity, compaction impact. Accepts <code>?status=active|completed</code> query param to filter by workflow status":
+      "Tổng hợp dữ liệu quy trình làm việc — đồ thị điều phối, luồng công cụ, hiệu quả, mẫu hình, ủy thác mô hình, lan truyền lỗi, đồng thời, độ phức tạp, tác động của việc nén. Chấp nhận tham số truy vấn <code>?status=active|completed</code> để lọc theo trạng thái quy trình",
+    "Per-session drill-in — agent tree, tool timeline, event details":
+      "Đi sâu theo từng phiên — cây agent, dòng thời gian công cụ, chi tiết sự kiện",
+    "Fired-alert feed, newest first (<code>?unacked=true</code>, <code>limit</code>, <code>offset</code>; carries <code>total</code> and <code>unacked</code> counts)":
+      "Luồng cảnh báo đã kích hoạt, mới nhất trước (<code>?unacked=true</code>, <code>limit</code>, <code>offset</code>; kèm theo số đếm <code>total</code> và <code>unacked</code>)",
+    "Acknowledge one alert": "Xác nhận một cảnh báo",
+    "Acknowledge every unacked alert": "Xác nhận mọi cảnh báo chưa được xác nhận",
+    "List alert rules": "Liệt kê các quy tắc cảnh báo",
+    "Create a rule (<code>event_pattern</code> | <code>inactivity</code> | <code>status_duration</code> | <code>token_threshold</code>)":
+      "Tạo một quy tắc (<code>event_pattern</code> | <code>inactivity</code> | <code>status_duration</code> | <code>token_threshold</code>)",
+    "Update name / config / enabled / cooldown":
+      "Cập nhật tên / cấu hình / trạng thái bật / thời gian chờ",
+    "Delete a rule and its fired-alert history":
+      "Xóa một quy tắc và lịch sử cảnh báo đã kích hoạt của nó",
+    "Supported providers + their config fields (drives the UI form)":
+      "Các nhà cung cấp được hỗ trợ cùng các trường cấu hình của chúng (điều khiển biểu mẫu UI)",
+    "List webhook targets (URLs masked, secrets redacted)":
+      "Liệt kê các đích webhook (URL được che, khóa bí mật được ẩn)",
+    "Create a target — 14 first-class providers (Slack, Discord, Teams, Google Chat, Mattermost, Rocket.Chat, Telegram, PagerDuty, Opsgenie, Splunk On-Call, Zapier, Make, n8n, Pipedream) + a generic JSON endpoint":
+      "Tạo một đích — 14 nhà cung cấp được hỗ trợ hạng nhất (Slack, Discord, Teams, Google Chat, Mattermost, Rocket.Chat, Telegram, PagerDuty, Opsgenie, Splunk On-Call, Zapier, Make, n8n, Pipedream) cùng một endpoint JSON tổng quát",
+    "Update name / url / enabled / secret / headers / config / rule scope (<code>type</code> is immutable)":
+      "Cập nhật tên / url / trạng thái bật / khóa bí mật / tiêu đề / cấu hình / phạm vi quy tắc (<code>type</code> là bất biến)",
+    "Delete a target and its delivery log": "Xóa một đích và nhật ký gửi của nó",
+    "Send a synthetic test alert and report the result":
+      "Gửi một cảnh báo thử nghiệm tổng hợp và báo cáo kết quả",
+    "Recent delivery log for a target": "Nhật ký gửi gần đây cho một đích",
+    Documentation: "Tài liệu",
+    Architecture: "Kiến trúc",
+    "Relevant Links": "Liên kết liên quan",
+    "GitHub Repo": "Kho GitHub",
   },
   plain: {
     zh: {

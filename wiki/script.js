@@ -1244,6 +1244,10 @@ document.querySelectorAll(".diagram-toggle").forEach((toggle) => {
     ".main-content th",
     ".main-content .screenshot-caption",
     ".main-content .callout-body > strong",
+    ".main-content .route-desc",
+    ".wiki-footer .footer-note",
+    ".wiki-footer .footer-col-title",
+    ".wiki-footer .footer-col-links a",
   ].join(", ");
   const htmlEls = Array.from(document.querySelectorAll(HTML_SEL));
   const enHtml = new Map();
