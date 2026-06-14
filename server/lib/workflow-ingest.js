@@ -7,17 +7,21 @@
  *
  *   <projects>/<enc-cwd>/<sessionId>/
  *     workflows/
- *       scripts/<name>-wf_<runId>.js   ← written at LAUNCH
- *       wf_<runId>.json                ← run journal, written at COMPLETION
- *     subagents/
- *       agent-<agentId>.jsonl          ← one transcript per inner agent
+ *       scripts/<name>-wf_<runId>.js          ← written at LAUNCH
+ *       wf_<runId>.json                       ← run journal, written at COMPLETION
+ *     subagents/workflows/<runId>/
+ *       agent-<agentId>.jsonl                 ← one transcript per inner agent
+ *       agent-<agentId>.meta.json
  *
  * The run journal is the source of truth for a completed run: identity,
- * lifecycle, aggregates, phases[], and workflowProgress[] (one entry per inner
- * agent, keyed by the EXACT agent-<agentId>.jsonl basename). Because the
- * journal is terminal-only, a running workflow is detected from its launch
- * script plus live subagents/ activity, and replaced by the journal record on
- * completion (idempotent upsert by run_id).
+ * lifecycle, aggregates (agentCount/totalTokens/totalToolCalls), phases[], and
+ * workflowProgress[] — a MIXED log of `type:"workflow_phase"` markers and
+ * `type:"workflow_agent"` entries. Each workflow_agent entry carries agentId,
+ * state ("done"/"error"/…), label, phaseTitle, tokens, toolCalls, durationMs,
+ * etc., and its agentId is the EXACT agent-<agentId>.jsonl basename in the
+ * per-run nested dir above. Because the journal is terminal-only, a running
+ * workflow is detected from its launch script and replaced by the journal
+ * record on completion (idempotent upsert by run_id).
  *
  * Inner agents are linked into the existing agents table via the same
  * `${sessionId}-jsonl-<agentId>` id scheme that importSubagentFromJsonl uses,
@@ -113,10 +117,11 @@ function resolveTranscriptPath(session) {
 
 /**
  * Locate a session's workflow artifacts from its transcript JSONL path.
- * Mirrors findSessionSubagents: workflows live at
- * `<dir>/<sessionId>/workflows/` next to `<dir>/<sessionId>.jsonl`.
+ * Workflows live at `<dir>/<sessionId>/workflows/` next to
+ * `<dir>/<sessionId>.jsonl`; inner-agent transcripts are resolved per-run via
+ * agentsDirForRun(sessionDir, runId).
  *
- * @returns {{ workflowsDir: string|null, subagentsDir: string|null,
+ * @returns {{ sessionDir: string|null, workflowsDir: string|null,
  *             journals: string[], scripts: string[] }}
  */
 function findSessionWorkflows(transcriptPath) {
@@ -195,7 +200,9 @@ function parseWorkflowJournal(journalPath) {
     startedAt,
     endedAt,
     durationMs,
-    agentCount: Number.isFinite(j.agentCount) ? j.agentCount : progress.length,
+    agentCount: Number.isFinite(j.agentCount)
+      ? j.agentCount
+      : progress.filter((e) => e && e.type === "workflow_agent").length,
     totalTokens: Number.isFinite(j.totalTokens) ? j.totalTokens : 0,
     totalToolCalls: Number.isFinite(j.totalToolCalls) ? j.totalToolCalls : 0,
     phases: Array.isArray(j.phases) ? j.phases : [],
