@@ -11,6 +11,7 @@ const { broadcast } = require("../websocket");
 const TranscriptCache = require("../lib/transcript-cache");
 const { scanAndImportSubagents } = require("../../scripts/import-history");
 const { evaluateEvent } = require("../lib/alerts");
+const { ingestWorkflowsForSession } = require("../lib/workflow-ingest");
 
 const router = Router();
 
@@ -777,6 +778,27 @@ router.post("/event", (req, res) => {
       })
       .catch(() => {
         // non-fatal — partial JSONL during a live run is expected
+      });
+  }
+
+  // Ingest Workflow-tool run journals from disk. Inner agent() calls emit NO
+  // hooks, so the journal (written at workflow completion) is the only source.
+  // Run on the lifecycle hooks that bracket a workflow finishing, off the
+  // response path and fail-safe — a partial/absent journal is expected.
+  if (
+    ["Stop", "SubagentStop", "SessionEnd"].includes(hook_type) &&
+    data.session_id &&
+    data.transcript_path
+  ) {
+    ingestWorkflowsForSession(dbModule, {
+      id: data.session_id,
+      transcript_path: data.transcript_path,
+    })
+      .then((changed) => {
+        for (const wf of changed) broadcast("workflow_upserted", wf);
+      })
+      .catch(() => {
+        // non-fatal — partial workflow artifacts during a live run are expected
       });
   }
 });

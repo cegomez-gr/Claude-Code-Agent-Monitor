@@ -188,6 +188,13 @@ function autoImportLegacySessions() {
         if (backfilled > 0)
           console.log(`Backfilled ${backfilled} compaction events from ~/.claude/`);
       })
+      // Backfill Workflow-tool run journals (issue #167) for all imported
+      // sessions. Inner agents emit no hooks, so this on-disk scan is the only
+      // way historical workflows surface.
+      .then(() => require("./lib/workflow-ingest").ingestAllWorkflows(dbModule))
+      .then(({ workflows }) => {
+        if (workflows > 0) console.log(`Backfilled ${workflows} workflow run(s) from ~/.claude/`);
+      })
       // Write the marker only after the import completes, so a crash mid-import
       // retries on the next start instead of being skipped forever.
       .then(() => {
@@ -440,6 +447,24 @@ if (require.main === module) {
         );
         continue;
       }
+    }
+
+    // 3. Scan active sessions for Workflow-tool run journals (issue #167).
+    // Catches workflows that complete without a subsequent hook and flips
+    // launch-detected "running" rows to "completed" once their journal lands.
+    const { ingestWorkflowsForSession } = require("./lib/workflow-ingest");
+    for (const row of active) {
+      if (!row.tp) continue;
+      ingestWorkflowsForSession(cleanupDb, { id: row.session_id, transcript_path: row.tp })
+        .then((changed) => {
+          for (const wf of changed) broadcast("workflow_upserted", wf);
+        })
+        .catch((err) => {
+          console.warn(
+            `[SWEEP] Workflow scan failed for session ${row.session_id}:`,
+            err?.message || err
+          );
+        });
     }
   }, SWEEP_INTERVAL_MS);
 
