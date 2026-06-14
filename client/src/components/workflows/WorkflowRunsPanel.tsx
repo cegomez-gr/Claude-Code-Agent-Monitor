@@ -379,13 +379,13 @@ export function WorkflowRunsPanel({
                         >
                           <button
                             onClick={() => toggleResult(key)}
-                            className="w-full flex items-start gap-2 px-2 py-1.5 text-left hover:bg-gray-800/40 transition-colors"
+                            className="w-full flex items-center gap-2 px-2 py-1.5 text-left hover:bg-gray-800/40 transition-colors"
                             aria-expanded={open}
                           >
                             {open ? (
-                              <ChevronDown className="w-3.5 h-3.5 text-gray-500 flex-shrink-0 mt-0.5" />
+                              <ChevronDown className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
                             ) : (
-                              <ChevronRight className="w-3.5 h-3.5 text-gray-500 flex-shrink-0 mt-0.5" />
+                              <ChevronRight className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
                             )}
                             <span
                               className={`badge text-[10px] border flex-shrink-0 ${phaseColor(phaseTitles, a.phaseTitle)}`}
