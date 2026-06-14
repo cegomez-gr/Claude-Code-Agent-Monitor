@@ -1289,27 +1289,40 @@ import pipeline's `parseSubagentFile` and `importSubagentFromJsonl`, so inner
 agents become agent rows under the **same** `${sessionId}-jsonl-<agentId>` id
 scheme the subagent importer already uses — ingestion therefore **converges**
 with any prior subagent import (no duplicate rows). Each inner agent is stamped
-with `agents.workflow_run_id` + `agents.workflow_phase`. Per-agent
-token/tool/duration metrics are read from the journal's `progress[]` JSON, so
-the module **never writes `token_usage`** and cannot double-count session
-totals.
+with `agents.workflow_run_id` + `agents.workflow_phase`. The per-agent table in
+the UI is read from the journal's `progress[]` JSON.
 
-Ingestion runs from three fail-safe, off-the-response-path triggers:
+**Cost folding.** Inner agents are sidechain contexts whose token usage is NOT
+in the parent transcript (the same reason `combineSessionTokens` *adds*
+subagent tokens). So the fleet's real token split — parsed from each
+`agent-<id>.jsonl` — is written into the session's `token_usage` under a
+namespaced `service_tier = 'workflow'` bucket. That bucket is isolated from the
+main-transcript writer's rows (which use the real tier), so the two never
+collide or clobber, while `calculateCost` still sums them per model. The write
+is a full recompute each ingest → `replaceTokenUsage`'s replace semantics make
+it idempotent (no double-count across re-ingests).
+
+Ingestion runs from four fail-safe, off-the-response-path triggers:
 
 1. **Live** — `routes/hooks.js`, on `Stop` / `SubagentStop` / `SessionEnd`
    (the lifecycle hooks that bracket a workflow finishing).
-2. **Periodic** — the `server/index.js` sweep, scanning active sessions'
-   `workflows/` directories (flips `running` → `completed` when a journal
-   lands without a subsequent hook).
-3. **Backfill** — a one-time pass in `autoImportLegacySessions` ingests
+2. **Real-time poll** — `startWorkflowPoll` (`server/index.js`) scans active
+   sessions every ~12 s, skipping any whose workflow artifacts are unchanged
+   (a cheap newest-mtime fingerprint). The run journal is written at workflow
+   completion, which may not coincide with a hook, so this keeps the UI fresh
+   without waiting. Tunable via `DASHBOARD_WORKFLOW_POLL_MS` (0 disables).
+3. **Periodic** — the `server/index.js` maintenance sweep, scanning active
+   sessions' `workflows/` directories (flips `running` → `completed` when a
+   journal lands without a subsequent hook).
+4. **Backfill** — a one-time pass in `autoImportLegacySessions` ingests
    historical on-disk workflows for every recorded session.
 
-Each ingest broadcasts a `workflow_upserted` WebSocket message. Runs surface
-via `GET /api/workflows/runs` (list) and `GET /api/workflows/runs/:runId`
-(detail with linked agents + events), and are attached to the launching
-session via the `workflows[]` field on `GET /api/sessions/:id`. The UI shows
-them in a "Workflow Runs" panel on the Workflows page and a subsection on
-Session Detail.
+Each ingest that changes anything broadcasts `workflow_upserted` and a
+`session_updated` (so the cost views refetch) over WebSocket. Runs surface via
+`GET /api/workflows/runs` (list) and `GET /api/workflows/runs/:runId` (detail
+with linked agents + events), and are attached to the launching session via the
+`workflows[]` field on `GET /api/sessions/:id`. The UI shows them in a
+"Workflow Runs" panel on the Workflows page and a subsection on Session Detail.
 
 ### Schema
 

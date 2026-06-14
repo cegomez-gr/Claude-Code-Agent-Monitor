@@ -2,8 +2,8 @@
  * @file Tests for Workflow-tool run ingestion (issue #167): parsing the on-disk
  * run journal, upserting a workflows row, linking inner agents by the shared
  * `${sessionId}-jsonl-<agentId>` id scheme, idempotency, running→completed
- * detection with launch-time preservation, and the no-double-count invariant
- * (workflow ingest never writes token_usage).
+ * detection with launch-time preservation, and folding inner-agent token usage
+ * into the session cost under a namespaced `workflow` service_tier.
  * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
@@ -116,6 +116,39 @@ before(() => {
       },
     ],
   });
+
+  // Inner-agent transcripts in the per-run nested dir, each with token usage so
+  // ingest can fold their spend into the session cost.
+  const runAgentDir = path.join(workflowsDir(), "..", "subagents", "workflows", "wf_test123");
+  const agentLines = (model, input, output) =>
+    [
+      { type: "user", timestamp: "2026-01-01T00:00:00.000Z", message: { content: "go" } },
+      {
+        type: "assistant",
+        timestamp: "2026-01-01T00:00:01.000Z",
+        message: {
+          model,
+          content: [{ type: "text", text: "done" }],
+          usage: {
+            input_tokens: input,
+            output_tokens: output,
+            cache_read_input_tokens: 0,
+            cache_creation_input_tokens: 0,
+          },
+        },
+      },
+    ]
+      .map((l) => JSON.stringify(l))
+      .join("\n");
+  fs.mkdirSync(runAgentDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(runAgentDir, "agent-a1.jsonl"),
+    agentLines("claude-opus-4-8", 4000, 1000)
+  );
+  fs.writeFileSync(
+    path.join(runAgentDir, "agent-a2.jsonl"),
+    agentLines("claude-opus-4-8", 6000, 1345)
+  );
 });
 
 after(() => {
@@ -186,14 +219,23 @@ describe("ingestWorkflowsForSession — completed journal", () => {
     assert.equal(linked.length, 2);
   });
 
-  it("never writes token_usage (no double-counting)", () => {
-    const n = dbModule.db
-      .prepare("SELECT COUNT(*) AS n FROM token_usage WHERE session_id = ?")
-      .get(SESSION_ID);
-    assert.equal(n.n, 0);
+  it("folds inner-agent tokens into the session under a 'workflow' service_tier", () => {
+    const rows = dbModule.db
+      .prepare("SELECT * FROM token_usage WHERE session_id = ?")
+      .all(SESSION_ID);
+    assert.ok(rows.length > 0, "workflow token rows written");
+    assert.ok(
+      rows.every((r) => r.service_tier === "workflow"),
+      "isolated under the workflow tier (no collision with main buckets)"
+    );
+    // a1(4000)+a2(6000)=10000 input, 1000+1345=2345 output (same model → one row)
+    const totalInput = rows.reduce((s, r) => s + r.input_tokens + r.baseline_input, 0);
+    const totalOutput = rows.reduce((s, r) => s + r.output_tokens + r.baseline_output, 0);
+    assert.equal(totalInput, 10000);
+    assert.equal(totalOutput, 2345);
   });
 
-  it("is idempotent — re-ingest creates no duplicate workflow or agent rows", async () => {
+  it("is idempotent — re-ingest creates no duplicate rows and stable token totals", async () => {
     await ingestWorkflowsForSession(dbModule, { id: SESSION_ID, transcript_path: transcriptPath });
     const wfCount = dbModule.db
       .prepare("SELECT COUNT(*) AS n FROM workflows WHERE session_id = ?")
@@ -203,6 +245,13 @@ describe("ingestWorkflowsForSession — completed journal", () => {
       .prepare("SELECT COUNT(*) AS n FROM agents WHERE session_id = ? AND type = 'subagent'")
       .get(SESSION_ID);
     assert.equal(subCount.n, 2);
+    // tokens not double-counted on re-ingest (replace semantics)
+    const tot = dbModule.db
+      .prepare(
+        "SELECT SUM(input_tokens + baseline_input) AS i FROM token_usage WHERE session_id = ?"
+      )
+      .get(SESSION_ID);
+    assert.equal(tot.i, 10000);
   });
 });
 

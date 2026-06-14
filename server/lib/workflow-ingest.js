@@ -99,6 +99,45 @@ function mapState(state) {
   }
 }
 
+// Token fields carried on a parsed-subagent bucket (camelCase, matching
+// writeSessionTokens). Used to fold inner-agent usage into the session's cost.
+const TOKEN_FIELDS = [
+  "input",
+  "output",
+  "cacheRead",
+  "cacheWrite",
+  "cacheWrite1h",
+  "webSearch",
+  "webFetch",
+  "codeExec",
+];
+
+/**
+ * Merge a parsed agent's tokensByModel into a session-level accumulator, keyed
+ * by (model, speed, geo) with the service_tier forced to "workflow". This
+ * namespaces workflow spend into its own token_usage bucket so it never
+ * collides with — or clobbers — the main-transcript writer's rows, while still
+ * being summed per-model by the cost calculator. Inner agents are sidechain
+ * contexts whose usage is NOT in the parent transcript, so this is additive,
+ * not double-counting (same model as combineSessionTokens for subagents).
+ */
+function mergeWorkflowTokens(dst, src) {
+  for (const b of Object.values(src || {})) {
+    if (!b || !b.model) continue;
+    const key = `${b.model}|${b.speed}|${b.geo}|workflow`;
+    if (!dst[key]) {
+      dst[key] = {
+        model: b.model,
+        speed: b.speed,
+        geo: b.geo,
+        tier: "workflow",
+      };
+      for (const f of TOKEN_FIELDS) dst[key][f] = 0;
+    }
+    for (const f of TOKEN_FIELDS) dst[key][f] += b[f] || 0;
+  }
+}
+
 /**
  * Resolve a session's transcript JSONL path from a session-like row. Prefers an
  * explicit transcript_path; otherwise derives it from (id, cwd) via claude-home.
@@ -222,6 +261,9 @@ async function ingestWorkflowJournal(dbModule, sessionId, journal, opts = {}) {
   // Inner-agent transcripts live in a per-run nested dir, not the session's
   // top-level subagents/. opts.sessionDir is the session transcript folder.
   const agentDir = opts.sessionDir ? agentsDirForRun(opts.sessionDir, journal.runId) : null;
+  // Accumulate inner-agent token usage (real input/output/cache split from each
+  // transcript) so the run's spend can be folded into the session's cost.
+  const runTokens = {};
 
   stmts.upsertWorkflow.run(
     journal.runId,
@@ -277,6 +319,7 @@ async function ingestWorkflowJournal(dbModule, sessionId, journal, opts = {}) {
     try {
       if (parsed) {
         ih.importSubagentFromJsonl(dbModule, sessionId, mainAgentId, parsed);
+        mergeWorkflowTokens(runTokens, parsed.tokensByModel);
       } else if (!stmts.getAgent.get(jsonlId)) {
         stmts.insertAgent.run(
           jsonlId,
@@ -304,7 +347,7 @@ async function ingestWorkflowJournal(dbModule, sessionId, journal, opts = {}) {
     }
   }
 
-  return stmts.getWorkflow.get(journal.runId);
+  return { row: stmts.getWorkflow.get(journal.runId), tokens: runTokens };
 }
 
 /**
@@ -385,6 +428,11 @@ async function ingestWorkflowsForSession(dbModule, session) {
 
   const changed = [];
   const journalRunIds = new Set();
+  // Session-wide accumulator of inner-agent token usage across all runs, so the
+  // session's cost includes workflow spend. Recomputed in full each call (all
+  // journals are re-parsed) → writeSessionTokens replace semantics make it
+  // idempotent (no double-count across re-ingests).
+  const workflowTokens = {};
   // Map runId → its launch script (so a journal row records script_path too).
   const scriptByRun = new Map();
   for (const s of paths.scripts) scriptByRun.set(extractRunId(s), s);
@@ -394,11 +442,12 @@ async function ingestWorkflowsForSession(dbModule, session) {
       const journal = parseWorkflowJournal(journalPath);
       if (!journal) continue;
       journalRunIds.add(journal.runId);
-      const row = await ingestWorkflowJournal(dbModule, sessionId, journal, {
+      const res = await ingestWorkflowJournal(dbModule, sessionId, journal, {
         sessionDir: paths.sessionDir,
         scriptPath: scriptByRun.get(journal.runId) || null,
       });
-      if (row) changed.push(row);
+      if (res && res.row) changed.push(res.row);
+      if (res && res.tokens) mergeWorkflowTokens(workflowTokens, res.tokens);
     } catch {
       /* skip malformed journal */
     }
@@ -408,6 +457,17 @@ async function ingestWorkflowsForSession(dbModule, session) {
     changed.push(...detectRunningWorkflows(dbModule, sessionId, paths, journalRunIds));
   } catch {
     /* non-fatal */
+  }
+
+  // Fold the workflow fleet's token usage into the session cost under a
+  // namespaced `workflow` service_tier (isolated from the main-transcript
+  // writer's buckets). getTokensBySession + calculateCost sum it per model.
+  try {
+    if (Object.keys(workflowTokens).length > 0) {
+      importHistory().writeSessionTokens(dbModule, sessionId, workflowTokens);
+    }
+  } catch {
+    /* non-fatal — cost folding must never break ingestion */
   }
 
   return changed;
@@ -448,9 +508,29 @@ async function ingestAllWorkflows(dbModule) {
   return { sessions, workflows };
 }
 
+/**
+ * Cheap change-fingerprint for a session's workflow artifacts: the newest mtime
+ * across its journals + launch scripts (0 if none). A fast poller compares this
+ * to skip re-ingesting unchanged sessions.
+ */
+function workflowsMaxMtime(transcriptPath) {
+  const { journals, scripts } = findSessionWorkflows(transcriptPath);
+  let max = 0;
+  for (const p of [...journals, ...scripts]) {
+    try {
+      const m = fs.statSync(p).mtimeMs;
+      if (m > max) max = m;
+    } catch {
+      /* ignore */
+    }
+  }
+  return max;
+}
+
 module.exports = {
   ingestWorkflowsForSession,
   ingestAllWorkflows,
+  workflowsMaxMtime,
   findSessionWorkflows,
   parseWorkflowJournal,
   ingestWorkflowJournal,

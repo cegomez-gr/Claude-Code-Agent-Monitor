@@ -178,7 +178,7 @@ export function WorkflowRunsPanel({
             </button>
 
             {isOpen && (
-              <div className="px-3 pb-3 pt-1 border-t border-gray-800/60 space-y-3">
+              <div className="px-3 pb-3 pt-3 border-t border-gray-800/60 space-y-3">
                 {run.phases.length > 0 && (
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <Layers className="w-3.5 h-3.5 text-gray-500" />
