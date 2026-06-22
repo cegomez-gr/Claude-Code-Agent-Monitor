@@ -7,6 +7,7 @@ Thanks for taking the time to contribute. Please read this guide before opening 
 ## Table of Contents
 
 - [Code of Conduct](#code-of-conduct)
+- [Contributor License Agreement (CLA)](#contributor-license-agreement-cla)
 - [Getting Started](#getting-started)
 - [Development Workflow](#development-workflow)
 - [Branching and Commits](#branching-and-commits)
@@ -20,6 +21,23 @@ Thanks for taking the time to contribute. Please read this guide before opening 
 ## Code of Conduct
 
 This project follows the [Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md). By participating, you agree to uphold it.
+
+---
+
+## Contributor License Agreement (CLA)
+
+All contributions require a signed **[Contributor License Agreement](../CLA.md)**. This is enforced automatically — there is nothing to set up ahead of time.
+
+1. Open your pull request as normal.
+2. On your **first** PR, the `🖋️ CLA Assistant` bot comments asking you to sign. Read [`CLA.md`](../CLA.md), then post this comment on the PR, verbatim:
+
+   ```
+   I have read the CLA Document and I hereby sign the CLA
+   ```
+
+3. The bot records your signature and turns the **CLA Assistant** status check green. The PR cannot be merged until it is green.
+
+You sign **once** — the signature covers all of your current and future contributions, so returning contributors are never asked again. If you contribute **on behalf of a company**, contact the maintainer ([@hoangsonww](https://github.com/hoangsonww)) to arrange a Corporate CLA first.
 
 ---
 

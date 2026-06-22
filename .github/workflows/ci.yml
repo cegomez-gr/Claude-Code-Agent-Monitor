@@ -29,6 +29,10 @@ name: 🚀 CI / CD Pipeline for Claude Code Agent Monitor
 on:
   push:
     branches: ["**"]
+    # CLA signature commits (made by github-actions[bot] via cla.yml) only touch
+    # this path — skip the full CI/CD pipeline for them.
+    paths-ignore:
+      - "signatures/**"
   pull_request:
     branches: ["**"]
 

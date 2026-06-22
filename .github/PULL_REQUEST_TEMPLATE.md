@@ -27,6 +27,7 @@
 ## Checklist
 
 - [ ] I have read the [contributing guidelines](../CONTRIBUTING.md)
+- [ ] I have signed the [CLA](../CLA.md) (the `🖋️ CLA Assistant` bot will prompt me on my first PR)
 - [ ] My code follows the project's coding standards
 - [ ] I have added/updated tests that prove my fix or feature works
 - [ ] All new and existing tests pass (`npm test`)
