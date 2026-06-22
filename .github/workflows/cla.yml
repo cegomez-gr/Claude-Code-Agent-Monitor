@@ -19,9 +19,11 @@
 #     comments. The job is gated so it only runs for those two comment bodies or
 #     for pull_request_target events — ordinary issue/PR chatter is ignored.
 #
-# Storage: signatures live on the default branch under signatures/version1/cla.json.
-# The signature commits are made by github-actions[bot]; the CI/CD workflow
-# (ci.yml) ignores the signatures/ path so these commits do not trigger builds.
+# Storage: signatures live on the dedicated, unprotected `cla-signatures` branch
+# under signatures/version1/cla.json. They are NOT stored on master because the
+# `master-protect` ruleset blocks the bot's direct signature commits. The signature
+# commits are made by github-actions[bot]; the CI/CD workflow (ci.yml) ignores the
+# signatures/ path so these commits do not trigger builds.
 #
 # Token: uses the built-in GITHUB_TOKEN (no extra secret needed) because the
 # signature file is stored inside this repository.
@@ -62,8 +64,11 @@ jobs:
           path-to-signatures: "signatures/version1/cla.json"
           # Public URL of the CLA contributors must agree to.
           path-to-document: "https://github.com/hoangsonww/Claude-Code-Agent-Monitor/blob/master/CLA.md"
-          # Store signatures on the default branch.
-          branch: "master"
+          # Store signatures on a DEDICATED, UNPROTECTED branch. The default
+          # branch (master) is governed by the `master-protect` ruleset, which
+          # blocks direct pushes — including the bot's signature commits — so
+          # signatures must live on a branch the bot can write to freely.
+          branch: "cla-signatures"
           # Bots never sign. Every human contributor (including maintainers) must.
           allowlist: "dependabot[bot],renovate[bot],github-actions[bot]"
           # Lock the signature record once a PR is merged.
