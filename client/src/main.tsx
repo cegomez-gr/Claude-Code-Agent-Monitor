@@ -14,9 +14,9 @@ if ("serviceWorker" in navigator) {
   // Detect whether the page is already controlled by an SW *before* we
   // register. On a truly fresh install there is no controller yet, so the
   // first `controllerchange` should NOT reload (the user just opened the page
-  // — nothing is stale). On every subsequent rebuild the page is controlled,
+  // - nothing is stale). On every subsequent rebuild the page is controlled,
   // a new SW takes over, and a one-shot reload picks up the new bundle URLs
-  // automatically — no hard refresh needed.
+  // automatically - no hard refresh needed.
   const wasControlled = !!navigator.serviceWorker.controller;
   let reloaded = false;
   navigator.serviceWorker.addEventListener("controllerchange", () => {

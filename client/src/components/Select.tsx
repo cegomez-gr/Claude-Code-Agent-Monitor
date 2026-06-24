@@ -111,7 +111,7 @@ export function Select<T extends string>({
         onKeyDown={onKey}
         className="w-full flex items-center justify-between gap-2 bg-surface-2 border border-border rounded-md px-3 py-1.5 text-[11px] text-gray-100 focus:outline-none focus:border-accent/50 hover:bg-surface-3 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        <span className="truncate">{current?.label ?? "—"}</span>
+        <span className="truncate">{current?.label ?? "-"}</span>
         <ChevronDown className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
       </button>
       {open && (

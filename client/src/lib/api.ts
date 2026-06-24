@@ -251,7 +251,7 @@ export const api = {
       request<WorkflowData>(`/workflows${status && status !== "all" ? `?status=${status}` : ""}`),
     session: (id: string) =>
       request<SessionDrillIn>(`/workflows/session/${encodeURIComponent(id)}`),
-    // Workflow-tool runs (issue #167) — fleets ingested from on-disk journals.
+    // Workflow-tool runs (issue #167) - fleets ingested from on-disk journals.
     runs: (params?: { status?: string; session_id?: string; limit?: number; offset?: number }) => {
       const qs = new URLSearchParams();
       if (params?.status && params.status !== "all") qs.set("status", params.status);
@@ -736,7 +736,7 @@ export interface RunListResponse {
 }
 
 /**
- * A row from the persistent `dashboard_runs` sqlite table — every run ever
+ * A row from the persistent `dashboard_runs` sqlite table - every run ever
  * spawned via /api/run, including completed / errored / killed ones long
  * after the in-memory handle has been reaped.
  */
@@ -783,10 +783,10 @@ export const RUN_EFFORT_CHOICES: EffortChoice[] = [
   { id: "medium", label: "Medium", hint: "Balanced" },
   { id: "high", label: "High", hint: "More reasoning, slower" },
   { id: "xhigh", label: "Extra-high", hint: "Deep reasoning" },
-  { id: "max", label: "Max", hint: "All-out — slowest, most tokens" },
+  { id: "max", label: "Max", hint: "All-out - slowest, most tokens" },
 ];
 
-// Curated model list. "" means "inherit from settings.json" — no --model flag.
+// Curated model list. "" means "inherit from settings.json" - no --model flag.
 export const RUN_MODEL_CHOICES: ModelChoice[] = [
   { id: "", label: "Inherit from settings", hint: "Use whatever your settings.json model is" },
   {

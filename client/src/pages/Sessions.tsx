@@ -82,7 +82,7 @@ export function Sessions() {
   const load = useCallback(async () => {
     try {
       // The "waiting" filter is a UI-only overlay derived from the
-      // awaiting_input_since column — the underlying SessionStatus is
+      // awaiting_input_since column - the underlying SessionStatus is
       // still "active". Map it to a client-side filter on top of the
       // active set so paging/totals stay consistent with the visible rows.
       if (filter === "waiting") {

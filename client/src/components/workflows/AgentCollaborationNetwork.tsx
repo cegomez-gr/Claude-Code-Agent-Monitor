@@ -130,7 +130,7 @@ function showTooltip(
   subtitle.textContent = t("pipeline.tooltip.agentType");
   el.appendChild(subtitle);
 
-  const sharePct = totalSpawns > 0 ? `${((d.total / totalSpawns) * 100).toFixed(1)}%` : "—";
+  const sharePct = totalSpawns > 0 ? `${((d.total / totalSpawns) * 100).toFixed(1)}%` : "-";
 
   const rows: [string, string][] = [
     [t("pipeline.spawned"), String(d.total) + t("pipeline.spawns")],
@@ -222,7 +222,7 @@ export function AgentCollaborationNetwork({
     return { nodes, links, isEmpty: nodes.length === 0 || links.length === 0 };
   }, [effectiveness, edges]);
 
-  // D3 simulation — only depends on memoized data
+  // D3 simulation - only depends on memoized data
   useEffect(() => {
     const svg = svgRef.current;
     const container = containerRef.current;
@@ -343,7 +343,7 @@ export function AgentCollaborationNetwork({
       .attr("stroke-width", 16)
       .attr("cursor", "pointer");
 
-    // ── Hover — pure DOM, zero React re-renders ──
+    // ── Hover - pure DOM, zero React re-renders ──
     const tipEl = tooltipRef.current;
 
     // Edge hover
@@ -374,10 +374,8 @@ export function AgentCollaborationNetwork({
           subtitle.textContent = t("pipeline.tooltip.edge");
           tipEl.appendChild(subtitle);
 
-          const shareOfSrc =
-            src.total > 0 ? `${((d.weight / src.total) * 100).toFixed(1)}%` : "\u2014";
-          const shareOfTgt =
-            tgt.total > 0 ? `${((d.weight / tgt.total) * 100).toFixed(1)}%` : "\u2014";
+          const shareOfSrc = src.total > 0 ? `${((d.weight / src.total) * 100).toFixed(1)}%` : "-";
+          const shareOfTgt = tgt.total > 0 ? `${((d.weight / tgt.total) * 100).toFixed(1)}%` : "-";
 
           const rows: [string, string][] = [
             [t("pipeline.tooltip.sequentialPairs"), `${d.weight}\u00d7`],

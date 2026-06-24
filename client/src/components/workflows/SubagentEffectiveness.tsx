@@ -25,7 +25,7 @@ const RING_STROKE = 5;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
 function formatDurationSec(seconds: number | null): string {
-  if (seconds === null || seconds < 0) return "—";
+  if (seconds === null || seconds < 0) return "-";
   const totalSec = Math.floor(seconds);
   const hours = Math.floor(totalSec / 3600);
   const minutes = Math.floor((totalSec % 3600) / 60);

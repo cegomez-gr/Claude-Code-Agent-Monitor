@@ -59,7 +59,7 @@ async function notify(title: string, body: string) {
       body: JSON.stringify({ title, body }),
     });
   } catch {
-    // Server unreachable — fall back to local notification
+    // Server unreachable - fall back to local notification
     try {
       if ("serviceWorker" in navigator) {
         const registration = await navigator.serviceWorker.ready;

@@ -25,13 +25,13 @@
     "tooltip": {
       "title": "Cách hoạt động của định giá mô hình",
       "howItWorks": "Cách hoạt động",
-      "howItWorksBody": "Khi một phiên báo cáo mức dùng, dashboard tìm quy tắc định giá đầu tiên có mẫu khớp với model id, rồi nhân (token đầu vào / 1 triệu) và (token đầu ra / 1 triệu) với các đơn giá bên dưới để tính chi phí. Quy tắc được duyệt từ trên xuống — quy tắc khớp đầu tiên sẽ được dùng.",
+      "howItWorksBody": "Khi một phiên báo cáo mức dùng, dashboard tìm quy tắc định giá đầu tiên có mẫu khớp với model id, rồi nhân (token đầu vào / 1 triệu) và (token đầu ra / 1 triệu) với các đơn giá bên dưới để tính chi phí. Quy tắc được duyệt từ trên xuống - quy tắc khớp đầu tiên sẽ được dùng.",
       "patternsTitle": "Cú pháp mẫu",
       "patternsBody": "Mẫu là dạng glob kiểu SQL. % là ký tự đại diện khớp với bất kỳ chuỗi nào. Ví dụ: claude-opus-4-7% khớp mọi model id bắt đầu bằng claude-opus-4-7 (ví dụ claude-opus-4-7, claude-opus-4-7-20260101). claude-%-haiku khớp mọi biến thể haiku. Một id chính xác như claude-sonnet-4-6 chỉ khớp với chính nó.",
       "manualUpdates": "Bạn phải cập nhật giá thủ công",
-      "manualUpdatesBody": "Anthropic công bố thay đổi giá trên website của họ — không có nguồn dữ liệu trực tiếp. Khi có model mới ra mắt hoặc đơn giá thay đổi, hãy chỉnh sửa quy tắc tương ứng (hoặc thêm quy tắc mới ở phía trên quy tắc bao quát) để những phiên ghi nhận sau này được tính phí chính xác. Phiên đã lưu vẫn giữ nguyên giá đã áp dụng tại thời điểm nạp.",
-      "apiPricing": "Chỉ để tham khảo — đơn giá API",
-      "apiPricingBody": "Đây là đơn giá API trả theo lượng dùng. Nếu bạn dùng Claude Code theo gói thuê bao (Pro, Max, Team hoặc Enterprise), chi phí thực tế là phí cố định hàng tháng chứ không tính theo token — nên những con số ở đây thường cao hơn số tiền bạn thực trả. Hãy xem chi phí ở đây là ước tính mức dùng để tham khảo, không phải hóa đơn."
+      "manualUpdatesBody": "Anthropic công bố thay đổi giá trên website của họ - không có nguồn dữ liệu trực tiếp. Khi có model mới ra mắt hoặc đơn giá thay đổi, hãy chỉnh sửa quy tắc tương ứng (hoặc thêm quy tắc mới ở phía trên quy tắc bao quát) để những phiên ghi nhận sau này được tính phí chính xác. Phiên đã lưu vẫn giữ nguyên giá đã áp dụng tại thời điểm nạp.",
+      "apiPricing": "Chỉ để tham khảo - đơn giá API",
+      "apiPricingBody": "Đây là đơn giá API trả theo lượng dùng. Nếu bạn dùng Claude Code theo gói thuê bao (Pro, Max, Team hoặc Enterprise), chi phí thực tế là phí cố định hàng tháng chứ không tính theo token - nên những con số ở đây thường cao hơn số tiền bạn thực trả. Hãy xem chi phí ở đây là ước tính mức dùng để tham khảo, không phải hóa đơn."
     },
     "cacheWrite5m": "Ghi bộ nhớ đệm (5m)",
     "cacheWrite1h": "Ghi bộ nhớ đệm (1h)",
@@ -75,7 +75,7 @@
   },
   "import": {
     "title": "Nhập lịch sử",
-    "description": "Đưa các phiên Claude Code hiện có vào dashboard. Số token, chi phí theo mô hình, lần nén ngữ cảnh, subagent, lượt dùng tool và thời lượng từng lượt được dựng lại từ chính các transcript JSONL gốc — y hệt cách phiên trực tiếp được ghi nhận.",
+    "description": "Đưa các phiên Claude Code hiện có vào dashboard. Số token, chi phí theo mô hình, lần nén ngữ cảnh, subagent, lượt dùng tool và thời lượng từng lượt được dựng lại từ chính các transcript JSONL gốc - y hệt cách phiên trực tiếp được ghi nhận.",
     "accuracyNote": "Chạy lại nhiều lần luôn an toàn. Phiên được khử trùng lặp theo session ID, và mốc nén ngữ cảnh đảm bảo tổng token không bao giờ bị tính trùng.",
     "supportedFiles": "Định dạng được hỗ trợ: .jsonl, .meta.json, .zip, .tar, .tar.gz, .tgz, .gz",
     "instructions": "Cách thu thập lịch sử của bạn",
@@ -238,11 +238,11 @@
     "deleteMessage": "Xóa \"{{name}}\"? Cảnh báo sẽ ngừng được gửi tới đích này. Không thể hoàn tác.",
     "guideToggle": "Cách thiết lập {{provider}}",
     "guideDocs": "Tài liệu chính thức của {{provider}}",
-    "guideStaleNote": "Giao diện thiết lập của nhà cung cấp thường thay đổi nên các bước này có thể đã lỗi thời — hãy luôn kiểm tra tài liệu chính thức."
+    "guideStaleNote": "Giao diện thiết lập của nhà cung cấp thường thay đổi nên các bước này có thể đã lỗi thời - hãy luôn kiểm tra tài liệu chính thức."
   },
   "alertsHub": {
     "title": "Cảnh báo",
-    "description": "Định nghĩa quy tắc cảnh báo, định tuyến tới các kênh webhook và xem những gì đã kích hoạt — tất cả ở một nơi.",
+    "description": "Định nghĩa quy tắc cảnh báo, định tuyến tới các kênh webhook và xem những gì đã kích hoạt - tất cả ở một nơi.",
     "tabRules": "Quy tắc",
     "tabChannels": "Kênh",
     "tabActivity": "Hoạt động",
@@ -271,7 +271,7 @@
         "Trong kênh Teams mục tiêu, nhấn ⋯ → 'Workflows'.",
         "Chọn mẫu 'Post to a channel when a webhook request is received'.",
         "Hoàn tất luồng và sao chép URL HTTP POST được tạo.",
-        "Dán vào ô trên. (Office 365 connector cũ đã ngừng năm 2025 — dùng Workflows.)"
+        "Dán vào ô trên. (Office 365 connector cũ đã ngừng năm 2025 - dùng Workflows.)"
       ]
     },
     "google_chat": {
@@ -300,7 +300,7 @@
         "Nhắn @BotFather, chạy /newbot và sao chép bot token.",
         "Thêm bot vào nhóm/kênh của bạn (hoặc nhắn riêng cho nó).",
         "Tìm chat ID: gửi một tin nhắn, mở https://api.telegram.org/bot<token>/getUpdates, đọc result[].message.chat.id.",
-        "Nhập Bot token và Chat ID ở trên — không cần URL."
+        "Nhập Bot token và Chat ID ở trên - không cần URL."
       ]
     },
     "pagerduty": {
@@ -308,7 +308,7 @@
         "Mở Service mục tiêu → Integrations → 'Add integration'.",
         "Chọn 'Events API v2'.",
         "Sao chép Integration Key (routing key).",
-        "Nhập làm Routing key ở trên — URL Events API đã được điền sẵn."
+        "Nhập làm Routing key ở trên - URL Events API đã được điền sẵn."
       ]
     },
     "opsgenie": {
@@ -316,13 +316,13 @@
         "Settings → Integrations → thêm tích hợp 'API'.",
         "Sao chép API key được tạo.",
         "Ghi nhớ vùng tài khoản (US hoặc EU).",
-        "Nhập API key và vùng ở trên — URL cảnh báo được suy ra từ vùng."
+        "Nhập API key và vùng ở trên - URL cảnh báo được suy ra từ vùng."
       ]
     },
     "splunk_oncall": {
       "steps": [
         "Integrations → REST Endpoint, và bật nó.",
-        "Sao chép REST URL — nó đã chứa API key của bạn.",
+        "Sao chép REST URL - nó đã chứa API key của bạn.",
         "Thay '$routing_key' ở cuối bằng một routing key của bạn.",
         "Dán URL đầy đủ vào ô trên."
       ]

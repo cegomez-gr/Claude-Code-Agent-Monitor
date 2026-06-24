@@ -19,7 +19,7 @@ interface CodeBlockProps {
   compact?: boolean;
   /** Override for the right-side label (e.g. "Output", "Error"). */
   label?: string;
-  /** Tone — "default" matches the surface, "danger" tints red, "success" tints emerald. */
+  /** Tone - "default" matches the surface, "danger" tints red, "success" tints emerald. */
   tone?: "default" | "danger" | "success";
   /** Cap the rendered height; pass null to disable. Default 24rem. */
   maxHeight?: string | null;
@@ -88,7 +88,7 @@ export function CodeBlock({
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
     } catch {
-      // Clipboard may be unavailable in some contexts — fail silently.
+      // Clipboard may be unavailable in some contexts - fail silently.
     }
   };
 

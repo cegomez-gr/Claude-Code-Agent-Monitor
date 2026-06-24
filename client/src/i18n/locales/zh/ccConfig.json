@@ -173,7 +173,7 @@
   },
   "backups": {
     "title": "备份",
-    "empty": "暂无备份 — 每次编辑或删除都会创建带时间戳的备份。",
+    "empty": "暂无备份 - 每次编辑或删除都会创建带时间戳的备份。",
     "viewLink": "查看备份历史",
     "openButton": "备份",
     "subtitle": "编辑器中每次保存/删除会先写入备份。备份目录位于 Claude Code 不扫描的位置,因此不会作为残留显示在 CLI 中。",
@@ -209,7 +209,7 @@
     },
     "plugins": {
       "title": "插件由 CLI 管理",
-      "body": "插件是带有自己注册表的捆绑包 — `installed_plugins.json` 加上 `plugins/cache/` 下的安装路径。仪表盘只读取它们,安装/卸载交给 `claude plugin …` 以保持注册表一致性。",
+      "body": "插件是带有自己注册表的捆绑包 - `installed_plugins.json` 加上 `plugins/cache/` 下的安装路径。仪表盘只读取它们,安装/卸载交给 `claude plugin …` 以保持注册表一致性。",
       "install": "安装插件:",
       "installCmd": "claude plugin install <marketplace>/<plugin>",
       "uninstall": "卸载此插件:",

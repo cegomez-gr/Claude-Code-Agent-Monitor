@@ -92,7 +92,7 @@ export function ErrorPropagationMap({ data }: ErrorPropagationMapProps) {
         </div>
       </div>
 
-      {/* Errors by depth — horizontal bars */}
+      {/* Errors by depth - horizontal bars */}
       {hasDepthData && (
         <div>
           <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-2.5">

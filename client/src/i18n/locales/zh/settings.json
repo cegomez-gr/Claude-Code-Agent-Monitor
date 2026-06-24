@@ -25,13 +25,13 @@
     "tooltip": {
       "title": "模型定价的工作原理",
       "howItWorks": "工作原理",
-      "howItWorksBody": "当一个会话上报使用量时，仪表盘会查找第一个模式与 model id 匹配的定价规则，将（输入 token / 100 万）和（输出 token / 100 万）分别乘以下方的费率以计算费用。规则按从上到下的顺序匹配——首条匹配的规则生效。",
+      "howItWorksBody": "当一个会话上报使用量时，仪表盘会查找第一个模式与 model id 匹配的定价规则，将（输入 token / 100 万）和（输出 token / 100 万）分别乘以下方的费率以计算费用。规则按从上到下的顺序匹配--首条匹配的规则生效。",
       "patternsTitle": "模式语法",
       "patternsBody": "模式采用 SQL 风格的通配。% 可匹配任意字符。例如：claude-opus-4-7% 匹配以 claude-opus-4-7 开头的所有 model id（如 claude-opus-4-7、claude-opus-4-7-20260101）。claude-%-haiku 匹配任意 haiku 变体。像 claude-sonnet-4-6 这样的精确 id 只匹配自身。",
       "manualUpdates": "你必须手动更新价格",
-      "manualUpdatesBody": "Anthropic 在其官网公布价格变动——并没有实时数据源。当新模型发布或费率调整时，请编辑对应的规则（或在通用规则之上添加新规则），以便后续记录的会话能正确计费。已经存储的会话仍保留入库时使用的价格。",
-      "apiPricing": "仅供参考 — API 价格",
-      "apiPricingBody": "这些是按量付费的 API 价格。如果你通过订阅套餐（Pro、Max、Team 或 Enterprise）使用 Claude Code，你的实际花费是固定的月费，而非按 Token 计费——因此这里的数字通常会高于你实际支付的金额。请将此处的费用视为用量估算，仅供参考，并非账单。"
+      "manualUpdatesBody": "Anthropic 在其官网公布价格变动--并没有实时数据源。当新模型发布或费率调整时，请编辑对应的规则（或在通用规则之上添加新规则），以便后续记录的会话能正确计费。已经存储的会话仍保留入库时使用的价格。",
+      "apiPricing": "仅供参考 - API 价格",
+      "apiPricingBody": "这些是按量付费的 API 价格。如果你通过订阅套餐（Pro、Max、Team 或 Enterprise）使用 Claude Code，你的实际花费是固定的月费，而非按 Token 计费--因此这里的数字通常会高于你实际支付的金额。请将此处的费用视为用量估算，仅供参考，并非账单。"
     },
     "cacheWrite5m": "缓存写入 (5m)",
     "cacheWrite1h": "缓存写入 (1h)",
@@ -75,7 +75,7 @@
   },
   "import": {
     "title": "导入历史",
-    "description": "将已有的 Claude Code 会话导入仪表盘。Token 数、按模型计费、上下文压缩、Subagent、工具调用与各轮耗时都会从原始 JSONL transcript 重新构建——与实时会话的采集方式完全一致。",
+    "description": "将已有的 Claude Code 会话导入仪表盘。Token 数、按模型计费、上下文压缩、Subagent、工具调用与各轮耗时都会从原始 JSONL transcript 重新构建--与实时会话的采集方式完全一致。",
     "accuracyNote": "重复导入是安全的。会话按 session ID 去重，压缩基线确保 Token 总数不会重复计算。",
     "supportedFiles": "支持的输入：.jsonl, .meta.json, .zip, .tar, .tar.gz, .tgz, .gz",
     "instructions": "如何收集你的历史",
@@ -238,7 +238,7 @@
     "deleteMessage": "删除“{{name}}”？触发的告警将不再投递到此目标。此操作无法撤销。",
     "guideToggle": "如何设置 {{provider}}",
     "guideDocs": "{{provider}} 官方文档",
-    "guideStaleNote": "各服务的设置界面经常变动，这些步骤可能已过时——请务必以官方文档为准。"
+    "guideStaleNote": "各服务的设置界面经常变动，这些步骤可能已过时--请务必以官方文档为准。"
   },
   "alertsHub": {
     "title": "告警",
@@ -271,7 +271,7 @@
         "在目标 Teams 频道，点击 ⋯ → “Workflows”。",
         "选择模板“Post to a channel when a webhook request is received”。",
         "完成流程并复制生成的 HTTP POST URL。",
-        "粘贴到上方。（传统 Office 365 连接器已于 2025 年停用 — 请使用 Workflows。）"
+        "粘贴到上方。（传统 Office 365 连接器已于 2025 年停用 - 请使用 Workflows。）"
       ]
     },
     "google_chat": {
@@ -300,7 +300,7 @@
         "给 @BotFather 发消息，运行 /newbot，复制 bot token。",
         "将该 bot 加入你的群/频道（或直接私聊它）。",
         "获取 chat ID：发送一条消息，打开 https://api.telegram.org/bot<token>/getUpdates，读取 result[].message.chat.id。",
-        "在上方填入 Bot token 和 Chat ID — 无需 URL。"
+        "在上方填入 Bot token 和 Chat ID - 无需 URL。"
       ]
     },
     "pagerduty": {
@@ -308,7 +308,7 @@
         "打开目标服务 → 集成 → “Add integration”。",
         "选择“Events API v2”。",
         "复制 Integration Key（即 routing key）。",
-        "在上方填入 Routing key — Events API URL 已自动填好。"
+        "在上方填入 Routing key - Events API URL 已自动填好。"
       ]
     },
     "opsgenie": {
@@ -316,13 +316,13 @@
         "设置 → 集成 → 添加“API”集成。",
         "复制生成的 API key。",
         "记下你的账户区域（US 或 EU）。",
-        "在上方填入 API key 和区域 — 告警 URL 会根据区域自动推导。"
+        "在上方填入 API key 和区域 - 告警 URL 会根据区域自动推导。"
       ]
     },
     "splunk_oncall": {
       "steps": [
         "集成 → REST Endpoint，并启用它。",
-        "复制 REST URL — 其中已包含你的 API key。",
+        "复制 REST URL - 其中已包含你的 API key。",
         "将末尾的“$routing_key”替换为你的某个 routing key。",
         "将完整 URL 粘贴到上方。"
       ]

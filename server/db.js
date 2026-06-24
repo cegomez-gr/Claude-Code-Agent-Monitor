@@ -848,6 +848,14 @@ const stmts = {
   updateSessionModel: db.prepare(
     "UPDATE sessions SET model = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND COALESCE(model, '') != ?"
   ),
+  // Updates session.name only when the new value differs from what's stored.
+  // Used by the hook ingestor / watchdog to keep the displayed session name in
+  // sync with the transcript's title (set via /rename, `claude -n`, or the
+  // auto-generated ai-title). No-op (zero changes) on the common unchanged
+  // case so the broadcast path stays quiet.
+  updateSessionName: db.prepare(
+    "UPDATE sessions SET name = ?, updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ? AND COALESCE(name, '') != ?"
+  ),
   // One-shot writer for sessions.transcript_path. The NULL/'' guard makes
   // every subsequent hook event for the same session a SQL no-op, so the
   // periodic compaction sweep can read transcript_path off the row instead

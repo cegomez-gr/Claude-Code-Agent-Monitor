@@ -499,7 +499,7 @@ export function ToolExecutionFlow({
 // ── Tooltip DOM builder ───────────────────────────────────────────────────────
 
 function fmtPct(v: number): string {
-  if (v <= 0) return "—";
+  if (v <= 0) return "-";
   if (v < 0.01) return "<1%";
   return `${(v * 100).toFixed(1)}%`;
 }

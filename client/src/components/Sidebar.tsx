@@ -146,7 +146,7 @@ export function Sidebar({ wsConnected, collapsed, onToggle }: SidebarProps) {
   const [connectedSince, setConnectedSince] = useState<number | null>(
     wsConnected ? Date.now() : null
   );
-  // Buffers live in refs so the sidebar isn't re-rendered on every WS event —
+  // Buffers live in refs so the sidebar isn't re-rendered on every WS event -
   // the modal samples them on its own tick while it's open. Cumulative buffers
   // (count, type breakdown, recent list) are hydrated from localStorage so they
   // survive page reloads; the rolling 60s sparkline buffer is intentionally
@@ -266,7 +266,7 @@ export function Sidebar({ wsConnected, collapsed, onToggle }: SidebarProps) {
       }
       // All-time peak events/sec: count events landing in the trailing 1s
       // window ending right now. Walk from the tail (newest) backwards and
-      // stop as soon as we cross the threshold — O(k) where k is the size of
+      // stop as soon as we cross the threshold - O(k) where k is the size of
       // the burst, so this stays cheap even under sustained traffic.
       const oneSecAgo = now - 1000;
       let inLastSec = 0;
@@ -295,7 +295,7 @@ export function Sidebar({ wsConnected, collapsed, onToggle }: SidebarProps) {
     if (checking) return;
     setChecking(true);
     setCheckError(false);
-    // Explicit user intent — clear any prior dismissal so the modal can
+    // Explicit user intent - clear any prior dismissal so the modal can
     // re-open if this check still reports an update.
     try {
       localStorage.removeItem("agent-monitor-update-dismissed-sha");
@@ -362,7 +362,7 @@ export function Sidebar({ wsConnected, collapsed, onToggle }: SidebarProps) {
         </div>
       </div>
 
-      {/* Nav — only this section scrolls when its items overflow; the rest of
+      {/* Nav - only this section scrolls when its items overflow; the rest of
           the sidebar (brand, language, collapse toggle, footer) stays pinned.
           Chevron buttons appear at the edges when content is clipped, so the
           user knows there's more to reach without inspecting the scrollbar. */}
@@ -718,7 +718,7 @@ function ConnectionStatusModal({
   const recentEvents = recentEventsRef.current;
   const buckets = bucketEventsPerSecond(eventTimestampsRef.current, 60);
   const eventsLastMinute = buckets.reduce((sum, n) => sum + n, 0);
-  // All-time peak — kept persistently across the session and across reloads,
+  // All-time peak - kept persistently across the session and across reloads,
   // so a one-off burst doesn't disappear once it rolls off the 60s window.
   const peakPerSec = peakPerSecRef.current;
   const avgPerSec = eventsLastMinute / 60;

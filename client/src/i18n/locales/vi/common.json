@@ -142,7 +142,7 @@
     "help": {
       "toggle": "Trợ giúp",
       "title": "Về sự kiện, bộ lọc và nhóm",
-      "subtitle": "Nhấn để mở — trạng thái, vòng đời, ngữ nghĩa bộ lọc, giá trị bộ lọc",
+      "subtitle": "Nhấn để mở - trạng thái, vòng đời, ngữ nghĩa bộ lọc, giá trị bộ lọc",
       "valuesTitle": "Mỗi bộ lọc chấp nhận gì",
       "valueStatusDesc": "Lối tắt mở rộng thành event_type (Working → PreToolUse, Completed → Stop/SubagentStop/Compaction, ...).",
       "valueEventTypeDesc": "Giá trị event_type thực có trong DB. Lấy từ /api/events/facets.",
@@ -164,7 +164,7 @@
       "filtersTitle": "Cách bộ lọc hoạt động",
       "filterTip1": "Các bộ lọc kết hợp AND giữa các danh mục. Trong một danh mục, nhiều lựa chọn là OR.",
       "filterTip2": "Status là lối tắt mở rộng thành event_type (Working → PreToolUse, Completed → Stop/SubagentStop/Compaction, ...).",
-      "filterTipGrouping": "Mẹo nhóm: một hàng nhóm cần cả Pre và Post. Khi lọc theo Status, hãy chọn Working + Connected cùng lúc để giữ nguyên cặp — nếu không, nhóm chỉ hiện một nửa.",
+      "filterTipGrouping": "Mẹo nhóm: một hàng nhóm cần cả Pre và Post. Khi lọc theo Status, hãy chọn Working + Connected cùng lúc để giữ nguyên cặp - nếu không, nhóm chỉ hiện một nửa.",
       "filterTip3": "Tìm kiếm văn bản khớp summary, tool_name và dữ liệu thô.",
       "filterTip4": "Khoảng ngày áp dụng cho created_at của mỗi sự kiện."
     }

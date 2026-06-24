@@ -1,7 +1,7 @@
 /**
  * @file event-summary.ts
  * @description Produces a short, human-readable summary of a DashboardEvent
- * for the top of the expanded EventDetail panel. Purely data-driven — parses
+ * for the top of the expanded EventDetail panel. Purely data-driven - parses
  * `tool_input` / `tool_response` and extracts the most useful facts. Returns
  * null for events where a summary would add nothing (e.g. unknown tools with
  * empty payloads).
@@ -159,7 +159,7 @@ export function buildEventSummary(event: DashboardEvent): EventSummary | null {
   const input = obj(data?.tool_input);
   const response = obj(data?.tool_response);
 
-  // MCP tools — generic summary
+  // MCP tools - generic summary
   if (tool.startsWith("mcp__")) {
     const headline = humanizeMcp(tool);
     const bullets: string[] = [];
@@ -344,7 +344,7 @@ export function buildEventSummary(event: DashboardEvent): EventSummary | null {
     }
 
     default: {
-      // Unknown native tool — minimal summary.
+      // Unknown native tool - minimal summary.
       if (!input && !response) return null;
       return {
         icon: "🔧",

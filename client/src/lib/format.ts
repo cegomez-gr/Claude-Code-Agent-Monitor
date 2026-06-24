@@ -13,11 +13,11 @@ import i18n from "../i18n";
  * timestamps without a timezone indicator are treated as UTC.
  */
 function parseDate(iso: string): Date {
-  // Already has timezone info (Z or +/- offset) — parse directly
+  // Already has timezone info (Z or +/- offset) - parse directly
   if (/[Zz]$/.test(iso) || /[+-]\d{2}:\d{2}$/.test(iso)) {
     return new Date(iso);
   }
-  // No timezone — treat as UTC by appending Z
+  // No timezone - treat as UTC by appending Z
   // Handle both 'YYYY-MM-DD HH:MM:SS' and 'YYYY-MM-DDTHH:MM:SS' formats
   return new Date(iso.replace(" ", "T") + "Z");
 }
@@ -54,7 +54,7 @@ export function formatDateTime(iso: string): string {
   });
 }
 
-/** Date only, e.g. "Apr 18" — paired with formatTime as a small second line in
+/** Date only, e.g. "Apr 18" - paired with formatTime as a small second line in
  *  narrow list rows (timeline, activity feed) so the date is visible too. */
 export function formatDateShort(iso: string): string {
   const d = parseDate(iso);
@@ -62,7 +62,7 @@ export function formatDateShort(iso: string): string {
   return d.toLocaleString(getCurrentLocale(), { month: "short", day: "numeric" });
 }
 
-/** Fully detailed timestamp with weekday, full date, seconds, and timezone —
+/** Fully detailed timestamp with weekday, full date, seconds, and timezone -
  *  e.g. "Sat, Apr 18, 2026, 08:49:13 AM PDT". For detail panels. */
 export function formatDateTimeFull(iso: string): string {
   const d = parseDate(iso);
@@ -215,7 +215,7 @@ export function formatModelName(model: string | null | undefined): string | null
   return result.join(" ") + ctxSuffix;
 }
 
-/** Last segment of a filesystem path. POSIX-only — fine for cwd display.
+/** Last segment of a filesystem path. POSIX-only - fine for cwd display.
  *  "/Users/dav/code/my-project" → "my-project". */
 export function pathBasename(p: string | null | undefined): string | null {
   if (!p) return null;

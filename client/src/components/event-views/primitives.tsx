@@ -24,7 +24,7 @@ export function CopyButton({ text }: { text: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      // Clipboard API can fail in insecure contexts — silently ignore.
+      // Clipboard API can fail in insecure contexts - silently ignore.
     }
   }
 

@@ -87,7 +87,7 @@ export function KanbanBoard() {
     //
     // Also fetch sessions so AgentCard can surface model / cwd / cost on
     // main-agent cards (they have no task and a generic name on their
-    // own — the session metadata is what makes the card useful).
+    // own - the session metadata is what makes the card useful).
     const [agentResults, sessionsRes] = await Promise.all([
       Promise.all(AGENT_FETCH_STATUSES.map((status) => api.agents.list({ status }))),
       api.sessions.list({ limit: 10000 }),
@@ -97,7 +97,7 @@ export function KanbanBoard() {
   }, []);
 
   const loadSessions = useCallback(async () => {
-    // Each column needs the full set for its status — column-level
+    // Each column needs the full set for its status - column-level
     // pagination ("show more") is handled client-side at COLUMN_PAGE_SIZE.
     // Wire-limit raised to the server's safety cap (10000); cost
     // computation on the server scales with returned rows, so each
@@ -147,7 +147,7 @@ export function KanbanBoard() {
     });
   }, [view, loadAgents, loadSessions]);
 
-  // Lookup map for AgentCard's session prop — memoized to avoid rebuilding on every render
+  // Lookup map for AgentCard's session prop - memoized to avoid rebuilding on every render
   const sessionsById = useMemo(() => {
     const map = new Map<string, Session>();
     for (const s of sessions) map.set(s.id, s);

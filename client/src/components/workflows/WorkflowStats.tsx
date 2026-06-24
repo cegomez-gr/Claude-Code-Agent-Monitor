@@ -27,7 +27,7 @@ function successRateColor(rate: number): string {
   return "text-red-400";
 }
 
-// ── Deterministic interpreters — return an i18n key + params ─────────────────
+// ── Deterministic interpreters - return an i18n key + params ─────────────────
 // Pure rule-based mapping so the same input always yields the same explanation.
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
@@ -267,7 +267,7 @@ export function WorkflowStats({ stats }: WorkflowStatsProps) {
   // t is referenced for translation prefix consistency.
   void (t as TFn);
   const topFlow = stats.topFlow;
-  const topFlowLabel = topFlow ? `${topFlow.source} → ${topFlow.target}` : "—";
+  const topFlowLabel = topFlow ? `${topFlow.source} → ${topFlow.target}` : "-";
 
   const srColor = successRateColor(stats.successRate);
 
