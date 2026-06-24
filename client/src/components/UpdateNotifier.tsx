@@ -1,7 +1,7 @@
 /**
  * @file Modal that tells the user when the dashboard's git checkout is behind
  * its remote and shows the exact command to run in a terminal. The dashboard
- * never pulls or restarts itself — the user copies and runs the command.
+ * never pulls or restarts itself - the user copies and runs the command.
  * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
@@ -85,7 +85,7 @@ export function UpdateNotifier() {
     setDismissedSha(status.remote_sha);
   }, [status?.remote_sha]);
 
-  // Escape to dismiss — standard modal affordance.
+  // Escape to dismiss - standard modal affordance.
   useEffect(() => {
     if (!show) return;
     const handler = (e: KeyboardEvent) => {
@@ -197,7 +197,7 @@ export function UpdateNotifier() {
 
           {/* The restart hint only applies when the printed command actually
            * rewrites the working tree. Feature-branch / detached-HEAD commands
-           * are fetch-only — restarting the dashboard would change nothing. */}
+           * are fetch-only - restarting the dashboard would change nothing. */}
           {status.situation === "tracking_canonical" ||
           status.situation === "fork_or_diverged_tracking" ? (
             <p className="text-[11px] text-gray-500 leading-relaxed">{t("restartNote")}</p>

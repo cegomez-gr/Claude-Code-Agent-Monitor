@@ -1,5 +1,5 @@
 /**
- * @file Tests for agentOriginLabel — verifies the parent-chain walk that
+ * @file Tests for agentOriginLabel - verifies the parent-chain walk that
  * renders nested subagent attribution as "main › coder › explorer", so
  * tool events triggered by deeply nested subagents identify their full
  * lineage instead of collapsing to just the leaf agent.
@@ -14,7 +14,7 @@ function makeMap(entries: Array<[string, AgentInfo]>): Map<string, AgentInfo> {
   return new Map(entries);
 }
 
-describe("agentOriginLabel — parent chain walk", () => {
+describe("agentOriginLabel - parent chain walk", () => {
   it("returns 'main' for the main agent itself", () => {
     const map = makeMap([
       ["sess-main", { type: "main", subagent_type: null, name: "Main", parent_agent_id: null }],

@@ -133,6 +133,11 @@ async function parseSessionFile(filePath) {
   let thinkingBlockCount = 0;
   const toolResultErrors = [];
   const usageExtras = { service_tiers: new Set(), speeds: new Set(), inference_geos: new Set() };
+  // Human-readable session title: custom-title (explicit /rename, claude -n)
+  // takes precedence over ai-title (auto-generated). Both are append-only
+  // metadata lines, so the last value seen wins.
+  let customTitle = null;
+  let aiTitle = null;
 
   for await (const line of rl) {
     if (!line.trim()) continue;
@@ -140,6 +145,15 @@ async function parseSessionFile(filePath) {
     try {
       entry = JSON.parse(line);
     } catch {
+      continue;
+    }
+
+    if (entry.type === "custom-title" && typeof entry.customTitle === "string") {
+      if (entry.customTitle.trim()) customTitle = entry.customTitle.trim();
+      continue;
+    }
+    if (entry.type === "ai-title" && typeof entry.aiTitle === "string") {
+      if (entry.aiTitle.trim()) aiTitle = entry.aiTitle.trim();
       continue;
     }
 
@@ -271,9 +285,13 @@ async function parseSessionFile(filePath) {
   if (!firstTimestamp) return null;
 
   const projectName = cwd ? path.basename(cwd) : slug || `Session ${sessionId.slice(0, 8)}`;
-  const sessionName = slug
+  // Prefer the real session title (custom > ai) when the transcript carries
+  // one; otherwise fall back to a cwd/slug-derived label. The hook ingestor
+  // applies the same precedence live, so imported and active names agree.
+  const fallbackName = slug
     ? `${projectName} (${slug})`
     : `${projectName} - ${sessionId.slice(0, 8)}`;
+  const sessionName = customTitle || aiTitle || fallbackName;
 
   // Check if the JSONL file was recently modified — indicates a possibly-active session
   let fileModifiedAt = null;
@@ -287,6 +305,8 @@ async function parseSessionFile(filePath) {
   return {
     sessionId,
     name: sessionName,
+    customTitle,
+    aiTitle,
     cwd,
     model,
     version,
@@ -512,7 +532,7 @@ function importCompactions(dbModule, sessionId, mainAgentId, compactions) {
       compactId
     );
 
-    const summary = `Context compacted — conversation history compressed (#${i + 1})`;
+    const summary = `Context compacted - conversation history compressed (#${i + 1})`;
     insertEvent.run(
       sessionId,
       compactId,
@@ -942,7 +962,7 @@ function importSession(dbModule, session) {
           mainAgentId,
           "Stop",
           null,
-          `${session.name} — response`,
+          `${session.name} - response`,
           importedData,
           ts
         );
@@ -1080,6 +1100,25 @@ function importSession(dbModule, session) {
       stmts.updateSession.run(null, null, null, JSON.stringify(meta), session.sessionId);
       backfilled = true;
     }
+
+    // Backfill the session name from the transcript title when the stored name
+    // is still an auto/placeholder label. Earlier imports named sessions after
+    // their cwd folder; the real title (custom > ai) is more useful. Only
+    // overwrite auto labels so a name the user picked is preserved.
+    const transcriptTitle = session.customTitle || session.aiTitle || null;
+    if (transcriptTitle) {
+      const base = session.cwd ? path.basename(session.cwd) : null;
+      const stored = existing.name || "";
+      const isAuto =
+        !stored.trim() ||
+        stored === `Session ${session.sessionId.slice(0, 8)}` ||
+        (base &&
+          (stored === base || stored.startsWith(`${base} - `) || stored.startsWith(`${base} (`)));
+      if (isAuto && stored !== transcriptTitle) {
+        stmts.updateSession.run(transcriptTitle, null, null, null, session.sessionId);
+        backfilled = true;
+      }
+    }
     if (
       session.endedAt &&
       (!existing.ended_at || session.endedAt > existing.ended_at) &&
@@ -1158,7 +1197,7 @@ function importSession(dbModule, session) {
   );
 
   const mainAgentId = `${session.sessionId}-main`;
-  const agentLabel = `Main Agent — ${session.name}`;
+  const agentLabel = `Main Agent - ${session.name}`;
   stmts.insertAgent.run(
     mainAgentId,
     session.sessionId,
@@ -1211,7 +1250,7 @@ function importSession(dbModule, session) {
         mainAgentId,
         "Stop",
         null,
-        `${session.name} — response`,
+        `${session.name} - response`,
         importedData,
         ts
       );

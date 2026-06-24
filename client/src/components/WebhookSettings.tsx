@@ -7,7 +7,7 @@
  * fetched from the server (`/api/webhooks/providers`): each provider declares
  * whether it needs a URL and which credential fields to render, so adding a
  * provider server-side surfaces here with no UI change. Secrets are never
- * returned by the API — URLs are masked and re-entered to change.
+ * returned by the API - URLs are masked and re-entered to change.
  * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
@@ -185,7 +185,7 @@ export function WebhookSettings() {
   const openEdit = (target: WebhookTarget) => {
     const provider = providerOf(target.type);
     // Prefill non-secret config (region, chat_id, severity, …); leave secret
-    // fields blank — they're redacted and re-entered only to change.
+    // fields blank - they're redacted and re-entered only to change.
     const config: Record<string, string> = {};
     for (const f of provider?.fields || []) {
       if (f.secret) continue;
@@ -223,7 +223,7 @@ export function WebhookSettings() {
   const canSubmit = useMemo(() => {
     if (!form || !provider) return false;
     if (!form.name.trim()) return false;
-    if (isEdit) return true; // server merge — existing values fill the gaps
+    if (isEdit) return true; // server merge - existing values fill the gaps
     if (provider.url_required && !form.url.trim()) return false;
     for (const f of provider.fields) {
       if (f.required && f.type !== "enum" && !(form.config[f.key] || "").trim()) return false;
@@ -514,9 +514,9 @@ export function WebhookSettings() {
               <span className="text-[11px] text-gray-500">
                 {t("webhooks.fieldUrl")}
                 {isEdit ? (
-                  <span className="text-gray-600"> — {t("webhooks.urlKeepHint")}</span>
+                  <span className="text-gray-600"> - {t("webhooks.urlKeepHint")}</span>
                 ) : urlOptional ? (
-                  <span className="text-gray-600"> — {t("webhooks.urlOptional")}</span>
+                  <span className="text-gray-600"> - {t("webhooks.urlOptional")}</span>
                 ) : null}
               </span>
               <input

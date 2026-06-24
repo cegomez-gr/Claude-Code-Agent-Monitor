@@ -4,7 +4,7 @@
   "mode": {
     "label": "Mode",
     "conversation": "Conversation",
-    "conversationHint": "Multi-turn — keep typing follow-ups while the agent works.",
+    "conversationHint": "Multi-turn - keep typing follow-ups while the agent works.",
     "headless": "One-shot",
     "headlessHint": "Single prompt, single response. Stdin closes after spawn."
   },
@@ -17,7 +17,7 @@
     "cwdGroups": {
       "dashboard": "Dashboard server",
       "home": "Home",
-      "recent": "Recent — used by Claude Code"
+      "recent": "Recent - used by Claude Code"
     },
     "cwdNoMatches": "No matches. Type an absolute path to use it directly.",
     "model": "Model",
@@ -26,9 +26,9 @@
     "modelCustomPlaceholder": "model id (e.g. claude-opus-4-7-20260101)",
     "permissionMode": "Permission mode",
     "permissionAcceptEdits": "acceptEdits (recommended)",
-    "permissionDefault": "default (interactive prompts — sessions may hang headlessly)",
+    "permissionDefault": "default (interactive prompts - sessions may hang headlessly)",
     "permissionPlan": "plan (read-only planning)",
-    "permissionBypass": "bypassPermissions (DANGER — allows everything without asking)",
+    "permissionBypass": "bypassPermissions (DANGER - allows everything without asking)",
     "effort": "Thinking effort",
     "effortHint": "Drives how much the model reasons before answering. Higher = more thinking tokens, slower, deeper. Empty inherits the model's default."
   },
@@ -123,10 +123,10 @@
     "subtitle": "same binary, different surface",
     "peek": "Most TUI features carry over. A handful of interactive ones don't.",
     "why": "Why",
-    "intro": "Under the hood we spawn the same `claude` binary your terminal uses — but stream-json (the only programmatic interface Claude exposes) is a one-way fire-hose, not the interactive TUI. Anything that depends on a running terminal session — in-place permission prompts, the keybinding overlay, mid-session config changes — has to be set up at spawn time instead of mid-conversation.",
+    "intro": "Under the hood we spawn the same `claude` binary your terminal uses - but stream-json (the only programmatic interface Claude exposes) is a one-way fire-hose, not the interactive TUI. Anything that depends on a running terminal session - in-place permission prompts, the keybinding overlay, mid-session config changes - has to be set up at spawn time instead of mid-conversation.",
     "supported": "Works here",
     "limited": "CLI only",
-    "tldr": "If a feature isn't here, pop the same session open in your terminal with `claude --resume <session-id>` — both sides share the same JSONL transcript on disk, so you never lose context by switching surfaces.",
+    "tldr": "If a feature isn't here, pop the same session open in your terminal with `claude --resume <session-id>` - both sides share the same JSONL transcript on disk, so you never lose context by switching surfaces.",
     "dismiss": "Got it",
     "minimize": "Minimize",
     "restore": "Show in-browser run notes",
@@ -144,7 +144,7 @@
     "slashHint": "Type / for slash commands",
     "fileHint": "Type @ to reference a file",
     "noMatches": "No matches",
-    "groupBuiltin": "Built-in (CLI only — won't run from here)",
+    "groupBuiltin": "Built-in (CLI only - won't run from here)",
     "groupUser": "User commands",
     "groupProject": "Project commands",
     "groupFiles": "Files in cwd"

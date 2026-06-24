@@ -428,7 +428,7 @@ function buildModelDelegationTooltip(
 ) {
   while (el.firstChild) el.removeChild(el.firstChild);
 
-  const sharePct = totalAgents > 0 ? `${((node.agentCount / totalAgents) * 100).toFixed(1)}%` : "—";
+  const sharePct = totalAgents > 0 ? `${((node.agentCount / totalAgents) * 100).toFixed(1)}%` : "-";
   const sideLabel =
     node.side === "main"
       ? t("modelDelegation.tooltip.mainModel")

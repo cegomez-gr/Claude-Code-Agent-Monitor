@@ -1,8 +1,8 @@
 /**
  * @file event-grouping.ts
  * @description Client-side grouping of DashboardEvent rows by `tool_use_id`.
- * A single tool invocation typically emits two events — `PreToolUse` (Working)
- * and `PostToolUse` (Connected) — both carrying the same `tool_use_id` inside
+ * A single tool invocation typically emits two events - `PreToolUse` (Working)
+ * and `PostToolUse` (Connected) - both carrying the same `tool_use_id` inside
  * their hook payload. Grouping collapses each such pair into one `EventGroup`
  * so the UI can show "Bash: curl ... (2.3s)" as one row instead of two, while
  * keeping the individual events accessible when the group is expanded.
@@ -16,7 +16,7 @@
 import type { DashboardEvent } from "./types";
 
 export type EventGroup = {
-  /** Stable key — either the tool_use_id, or `single:<event.id>` for
+  /** Stable key - either the tool_use_id, or `single:<event.id>` for
    *  ungroupable events. Safe to use as a React list key. */
   key: string;
   /** Events in the group, sorted chronologically (oldest → newest). */
@@ -31,7 +31,7 @@ export type EventGroup = {
   lastAt: string;
   /** Wall-clock duration between first and last event, or null if only one. */
   durationMs: number | null;
-  /** Best summary to display — prefers the most recent non-empty summary. */
+  /** Best summary to display - prefers the most recent non-empty summary. */
   summary: string | null;
 };
 
@@ -44,7 +44,7 @@ function extractToolUseId(event: DashboardEvent): string | null {
       if (typeof v === "string" && v.length > 0) return v;
     }
   } catch {
-    // Malformed payload — fall through to null.
+    // Malformed payload - fall through to null.
   }
   return null;
 }
@@ -93,7 +93,7 @@ export function groupEvents(events: DashboardEvent[]): EventGroup[] {
   return groups;
 }
 
-/** Best-effort status tag per event_type — mirrors the mapping used by
+/** Best-effort status tag per event_type - mirrors the mapping used by
  *  ActivityFeed / SessionDetail so grouped rows can show a status progression. */
 export function statusFromEventType(type: string): "working" | "waiting" | "completed" | "error" {
   switch (type) {
@@ -156,7 +156,7 @@ function parseMcpToolName(tool: string): { server: string; tool: string } | null
 
 /** First short string found in tool_input using a generic priority list, then
  *  falling back to any other short string. Applies to both MCP and native
- *  tools — no tool-specific knowledge baked in. */
+ *  tools - no tool-specific knowledge baked in. */
 const CONTEXT_FIELDS = [
   "description",
   "title",
@@ -246,7 +246,7 @@ function basename(path: string): string {
   return parts.length > 0 ? (parts[parts.length - 1] ?? path) : path;
 }
 
-/** Compact path label — last 2 segments (e.g. "tasks/base.py" for a long
+/** Compact path label - last 2 segments (e.g. "tasks/base.py" for a long
  *  absolute path ending in tasks/base.py), so the user sees the immediate
  *  parent directory in addition to the filename. Falls back to basename for
  *  single-segment paths. */
@@ -282,7 +282,7 @@ function extractToolInput(event: DashboardEvent): Record<string, unknown> | null
  *  dispatches per-tool to surface what actually happened (e.g. "Bash · git
  *  commit", "GitLab · get merge request · !174", "Edit EventGroupRow.tsx"),
  *  instead of the generic "Using tool: X" summary. MCP tools are rendered
- *  dynamically from their namespaced name — no per-server static mapping. */
+ *  dynamically from their namespaced name - no per-server static mapping. */
 export function buildEventTitle(event: DashboardEvent): string {
   if (!event.tool_name) return event.summary || event.event_type;
 
@@ -291,7 +291,7 @@ export function buildEventTitle(event: DashboardEvent): string {
   const trunc = (text: string, max = 80): string =>
     text.length > max ? text.slice(0, max) + "..." : text;
 
-  // ── MCP tools — fully dynamic dispatch ─────────────────────────────
+  // ── MCP tools - fully dynamic dispatch ─────────────────────────────
   const mcp = parseMcpToolName(event.tool_name);
   if (mcp) {
     const ctx = input ? buildContextHeadline(input) : null;
@@ -300,14 +300,14 @@ export function buildEventTitle(event: DashboardEvent): string {
 
   if (!input) return `${event.tool_name}${event.summary ? `: ${event.summary}` : ""}`;
 
-  // ── Native tools — per-tool smart titles ───────────────────────────
+  // ── Native tools - per-tool smart titles ───────────────────────────
   switch (event.tool_name) {
     case "Bash":
     case "PowerShell": {
       const desc = s(input.description);
       const cmd = s(input.command);
       const headline = parseShellHeadline(cmd);
-      if (headline && desc) return `${event.tool_name} · ${headline} — ${trunc(desc, 60)}`;
+      if (headline && desc) return `${event.tool_name} · ${headline} - ${trunc(desc, 60)}`;
       if (headline) return `${event.tool_name} · ${headline}`;
       if (desc) return `${event.tool_name}: ${desc}`;
       if (cmd) return `${event.tool_name}: ${trunc(cmd)}`;
@@ -356,7 +356,7 @@ export function buildEventTitle(event: DashboardEvent): string {
     case "Task": {
       const desc = s(input.description);
       const subtype = s(input.subagent_type);
-      if (desc && subtype) return `${event.tool_name} · ${subtype} — ${trunc(desc, 60)}`;
+      if (desc && subtype) return `${event.tool_name} · ${subtype} - ${trunc(desc, 60)}`;
       if (desc) return `${event.tool_name} · ${trunc(desc, 60)}`;
       if (subtype) return `${event.tool_name} · ${subtype}`;
       break;
@@ -377,7 +377,7 @@ export function buildEventTitle(event: DashboardEvent): string {
       const delay = input.delaySeconds;
       const reason = s(input.reason);
       if (typeof delay === "number") {
-        return `ScheduleWakeup · ${delay}s${reason ? ` — ${trunc(reason, 50)}` : ""}`;
+        return `ScheduleWakeup · ${delay}s${reason ? ` - ${trunc(reason, 50)}` : ""}`;
       }
       break;
     }
@@ -403,7 +403,7 @@ export function buildEventTitle(event: DashboardEvent): string {
       break;
     }
     default: {
-      // Generic fallback — first short string from the payload.
+      // Generic fallback - first short string from the payload.
       const ctx = buildContextHeadline(input);
       if (ctx) return `${event.tool_name} · ${trunc(ctx)}`;
     }
@@ -439,7 +439,7 @@ export type AgentInfo = {
   parent_agent_id?: string | null;
 };
 
-/** Single-segment label for an agent — the pill text. Returns null when the
+/** Single-segment label for an agent - the pill text. Returns null when the
  *  agent is the session's main agent (pill is noise in that case). */
 function singleAgentSegment(info: AgentInfo): string | null {
   if (info.type === "main") return null;
@@ -462,13 +462,13 @@ export function agentPillLabel(agentId: string | null, info: AgentInfo | undefin
   return shortAgentLabel(agentId);
 }
 
-/** Resolves a label that always identifies an event's agent origin — unlike
+/** Resolves a label that always identifies an event's agent origin - unlike
  *  agentPillLabel, this returns "main" for main agents instead of null. Used
  *  by the inline origin prefix ("{session} › {agent} · {action}").
  *
  *  When an `agentInfoById` map is provided AND the event's agent has a
  *  parent_agent_id, the chain is walked from the root subagent down to the
- *  current agent and joined with " › " — so an event triggered by a deeply
+ *  current agent and joined with " › " - so an event triggered by a deeply
  *  nested subagent reads "main › coder › explorer" instead of just "explorer".
  *  Cycles and missing parents fall back gracefully to the single-segment label. */
 export function agentOriginLabel(
@@ -479,7 +479,7 @@ export function agentOriginLabel(
   const map = infoOrMap instanceof Map ? infoOrMap : null;
   const info = map ? map.get(agentId) : (infoOrMap as AgentInfo | undefined);
 
-  // No map — preserve the legacy single-segment behavior for callers that
+  // No map - preserve the legacy single-segment behavior for callers that
   // haven't switched to the chain-aware overload yet.
   if (!map) {
     if (info) {
@@ -491,7 +491,7 @@ export function agentOriginLabel(
     return shortAgentLabel(agentId);
   }
 
-  // Map provided — walk parent chain so nested subagents read "main › coder".
+  // Map provided - walk parent chain so nested subagents read "main › coder".
   const segments: string[] = [];
   const seen = new Set<string>();
   let cursor: string | null = agentId;
@@ -517,7 +517,7 @@ export function agentOriginLabel(
 
 /** Builds the muted origin prefix shown before a row's action title, e.g.
  *  "datapilot › DataPilot › frontend-reviewer". Returns null when nothing
- *  identifying is available. Any of the three segments may be null — pages
+ *  identifying is available. Any of the three segments may be null - pages
  *  already scoped to a single session pass null for sessionName, etc. When a
  *  segment equals the previous one (e.g. project name == session name), it
  *  is dropped to avoid visual duplication. */

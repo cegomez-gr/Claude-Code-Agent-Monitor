@@ -169,7 +169,7 @@
     "confirmDeletePath": "Path: {{path}}",
     "confirmDeleteAction": "Yes, back up and delete",
     "templates": {
-      "skills": "---\nname: my-skill\ndescription: One-line description (shown when Claude picks the skill)\n---\n\nBody — what the skill does, when to use it, examples.\n",
+      "skills": "---\nname: my-skill\ndescription: One-line description (shown when Claude picks the skill)\n---\n\nBody - what the skill does, when to use it, examples.\n",
       "agents": "---\nname: my-agent\ndescription: When to invoke this subagent\ntools: Read, Grep\nmodel: sonnet\n---\n\nSystem prompt for the subagent.\n",
       "commands": "---\ndescription: One-line description shown in the slash menu\n---\n\nWhat /my-command does.\n",
       "output-styles": "---\nname: my-style\ndescription: Output style description\n---\n\nStyle instructions.\n",
@@ -178,7 +178,7 @@
   },
   "backups": {
     "title": "Backups",
-    "empty": "No backups yet — every edit or delete creates a timestamped backup that lands here.",
+    "empty": "No backups yet - every edit or delete creates a timestamped backup that lands here.",
     "viewLink": "Show backup history",
     "openButton": "Backups",
     "subtitle": "Every save / delete in the editor writes a copy here first. Backup folders live outside the directories Claude Code scans, so they don't reappear as ghosts in your CLI.",
@@ -214,7 +214,7 @@
     },
     "plugins": {
       "title": "Plugins are managed by the CLI",
-      "body": "Plugins are bundles with their own registry — `installed_plugins.json` plus install paths under `plugins/cache/`. The dashboard reads them but defers install/uninstall to `claude plugin …` so the registry stays consistent.",
+      "body": "Plugins are bundles with their own registry - `installed_plugins.json` plus install paths under `plugins/cache/`. The dashboard reads them but defers install/uninstall to `claude plugin …` so the registry stays consistent.",
       "install": "Install a plugin:",
       "installCmd": "claude plugin install <marketplace>/<plugin>",
       "uninstall": "Uninstall this plugin:",

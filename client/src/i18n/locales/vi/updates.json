@@ -1,6 +1,6 @@
 {
   "title": "Có bản cập nhật cho bảng điều khiển",
-  "lead": "Đã có commit mới trên nhánh remote. Hãy sao chép lệnh bên dưới và chạy trong terminal — bảng điều khiển sẽ không tự cập nhật.",
+  "lead": "Đã có commit mới trên nhánh remote. Hãy sao chép lệnh bên dưới và chạy trong terminal - bảng điều khiển sẽ không tự cập nhật.",
   "commitsBehind": "Chậm {{ref}} {{count}} commit",
   "copy": "Sao chép lệnh",
   "commandLabel": "Lệnh terminal để cập nhật bảng điều khiển",

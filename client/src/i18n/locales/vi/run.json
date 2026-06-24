@@ -4,7 +4,7 @@
   "mode": {
     "label": "Chế độ",
     "conversation": "Hội thoại",
-    "conversationHint": "Đa lượt — tiếp tục gõ trong khi agent xử lý.",
+    "conversationHint": "Đa lượt - tiếp tục gõ trong khi agent xử lý.",
     "headless": "Một lần",
     "headlessHint": "Một prompt, một phản hồi. Stdin đóng ngay sau khi spawn."
   },
@@ -17,7 +17,7 @@
     "cwdGroups": {
       "dashboard": "Dashboard server",
       "home": "Home",
-      "recent": "Gần đây — Claude Code đã dùng"
+      "recent": "Gần đây - Claude Code đã dùng"
     },
     "cwdNoMatches": "Không khớp. Gõ đường dẫn tuyệt đối để dùng trực tiếp.",
     "model": "Model",
@@ -26,9 +26,9 @@
     "modelCustomPlaceholder": "model id (vd: claude-opus-4-7-20260101)",
     "permissionMode": "Permission mode",
     "permissionAcceptEdits": "acceptEdits (khuyên dùng)",
-    "permissionDefault": "default (prompt tương tác — headless sẽ treo)",
+    "permissionDefault": "default (prompt tương tác - headless sẽ treo)",
     "permissionPlan": "plan (chỉ đọc, lập kế hoạch)",
-    "permissionBypass": "bypassPermissions (NGUY HIỂM — cho phép tất cả mà không hỏi)",
+    "permissionBypass": "bypassPermissions (NGUY HIỂM - cho phép tất cả mà không hỏi)",
     "effort": "Mức độ suy nghĩ",
     "effortHint": "Điều chỉnh mức suy luận của model trước khi trả lời. Cao hơn = nhiều token suy nghĩ hơn, chậm hơn, sâu hơn. Để trống để dùng mặc định của model."
   },
@@ -122,10 +122,10 @@
     "subtitle": "cùng binary, bề mặt khác",
     "peek": "Hầu hết tính năng TUI đều hoạt động. Một vài tính năng tương tác thì không.",
     "why": "Tại sao",
-    "intro": "Bên dưới chúng tôi khởi chạy chính `claude` binary mà terminal bạn dùng — nhưng stream-json (giao diện lập trình duy nhất Claude phơi ra) là luồng một chiều, không phải TUI tương tác. Mọi tính năng cần một phiên terminal đang chạy — prompt cấp quyền tại chỗ, bảng keybinding, đổi cấu hình giữa phiên — đều phải cấu hình lúc spawn thay vì giữa cuộc trò chuyện.",
+    "intro": "Bên dưới chúng tôi khởi chạy chính `claude` binary mà terminal bạn dùng - nhưng stream-json (giao diện lập trình duy nhất Claude phơi ra) là luồng một chiều, không phải TUI tương tác. Mọi tính năng cần một phiên terminal đang chạy - prompt cấp quyền tại chỗ, bảng keybinding, đổi cấu hình giữa phiên - đều phải cấu hình lúc spawn thay vì giữa cuộc trò chuyện.",
     "supported": "Hỗ trợ ở đây",
     "limited": "Chỉ CLI",
-    "tldr": "Nếu thiếu tính năng nào, mở cùng phiên ở terminal với `claude --resume <session-id>` — cả hai cùng đọc một tệp JSONL transcript trên đĩa, nên đổi bề mặt không làm mất ngữ cảnh.",
+    "tldr": "Nếu thiếu tính năng nào, mở cùng phiên ở terminal với `claude --resume <session-id>` - cả hai cùng đọc một tệp JSONL transcript trên đĩa, nên đổi bề mặt không làm mất ngữ cảnh.",
     "dismiss": "Đã rõ",
     "minimize": "Thu nhỏ",
     "restore": "Hiện ghi chú chạy trong trình duyệt",
@@ -143,7 +143,7 @@
     "slashHint": "Gõ / để tìm lệnh slash",
     "fileHint": "Gõ @ để tham chiếu file",
     "noMatches": "Không có",
-    "groupBuiltin": "Built-in (chỉ CLI — không chạy ở đây)",
+    "groupBuiltin": "Built-in (chỉ CLI - không chạy ở đây)",
     "groupUser": "Lệnh user",
     "groupProject": "Lệnh project",
     "groupFiles": "File trong cwd"

@@ -78,7 +78,7 @@ function ensureSession(sessionId, data) {
     stmts.insertAgent.run(
       mainAgentId,
       sessionId,
-      `Main Agent — ${sessionLabel}`,
+      `Main Agent - ${sessionLabel}`,
       "main",
       null,
       "working",
@@ -103,6 +103,52 @@ function ensureSession(sessionId, data) {
 
 function getMainAgent(sessionId) {
   return stmts.getAgent.get(`${sessionId}-main`);
+}
+
+/**
+ * True when `name` is an auto-generated / placeholder label rather than a
+ * meaningful title the user picked. Covers:
+ *   - empty / null
+ *   - the hook fallback "Session <id8>"
+ *   - the import-history fallbacks derived from cwd ("<folder>", "<folder> -
+ *     <id8>", "<folder> (<slug>)")
+ * Such names are safe to overwrite with a transcript-derived ai-title; a real
+ * user-chosen name is not.
+ */
+function isAutoSessionName(name, sessionId, cwd) {
+  if (!name || !name.trim()) return true;
+  if (name === `Session ${sessionId.slice(0, 8)}`) return true;
+  if (cwd) {
+    const base = require("path").basename(cwd);
+    if (base && (name === base || name.startsWith(`${base} - `) || name.startsWith(`${base} (`))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Keep sessions.name in sync with the transcript's human-readable title.
+ * Source of truth lives in the JSONL as `custom-title` (explicit /rename,
+ * `claude -n`, picker Ctrl+R) and `ai-title` (auto / plan-accept) lines, which
+ * the TranscriptCache surfaces on every extract. Precedence: an explicit
+ * custom title always wins; an ai-title only fills in when the current name is
+ * still an auto/placeholder label (so a name the user set in the dashboard or
+ * via /rename is never clobbered by the auto-generated title). Broadcasts
+ * session_updated only on a real change so the UI updates in real time.
+ */
+function syncSessionName(session, result) {
+  if (!session || !result) return;
+  const custom = result.customTitle && result.customTitle.trim();
+  const ai = result.aiTitle && result.aiTitle.trim();
+  const desired = custom || ai || null;
+  if (!desired) return;
+  if (!custom && !isAutoSessionName(session.name, session.id, session.cwd)) return;
+  const upd = stmts.updateSessionName.run(desired, session.id, desired);
+  if (upd.changes > 0) {
+    const refreshed = stmts.getSession.get(session.id);
+    if (refreshed) broadcast("session_updated", refreshed);
+  }
 }
 
 const processEvent = db.transaction((hookType, data) => {
@@ -269,7 +315,7 @@ const processEvent = db.transaction((hookType, data) => {
       summary =
         data.stop_reason === "error"
           ? `Error in ${sessionLabel}`
-          : `${sessionLabel} — ready for input`;
+          : `${sessionLabel} - ready for input`;
 
       // Stop means Claude finished its turn, NOT that the session is closed.
       // Session stays active — user can still send more messages.
@@ -517,6 +563,11 @@ const processEvent = db.transaction((hookType, data) => {
         }
       }
 
+      // Keep the displayed session name in sync with the transcript title
+      // (set via /rename, `claude -n`, or the auto ai-title). Re-read the row
+      // so we see any name set earlier in this same transaction.
+      syncSessionName(stmts.getSession.get(sessionId), result);
+
       // Register compaction agents and events.
       // Each isCompactSummary entry in the JSONL = one compaction that occurred.
       // Deduplicate by uuid so we only create once per compaction.
@@ -547,7 +598,7 @@ const processEvent = db.transaction((hookType, data) => {
           ).run(ts, ts, ts, compactId);
           broadcast("agent_created", stmts.getAgent.get(compactId));
 
-          const compactSummary = `Context compacted — conversation history compressed (#${compaction.entries.indexOf(entry) + 1})`;
+          const compactSummary = `Context compacted - conversation history compressed (#${compaction.entries.indexOf(entry) + 1})`;
           stmts.insertEvent.run(
             sessionId,
             compactId,
@@ -855,7 +906,15 @@ function watchdogCheck() {
       // Use cache directly (stat-based detection handles staleness automatically).
       // Don't invalidate — it defeats caching and forces full re-reads every 15s.
       const result = transcriptCache.extract(tPath);
-      if (!result || !result.errors || result.errors.length === 0) continue;
+      if (!result) continue;
+
+      // Pick up a /rename or fresh ai-title even when no hook fired for it —
+      // a session left idle right after /rename has no further events, so the
+      // watchdog is the path that surfaces the new name within ~15s.
+      const fullSess = stmts.getSession.get(sess.id);
+      if (fullSess) syncSessionName(fullSess, result);
+
+      if (!result.errors || result.errors.length === 0) continue;
 
       // Check if we already recorded these errors
       const existingErrorCount = db

@@ -192,7 +192,7 @@ function SystemHealthTab() {
   // Subagent effectiveness
   const effectiveness = (workflow.effectiveness || []).slice(0, 6);
 
-  // Composite health score — clamped to [0, 100] for display safety
+  // Composite health score - clamped to [0, 100] for display safety
   const healthScore = Math.max(
     0,
     Math.min(
@@ -436,7 +436,7 @@ function SystemHealthTab() {
             </Tip>
           </div>
 
-          {/* Ring gauge — centered */}
+          {/* Ring gauge - centered */}
           <div className="flex items-center justify-center flex-1">
             <Tip
               raw={`Score: ${healthScore.toFixed(1)} / 100\n\n• Success Rate (40%): ${successRate.toFixed(1)}%\n• Cache Hit (25%): ${cacheHitRate.toFixed(1)}%\n• Error Avoidance (25%): ${(100 - errorRate).toFixed(1)}%\n• Memory Health (10%): ${(100 - heapUsedPct).toFixed(1)}%`}
@@ -1002,7 +1002,7 @@ export function Dashboard() {
     setExpandedAgents((prev) => {
       // Only update if there are genuinely new IDs to add
       const newIds = [...toExpand].filter((id) => !prev.has(id));
-      if (newIds.length === 0) return prev; // Stable reference — no re-render
+      if (newIds.length === 0) return prev; // Stable reference - no re-render
       return new Set([...prev, ...newIds]);
     });
   }, [allSubagents]);
@@ -1137,7 +1137,7 @@ export function Dashboard() {
 
       {activeTab === "monitor" ? (
         <div className="flex-1 flex flex-col gap-8 min-h-0">
-          {/* Stats grid — 2 rows of 3 avoids the 6-column squeeze */}
+          {/* Stats grid - 2 rows of 3 avoids the 6-column squeeze */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <StatCard
               label={t("totalSessions")}
@@ -1242,7 +1242,7 @@ export function Dashboard() {
                               </button>
                             )}
                             {/* Reserve the chevron column even when this row
-                                has no chevron — without this, peer top-level
+                                has no chevron - without this, peer top-level
                                 mains would line up at different x positions
                                 depending on whether they have subagents,
                                 making chevron-having mains look indented
@@ -1385,7 +1385,7 @@ export function Dashboard() {
                       </span>
                       {(() => {
                         // Session label: real name when one exists, else the
-                        // short ID — keeps every activity row attributable.
+                        // short ID - keeps every activity row attributable.
                         const sname = sessionsById.get(event.session_id)?.name?.trim() || "";
                         const isAuto = /^Session [0-9a-f]{8}$/i.test(sname);
                         return (

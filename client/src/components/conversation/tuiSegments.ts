@@ -1,7 +1,7 @@
 /**
  * @file tuiSegments.ts
- * @description Parses Claude TUI tag markup that appears in user messages —
- * caveats, command invocations, captured stdout/stderr, system reminders —
+ * @description Parses Claude TUI tag markup that appears in user messages -
+ * caveats, command invocations, captured stdout/stderr, system reminders -
  * into a flat segment list the renderer can lay out inline. Also strips bare
  * ANSI/SGR escape sequences (e.g. "[1m...[22m") that survive the JSONL pipe
  * so messages render as plain text instead of leaking codes.

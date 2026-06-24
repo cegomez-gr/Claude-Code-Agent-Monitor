@@ -97,7 +97,7 @@ function renderBars(
     .attr("font-size", 10)
     .attr("font-family", "Inter, sans-serif");
 
-  // X axis label (sessions, not individual tick labels — too many)
+  // X axis label (sessions, not individual tick labels - too many)
   g.append("text")
     .attr("x", innerW / 2)
     .attr("y", innerH + 28)

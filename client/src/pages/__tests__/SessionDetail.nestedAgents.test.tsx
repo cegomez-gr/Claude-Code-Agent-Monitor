@@ -117,7 +117,7 @@ async function findTree() {
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
-describe("SessionDetail — Nested Agent Tree Rendering", () => {
+describe("SessionDetail - Nested Agent Tree Rendering", () => {
   beforeEach(() => {
     mockAgents = [];
   });
@@ -211,7 +211,7 @@ describe("SessionDetail — Nested Agent Tree Rendering", () => {
     ];
 
     renderPage();
-    // Main has 4 total descendants (L1, L2, L3a, L3b) — should show "4 subagents" when collapsed
+    // Main has 4 total descendants (L1, L2, L3a, L3b) - should show "4 subagents" when collapsed
     expect(await screen.findByText("4 subagents")).toBeInTheDocument();
   });
 

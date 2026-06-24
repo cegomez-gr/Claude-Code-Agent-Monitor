@@ -284,7 +284,7 @@ function mergeEnvelope(prev: Envelope[], envelope: Envelope): Envelope[] {
           _streaming: true,
         },
       };
-      // Keep the message_start envelope itself in the array — its
+      // Keep the message_start envelope itself in the array - its
       // `event.message.usage` is the only place we get the initial input /
       // cache token counts during live streaming. Without it, the meter is
       // stuck at zero until the post-reload replay re-injects the same
@@ -327,7 +327,7 @@ function mergeEnvelope(prev: Envelope[], envelope: Envelope): Envelope[] {
           try {
             (next as { input?: unknown }).input = JSON.parse(next._partialJson);
           } catch {
-            /* still incomplete JSON — leave previous parsed value */
+            /* still incomplete JSON - leave previous parsed value */
           }
         }
         blocks[blockIdx] = next;
@@ -351,7 +351,7 @@ function mergeEnvelope(prev: Envelope[], envelope: Envelope): Envelope[] {
     }
 
     // content_block_start/stop and other stream_event subtypes are mutations
-    // on the placeholder we already track — no usage info, no need to keep
+    // on the placeholder we already track - no usage info, no need to keep
     // the envelope itself.
     return prev;
   }
@@ -470,7 +470,7 @@ function useTypewriterEnvelopes(envelopes: Envelope[]): Envelope[] {
 
   // Single long-lived RAF loop. Reads envelopes via ref so new server data
   // is picked up without tearing down and rescheduling the loop on every
-  // websocket message — a previous version restarted on each envelope
+  // websocket message - a previous version restarted on each envelope
   // change which dropped frames between bursts and hid the streaming.
   useEffect(() => {
     rafRef.current = requestAnimationFrame(tickFnRef.current as FrameRequestCallback);
@@ -631,7 +631,7 @@ export function Run() {
     return () => clearInterval(tick);
   }, [refreshList]);
 
-  // Refresh whenever the tab regains focus / visibility — typical when the
+  // Refresh whenever the tab regains focus / visibility - typical when the
   // user comes back from running `claude` in a terminal and wants to see the
   // current state of every run without waiting for the next poll.
   useEffect(() => {
@@ -652,7 +652,7 @@ export function Run() {
   // existing /api/sessions/:id endpoint so the resume picker shows real
   // metadata, then drop the user back into the config card.
   // Resume a past dashboard run. Spawns a fresh `claude --resume <id>` with
-  // an empty initial prompt — claude idles on the resumed conversation
+  // an empty initial prompt - claude idles on the resumed conversation
   // until the user types a follow-up. The user lands directly in the chat
   // view (the new live handle is attached) instead of being forced back to
   // the config card.
@@ -664,7 +664,7 @@ export function Run() {
       setError(null);
       try {
         // Load the past transcript in parallel with spawning so the user
-        // doesn't stare at an empty screen — the resumed run starts cold and
+        // doesn't stare at an empty screen - the resumed run starts cold and
         // claude --resume doesn't replay anything over stdout.
         const [fetched, transcript] = await Promise.all([
           api.run.start({
@@ -696,10 +696,10 @@ export function Run() {
   );
 
   // View a past run inline (no spawn). Headless runs are single-shot, so
-  // there's no resume — but the transcript is still worth seeing without
+  // there's no resume - but the transcript is still worth seeing without
   // navigating away. Seeds the chat view with the past messages and a
   // synthetic completed handle so the UI renders as read-only (no Stop
-  // button, no follow-up input — both are gated on isLive).
+  // button, no follow-up input - both are gated on isLive).
   const onViewFromHistory = useCallback(
     async (item: DashboardRunHistoryItem) => {
       if (!item.session_id) return;
@@ -742,7 +742,7 @@ export function Run() {
     [busy, t]
   );
 
-  // WebSocket subscription — only act on messages for the current handle.
+  // WebSocket subscription - only act on messages for the current handle.
   useEffect(() => {
     return eventBus.subscribe((msg: WSMessage) => {
       if (msg.type === "run_stream") {
@@ -750,7 +750,7 @@ export function Run() {
         if (handle && p.id === handle.id) {
           // React 18 auto-batches async setStates, which collapses bursts of
           // stream_event deltas (and the final `assistant` envelope that
-          // follows them) into a single render — visually erasing the
+          // follows them) into a single render - visually erasing the
           // streaming effect. flushSync forces a commit per envelope so the
           // user sees text_delta / thinking_delta chunks paint as they
           // arrive instead of all at once.
@@ -842,7 +842,7 @@ export function Run() {
 
         // The spawner's in-memory envelope log only contains envelopes that
         // came over stdout for this specific spawn. For a resumed run, that
-        // means prior history is missing — claude --resume reads the prior
+        // means prior history is missing - claude --resume reads the prior
         // transcript as context but doesn't replay it on stdout. Without
         // this, re-attaching to a resumed run after navigating away loses
         // everything from before the resume. The session's JSONL transcript
@@ -863,7 +863,7 @@ export function Run() {
               envelopesToUse = transcriptEnvs;
             }
           } catch {
-            /* transcript fetch failed — keep the spawner's log */
+            /* transcript fetch failed - keep the spawner's log */
           }
         }
 
@@ -880,7 +880,7 @@ export function Run() {
     [busy, t]
   );
 
-  // Honor `?session=<id>` deep-links from /sessions and /sessions/:id —
+  // Honor `?session=<id>` deep-links from /sessions and /sessions/:id -
   // map the session id to a live run handle and attach to it instead of
   // dropping the user on the new-run config card. Strip the param once
   // consumed so a refresh of the Run page doesn't keep re-attaching.
@@ -889,7 +889,7 @@ export function Run() {
     const sid = searchParams.get("session");
     if (!sid) return;
     if (handle && handle.sessionId === sid) {
-      // Already attached to this session — just clean the URL.
+      // Already attached to this session - just clean the URL.
       const next = new URLSearchParams(searchParams);
       next.delete("session");
       setSearchParams(next, { replace: true });
@@ -926,7 +926,7 @@ export function Run() {
   // Apply once, then strip the param so a later refresh doesn't overwrite edits
   // the user has since made to the prompt. When `?autostart=1` is also present
   // (Tabby's "ask" path), arm a pending flag so the run fires automatically
-  // once preflight is ready — see the autostart effect below.
+  // once preflight is ready - see the autostart effect below.
   const promptPrefilledRef = useRef(false);
   const pendingAutostartRef = useRef(false);
   useEffect(() => {
@@ -1011,8 +1011,8 @@ export function Run() {
   // Only lock the page to the viewport when we're showing a live run session.
   // The config-card screen needs normal page flow so the form is fully
   // reachable on short windows. The run-session screen, however, owns the
-  // chat panel and we want long chats to scroll inside the panel — never the
-  // page — so we constrain only that case.
+  // chat panel and we want long chats to scroll inside the panel - never the
+  // page - so we constrain only that case.
   const viewportLocked = !!handle;
   return (
     <div
@@ -1056,12 +1056,12 @@ export function Run() {
       {!handle && <LimitationsBanner />}
 
       {!handle ? (
-        // Config card uses normal page flow — page scrolls if needed.
+        // Config card uses normal page flow - page scrolls if needed.
         <ConfigCard
           mode={mode}
           onModeChange={(m) => {
             setMode(m);
-            // Headless can't resume — clearing keeps the UI honest if the
+            // Headless can't resume - clearing keeps the UI honest if the
             // user had a session pinned and then switched mode.
             if (m === "headless") setResumeSession(null);
           }}
@@ -1199,7 +1199,7 @@ function LimitationsBanner() {
             {t("limitations.supported")}
           </div>
           <ul className="text-[11.5px] text-gray-300 leading-[1.55] space-y-1 marker:text-emerald-500/40 list-disc pl-4">
-            <li>Live streaming output — text, thinking, tool calls, tool results</li>
+            <li>Live streaming output - text, thinking, tool calls, tool results</li>
             <li>Multi-turn conversations &amp; resuming any past session</li>
             <li>User / project / plugin slash commands (template expansion)</li>
             <li>
@@ -1223,10 +1223,10 @@ function LimitationsBanner() {
               Built-in slash commands (<code className="text-[10.5px] text-gray-200">/help</code>,{" "}
               <code className="text-[10.5px] text-gray-200">/model</code>,{" "}
               <code className="text-[10.5px] text-gray-200">/clear</code>,{" "}
-              <code className="text-[10.5px] text-gray-200">/compact</code>) — they mutate CLI-only
+              <code className="text-[10.5px] text-gray-200">/compact</code>) - they mutate CLI-only
               state
             </li>
-            <li>Mid-session permission prompts — pick the mode at spawn time</li>
+            <li>Mid-session permission prompts - pick the mode at spawn time</li>
             <li>Compaction prompts mid-conversation</li>
             <li>Mid-session model or effort changes (set them at spawn time)</li>
           </ul>
@@ -1290,7 +1290,7 @@ function computeTokens(envelopes: Envelope[]): TokenStats {
   let cacheReadTokens = 0;
   let cacheCreationTokens = 0;
   // Output is summed across all completed turns plus the running current
-  // turn — claude reports output_tokens as a per-turn (per-message) number,
+  // turn - claude reports output_tokens as a per-turn (per-message) number,
   // not cumulative. Without summing, the meter resets every time a new
   // `message_start` arrives.
   let completedOutputTokens = 0;
@@ -1369,14 +1369,14 @@ function computeTokens(envelopes: Envelope[]): TokenStats {
         for (const m of Object.values(r.modelUsage)) {
           if (!m || typeof m !== "object") continue;
           if (typeof m.contextWindow === "number") contextWindow = m.contextWindow;
-          // Prefer modelUsage's per-model totals when available — these are
+          // Prefer modelUsage's per-model totals when available - these are
           // the canonical per-run numbers.
           if (typeof m.inputTokens === "number") inputTokens = m.inputTokens;
           if (typeof m.cacheReadInputTokens === "number") cacheReadTokens = m.cacheReadInputTokens;
           if (typeof m.cacheCreationInputTokens === "number")
             cacheCreationTokens = m.cacheCreationInputTokens;
           if (typeof m.outputTokens === "number") {
-            // modelUsage.outputTokens is the run total for this model — use
+            // modelUsage.outputTokens is the run total for this model - use
             // it as the canonical cumulative output, replacing our running
             // sum.
             completedOutputTokens = m.outputTokens;
@@ -1417,7 +1417,7 @@ function computeTokens(envelopes: Envelope[]): TokenStats {
         // `message.id` (transcriptToEnvelopes doesn't set one). Live-stream
         // canonical envelopes always have an id assigned by message_start,
         // and their tokens are already counted via stream_event / commitTurn
-        // — folding them here would double-count. Use id-presence as the
+        // - folding them here would double-count. Use id-presence as the
         // discriminator: no id → transcript-seeded → fold; id → live → skip.
         const hasId = !!(msg as { id?: string }).id;
         if (!hasId) {
@@ -1622,7 +1622,7 @@ interface AutocompleteState {
  *   3. Word boundary (after `-` / `_` / `.`) starts with query
  *   4. Name contains query (earlier index ranks higher)
  *   5. Subsequence match across the name
- *   6. Description contains query — only when query is at least 3 chars,
+ *   6. Description contains query - only when query is at least 3 chars,
  *      so a single keystroke can't drag in tangential descriptions.
  */
 function scoreSlashMatch(name: string, description: string | undefined, q: string): number {
@@ -1701,7 +1701,7 @@ function PromptEditor({
   const [fileSuggestions, setFileSuggestions] = useState<string[]>([]);
   const fileFetchRef = useRef<{ q: string; t: number } | null>(null);
 
-  // Slash filter — tiered scoring so prefix matches outrank arbitrary
+  // Slash filter - tiered scoring so prefix matches outrank arbitrary
   // substring hits, name matches outrank description matches, and shorter
   // names break ties when scores are equal.
   const slashItems = useMemo(() => {
@@ -2143,8 +2143,8 @@ function RunsModal({
   // Snappy refresh while the modal is the foreground UI: pull immediately
   // on open + every 2 s after that. Combined with the page-level 5 s poll
   // and the WS run_status broadcasts, this guarantees that any state
-  // change — lifecycle event, sibling tab, manual DB tweak, boot
-  // reconciliation — surfaces here within a couple of seconds.
+  // change - lifecycle event, sibling tab, manual DB tweak, boot
+  // reconciliation - surfaces here within a couple of seconds.
   useEffect(() => {
     onRefresh();
     const tick = setInterval(onRefresh, 2000);
@@ -2386,7 +2386,7 @@ function UnifiedRunRowView({
   const { t } = useTranslation("run");
   const startedDate = new Date(row.startedAt);
   const startedLabel = isNaN(startedDate.getTime())
-    ? "—"
+    ? "-"
     : startedDate.toLocaleString(undefined, {
         month: "short",
         day: "numeric",
@@ -2394,7 +2394,7 @@ function UnifiedRunRowView({
         minute: "2-digit",
       });
   const canResume = row.mode === "conversation" && !!row.sessionId && !row.isLive;
-  // Headless runs are single-shot, so resume doesn't apply — but the captured
+  // Headless runs are single-shot, so resume doesn't apply - but the captured
   // transcript is still worth viewing. Link to the Session detail page.
   const canView = row.mode === "headless" && !!row.sessionId && !row.isLive;
   return (
@@ -2506,9 +2506,9 @@ function ConfigCard(props: ConfigCardProps) {
   const [resumePicked, setResumePicked] = useState(isResume);
   // Keep "resume picked" in sync with the parent. Two cases:
   //  1. Parent set a resume session (e.g. user clicked Resume in the runs
-  //     modal) — flip the radio so the picker is shown and the selection
+  //     modal) - flip the radio so the picker is shown and the selection
   //     is visible.
-  //  2. Parent cleared the session and mode flipped to headless — clear
+  //  2. Parent cleared the session and mode flipped to headless - clear
   //     the radio so the form is honest.
   useEffect(() => {
     if (isResume && !resumePicked) setResumePicked(true);
@@ -2517,7 +2517,7 @@ function ConfigCard(props: ConfigCardProps) {
 
   return (
     <div className="rounded-xl border border-border bg-surface-1">
-      {/* Step 1: Mode (always visible — the primary decision) */}
+      {/* Step 1: Mode (always visible - the primary decision) */}
       <div className="border-b border-border px-4 py-3">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-2">
           {t("mode.label")}
@@ -2547,7 +2547,7 @@ function ConfigCard(props: ConfigCardProps) {
         )}
       </div>
 
-      {/* Step 2 (only for multi-turn): Source — new vs resume */}
+      {/* Step 2 (only for multi-turn): Source - new vs resume */}
       {props.mode === "conversation" && (
         <div className="border-b border-border px-4 py-3">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 mb-2">
@@ -3109,7 +3109,7 @@ function RunSession(props: RunSessionProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const [pinnedToBottom, setPinnedToBottom] = useState(true);
 
-  // Track whether the user has scrolled away — if so, don't yank them back.
+  // Track whether the user has scrolled away - if so, don't yank them back.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -3142,7 +3142,7 @@ function RunSession(props: RunSessionProps) {
   return (
     // flex-1 + min-h-0 lets us fill the viewport-locked parent, while the
     // inner stream area's overflow-auto keeps long chats scrollable inside
-    // the panel — never the page.
+    // the panel - never the page.
     <div className="rounded-xl border border-border bg-surface-1 flex flex-col flex-1 min-h-0">
       {/* Toolbar */}
       <div className="border-b border-border px-4 py-2.5 flex items-center gap-2 flex-wrap">
@@ -3178,7 +3178,7 @@ function RunSession(props: RunSessionProps) {
             {t("actions.viewSession")}
           </Link>
         )}
-        {/* Always available — lets the user leave a running run in the
+        {/* Always available - lets the user leave a running run in the
             background and start another one. The original is still in the
             Active Runs dropdown for re-attach. */}
         <button
@@ -3204,7 +3204,7 @@ function RunSession(props: RunSessionProps) {
       {/* Footer banner once finished */}
       {props.hasFinished && result && <ResultFooter result={result} />}
 
-      {/* Follow-up input — only for conversation mode while live */}
+      {/* Follow-up input - only for conversation mode while live */}
       {props.mode === "conversation" && props.isLive && (
         <div className="border-t border-border px-4 py-3">
           <PromptEditor
@@ -3313,7 +3313,7 @@ function EnvelopeRow({ envelope }: { envelope: Envelope }) {
     case "result":
       return null; // shown in the footer
     case "stream_event":
-      return null; // kept in state for token accounting only — never rendered
+      return null; // kept in state for token accounting only - never rendered
     default:
       // Unknown envelope: render compact JSON for transparency
       return <UnknownTurn env={envelope} />;
@@ -3358,7 +3358,7 @@ function UserTurn({ env }: { env: UserMessage }) {
       <div className="flex-1 min-w-0">
         <div className="text-[11px] font-semibold text-indigo-300 mb-1">{t("events.you")}</div>
         <div className="rounded-lg border border-indigo-500/20 bg-indigo-500/5 px-3 py-2 text-sm text-gray-200 whitespace-pre-wrap break-words">
-          {text || "—"}
+          {text || "-"}
         </div>
       </div>
     </div>

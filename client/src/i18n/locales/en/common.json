@@ -164,7 +164,7 @@
       "filtersTitle": "How filters work",
       "filterTip1": "Filters compose with AND across categories. Within one category, multi-select is OR.",
       "filterTip2": "Status is a shortcut that expands to event_type values (Working → PreToolUse, Completed → Stop/SubagentStop/Compaction, ...). Status + Event type compose as OR on event_type.",
-      "filterTipGrouping": "Grouping tip: a grouped row needs both Pre and Post events. If you filter by Status, pick Working + Connected together to keep pairs intact — otherwise a group will only show half of the call.",
+      "filterTipGrouping": "Grouping tip: a grouped row needs both Pre and Post events. If you filter by Status, pick Working + Connected together to keep pairs intact - otherwise a group will only show half of the call.",
       "filterTip3": "Text search matches summary, tool_name, and the raw payload (data column).",
       "filterTip4": "Date range applies to each event's created_at."
     }

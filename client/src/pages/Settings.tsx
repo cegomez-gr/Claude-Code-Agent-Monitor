@@ -863,7 +863,7 @@ export function Settings() {
         </div>
       </div>
 
-      {/* In-page section navigation — Settings is dense, so this TOC jumps to
+      {/* In-page section navigation - Settings is dense, so this TOC jumps to
           and scroll-spies each section. */}
       <nav className="sticky top-0 z-20 -mx-1 !mt-2 px-1 py-2 bg-surface-0/85 backdrop-blur border-b border-border/60 flex items-center gap-1.5">
         <span className="flex-shrink-0 pl-1 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
@@ -1059,10 +1059,10 @@ export function Settings() {
                       ${rule.cache_write_1h_per_mtok}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-400 text-right font-mono">
-                      {rule.fast_input_per_mtok ? `$${rule.fast_input_per_mtok}` : "—"}
+                      {rule.fast_input_per_mtok ? `$${rule.fast_input_per_mtok}` : "-"}
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-400 text-right font-mono">
-                      {rule.fast_output_per_mtok ? `$${rule.fast_output_per_mtok}` : "—"}
+                      {rule.fast_output_per_mtok ? `$${rule.fast_output_per_mtok}` : "-"}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 transition-opacity">

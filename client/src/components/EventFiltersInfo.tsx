@@ -4,7 +4,7 @@
  * status badges, the Pre/Post lifecycle, how filters compose, and what each
  * filter dropdown accepts. Rendered above the EventFilters toolbar on both
  * ActivityFeed and SessionDetail so users can discover the model without
- * leaving the page. Native <details> / <summary> — no popover primitive
+ * leaving the page. Native <details> / <summary> - no popover primitive
  * required and keyboard-accessible out of the box.
  * @author Son Nguyen <hoangson091104@gmail.com>
  */
@@ -22,7 +22,7 @@ export function EventFiltersInfo() {
         <span className="font-semibold uppercase tracking-wide mr-1.5">
           {t("eventFilters.help.title")}
         </span>
-        <span className="text-gray-500 font-normal">— {t("eventFilters.help.subtitle")}</span>
+        <span className="text-gray-500 font-normal">- {t("eventFilters.help.subtitle")}</span>
       </summary>
 
       <div className="divide-y divide-border">

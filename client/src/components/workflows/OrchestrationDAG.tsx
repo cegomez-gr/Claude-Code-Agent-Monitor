@@ -122,7 +122,7 @@ function isEmpty(data: OrchestrationData): boolean {
 }
 
 function successRate(completed: number, total: number): string {
-  if (total === 0) return "—";
+  if (total === 0) return "-";
   return `${Math.round((completed / total) * 100)}%`;
 }
 
@@ -143,7 +143,7 @@ function buildGraph(
 } {
   const rawNodes: Omit<DAGNode, "x" | "y">[] = [];
 
-  // Layer 0 — sessions
+  // Layer 0 - sessions
   rawNodes.push({
     id: "sessions",
     label: t("orchestration.sessions"),
@@ -154,7 +154,7 @@ function buildGraph(
     height: NODE_H,
   });
 
-  // Layer 1 — main agent
+  // Layer 1 - main agent
   rawNodes.push({
     id: "main",
     label: t("orchestration.mainAgent"),
@@ -165,7 +165,7 @@ function buildGraph(
     height: NODE_H,
   });
 
-  // Layer 2 — subagent types (deduplicated, capped at MAX_SUBAGENT_NODES)
+  // Layer 2 - subagent types (deduplicated, capped at MAX_SUBAGENT_NODES)
   const subagentMap = new Map<string, { count: number; completed: number; errors: number }>();
   for (const s of data.subagentTypes) {
     const key = s.subagent_type || "unknown";
@@ -213,7 +213,7 @@ function buildGraph(
     });
   }
 
-  // Layer 3 — compactions (context compressions)
+  // Layer 3 - compactions (context compressions)
   const compactions = (data as unknown as { compactions?: { total: number; sessions: number } })
     .compactions;
   const compTotal = compactions?.total ?? 0;
@@ -241,7 +241,7 @@ function buildGraph(
     });
   }
 
-  // Layer 4 — outcomes
+  // Layer 4 - outcomes
   const outcomeMap = new Map<string, number>();
   for (const o of data.outcomes) {
     outcomeMap.set(o.status, (outcomeMap.get(o.status) ?? 0) + o.count);
@@ -398,7 +398,7 @@ export function OrchestrationDAG({ data, onNodeClick, selectedNode }: Orchestrat
   const tipRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
 
-  // Imperative tooltip helpers — bypass React entirely so hover never re-renders the chart.
+  // Imperative tooltip helpers - bypass React entirely so hover never re-renders the chart.
   const hideTip = useCallback(() => {
     const tip = tipRef.current;
     if (tip) tip.style.opacity = "0";
@@ -662,7 +662,7 @@ export function OrchestrationDAG({ data, onNodeClick, selectedNode }: Orchestrat
       .attr("filter", "url(#glow)")
       .attr("opacity", 0.8);
 
-    // Background rect — outcome nodes use per-status fill
+    // Background rect - outcome nodes use per-status fill
     nodeGroups
       .append("rect")
       .attr("class", "node-bg")
@@ -805,7 +805,7 @@ export function OrchestrationDAG({ data, onNodeClick, selectedNode }: Orchestrat
         </div>
       </div>
 
-      {/* Tooltip — fixed-positioned, DOM-mutated to avoid React re-renders on hover */}
+      {/* Tooltip - fixed-positioned, DOM-mutated to avoid React re-renders on hover */}
       <div
         ref={tipRef}
         role="tooltip"
@@ -903,7 +903,7 @@ function buildDAGTooltipContent(el: HTMLDivElement, node: DAGNode, t: TFn) {
 }
 
 /**
- * Layer-aware description for a DAG node. Pure function of the node — no I/O,
+ * Layer-aware description for a DAG node. Pure function of the node - no I/O,
  * no randomness, deterministic across renders. Returns translated strings via
  * the supplied i18n function so all locales render correctly.
  */

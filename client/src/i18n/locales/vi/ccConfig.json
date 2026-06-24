@@ -164,7 +164,7 @@
     "confirmDeletePath": "Đường dẫn: {{path}}",
     "confirmDeleteAction": "Xác nhận sao lưu và xoá",
     "templates": {
-      "skills": "---\nname: my-skill\ndescription: Mô tả ngắn gọn\n---\n\nNội dung — skill làm gì, khi nào dùng, ví dụ.\n",
+      "skills": "---\nname: my-skill\ndescription: Mô tả ngắn gọn\n---\n\nNội dung - skill làm gì, khi nào dùng, ví dụ.\n",
       "agents": "---\nname: my-agent\ndescription: Khi nào gọi subagent này\ntools: Read, Grep\nmodel: sonnet\n---\n\nSystem prompt cho subagent.\n",
       "commands": "---\ndescription: Mô tả hiển thị trong menu /\n---\n\n/my-command làm gì.\n",
       "output-styles": "---\nname: my-style\ndescription: Mô tả kiểu xuất\n---\n\nChỉ thị về kiểu.\n",
@@ -173,7 +173,7 @@
   },
   "backups": {
     "title": "Bản sao lưu",
-    "empty": "Chưa có bản sao lưu — mỗi lần sửa hoặc xoá sẽ tạo bản sao có dấu thời gian.",
+    "empty": "Chưa có bản sao lưu - mỗi lần sửa hoặc xoá sẽ tạo bản sao có dấu thời gian.",
     "viewLink": "Xem lịch sử sao lưu",
     "openButton": "Bản sao lưu",
     "subtitle": "Mỗi thao tác lưu / xoá đều ghi bản sao tới đây trước. Thư mục sao lưu nằm ngoài các vị trí Claude Code quét, nên không xuất hiện như mục thừa trong CLI.",
@@ -209,7 +209,7 @@
     },
     "plugins": {
       "title": "Plugin được CLI quản lý",
-      "body": "Plugin là bundle có registry riêng — `installed_plugins.json` và đường dẫn cài trong `plugins/cache/`. Dashboard đọc thôi; install/uninstall giao cho `claude plugin …` để giữ registry nhất quán.",
+      "body": "Plugin là bundle có registry riêng - `installed_plugins.json` và đường dẫn cài trong `plugins/cache/`. Dashboard đọc thôi; install/uninstall giao cho `claude plugin …` để giữ registry nhất quán.",
       "install": "Cài plugin:",
       "installCmd": "claude plugin install <marketplace>/<plugin>",
       "uninstall": "Gỡ plugin này:",

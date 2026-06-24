@@ -23,6 +23,14 @@ const {
 
 const router = Router();
 
+// JSONL entry types the transcript reader turns into renderable messages.
+// `user`/`assistant` are the conversation; `custom-title` is the metadata line
+// written by /rename, `claude -n`, and the picker's Ctrl+R — surfaced as an
+// inline rename marker so TUI-only commands aren't invisible on the dashboard.
+// (ai-title is intentionally excluded: it repeats on nearly every turn and
+// would flood the stream; it drives the session NAME instead, not the chat.)
+const TRANSCRIPT_RENDER_TYPES = new Set(["user", "assistant", "custom-title"]);
+
 /**
  * Read only the first non-empty line from a JSONL file using streaming.
  * Avoids loading the entire file into memory.
@@ -556,8 +564,30 @@ router.get("/:id/transcript", async (req, res) => {
       crlfDelay: Infinity,
     });
 
+    // Dedupe state for synthetic rename markers: custom-title lines can repeat
+    // with the same value across a transcript, so only emit when the title
+    // actually changes from the last one we surfaced.
+    let lastRenameTitle = null;
+
     // Helper: parse a JSONL line into a message object, or null if not a displayable message
     function parseMessage(entry, num) {
+      // /rename, `claude -n`, picker Ctrl+R → custom-title metadata line. These
+      // commands produce no user/assistant turn, so without this they'd be
+      // invisible. Surface a compact "renamed" marker instead.
+      if (entry.type === "custom-title") {
+        const title = typeof entry.customTitle === "string" ? entry.customTitle.trim() : "";
+        if (!title || title === lastRenameTitle) return null;
+        lastRenameTitle = title;
+        return {
+          type: "session_event",
+          event_kind: "rename",
+          title,
+          timestamp: entry.timestamp || null,
+          content: [],
+          line: num,
+        };
+      }
+
       const msg = entry.type === "assistant" ? entry.message || {} : {};
       const content = [];
 
@@ -646,7 +676,7 @@ router.get("/:id/transcript", async (req, res) => {
         } catch {
           continue;
         }
-        if (entry.type !== "user" && entry.type !== "assistant") continue;
+        if (!TRANSCRIPT_RENDER_TYPES.has(entry.type)) continue;
 
         if (!foundStart) {
           if (lineNum <= afterLine) continue;
@@ -680,7 +710,7 @@ router.get("/:id/transcript", async (req, res) => {
         } catch {
           continue;
         }
-        if (entry.type !== "user" && entry.type !== "assistant") continue;
+        if (!TRANSCRIPT_RENDER_TYPES.has(entry.type)) continue;
         if (lineNum >= beforeLine) {
           // Reached the boundary — stop reading
           rl.close();
@@ -710,7 +740,7 @@ router.get("/:id/transcript", async (req, res) => {
         } catch {
           continue;
         }
-        if (entry.type !== "user" && entry.type !== "assistant") continue;
+        if (!TRANSCRIPT_RENDER_TYPES.has(entry.type)) continue;
 
         const message = parseMessage(entry, lineNum);
         if (!message) continue;
@@ -739,7 +769,7 @@ router.get("/:id/transcript", async (req, res) => {
         } catch {
           continue;
         }
-        if (entry.type !== "user" && entry.type !== "assistant") continue;
+        if (!TRANSCRIPT_RENDER_TYPES.has(entry.type)) continue;
 
         const message = parseMessage(entry, lineNum);
         if (!message) continue;

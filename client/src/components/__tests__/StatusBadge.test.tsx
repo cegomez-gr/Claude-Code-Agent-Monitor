@@ -35,7 +35,7 @@ describe("AgentStatusBadge", () => {
     expect(dot).toBeInTheDocument();
   });
 
-  it("should not apply pulse for connected status (now working — has pulse)", () => {
+  it("should not apply pulse for connected status (now working - has pulse)", () => {
     const { container } = render(<AgentStatusBadge status="working" />);
     const dot = container.querySelector(".animate-pulse-dot");
     expect(dot).toBeInTheDocument();

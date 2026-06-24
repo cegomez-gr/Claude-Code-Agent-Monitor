@@ -46,7 +46,7 @@ function isMcp(toolName: string): boolean {
 }
 
 /** Builds a unified-diff hunk from a bare old_string / new_string pair. One
- *  hunk, minimal context — good enough for the input preview before the
+ *  hunk, minimal context - good enough for the input preview before the
  *  actual structuredPatch comes back in the response. */
 function diffFromStrings(oldStr: string, newStr: string): DiffHunk[] {
   if (!oldStr && !newStr) return [];
@@ -148,7 +148,7 @@ export function ToolInputView({
   const i = obj(input);
   if (!i) return null;
 
-  // MCP tools — show the input as a key-value card with URL/query/id promoted.
+  // MCP tools - show the input as a key-value card with URL/query/id promoted.
   if (isMcp(toolName)) {
     return (
       <KeyValueCard

@@ -271,7 +271,7 @@ function EventSequence({ events }: EventSequenceProps) {
 
             {/* Summary */}
             <span className="text-xs text-gray-400 flex-1 min-w-0 truncate">
-              {ev.summary ?? ev.tool_name ?? "—"}
+              {ev.summary ?? ev.tool_name ?? "-"}
             </span>
 
             {/* Timestamp */}
@@ -595,7 +595,7 @@ function SessionSelector({ onSelectSession }: SessionSelectorProps) {
               </div>
             )}
 
-            {/* Load more — only show when not filtering client-side */}
+            {/* Load more - only show when not filtering client-side */}
             {!search.trim() && hasMore && (
               <button
                 type="button"
