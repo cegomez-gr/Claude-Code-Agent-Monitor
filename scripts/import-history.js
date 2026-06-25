@@ -822,9 +822,34 @@ function importSubagentFromJsonl(dbModule, sessionId, mainAgentId, subData) {
     created++;
   }
 
-  // Subagent token totals are merged into the parent session's token_usage row
-  // by combineSessionTokens() / writeSessionTokens() at the importSession level
-  // (subagents have their own JSONL files with separate msg.usage records).
+  // Stamp the subagent's REAL model (from its own transcript) onto its agent
+  // row. Live subagent rows — created by the PreToolUse "Agent" hook — carry no
+  // model, so without this they get read as the parent/orchestrator model
+  // (issue #185). The JSONL-keyed row already records model at creation; this
+  // backfills the live row (and is a no-op once model is set).
+  if (subData.model) {
+    const row = stmts.getAgent.get(targetAgentId);
+    if (row) {
+      let meta = {};
+      try {
+        meta = row.metadata ? JSON.parse(row.metadata) : {};
+      } catch {
+        meta = {};
+      }
+      if (!meta.model) {
+        meta.model = subData.model;
+        db.prepare("UPDATE agents SET metadata = ? WHERE id = ?").run(
+          JSON.stringify(meta),
+          targetAgentId
+        );
+      }
+    }
+  }
+
+  // Subagent token totals are written under the subagent's OWN model — live by
+  // scanAndImportSubagents() (per-subagent buckets, excluding the parent model)
+  // and authoritatively by combineSessionTokens()/writeSessionTokens() at the
+  // importSession level (subagents have their own JSONL with separate usage).
 
   const insertEvent = db.prepare(
     "INSERT INTO events (session_id, agent_id, event_type, tool_name, summary, data, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
@@ -2039,17 +2064,48 @@ async function scanAndImportSubagents(dbModule, sessionId, transcriptPath) {
   const subFiles = (await fs.promises.readdir(subDir)).filter((f) => f.endsWith(".jsonl"));
   if (subFiles.length === 0) return { imported: 0, created: 0 };
 
+  const { db } = dbModule;
   const mainAgentId = `${sessionId}-main`;
   let created = 0;
+  const parsedSubagents = [];
   for (const sf of subFiles) {
     try {
       const subData = await parseSubagentFile(path.join(subDir, sf));
       if (!subData) continue;
+      parsedSubagents.push(subData);
       created += importSubagentFromJsonl(dbModule, sessionId, mainAgentId, subData);
     } catch {
       // non-fatal — partial JSONL files are common during a live run
     }
   }
+
+  // Attribute each subagent's token usage to ITS OWN model (issue #185).
+  // A Haiku QA agent under an Opus orchestrator must keep its own (cheaper)
+  // token bucket instead of being priced at the orchestrator's rate.
+  //
+  // We deliberately SKIP any bucket whose model equals the parent session's
+  // model. That bucket is owned by the main-transcript writer in
+  // server/routes/hooks.js; writing it from two sources with different
+  // magnitudes would trip replaceTokenUsage's compaction baseline-shift
+  // (excluded < stored ⇒ baseline += stored) and inflate the total. Same-model
+  // subagents are reconciled by the authoritative importSession/reconcileTokens
+  // path instead. Subagent JSONLs are append-only, so the combined per-model
+  // sum only grows between SubagentStop sweeps — never a spurious drop.
+  if (parsedSubagents.length > 0) {
+    try {
+      const sessionRow = db.prepare("SELECT model FROM sessions WHERE id = ?").get(sessionId);
+      const parentModel = sessionRow ? sessionRow.model : null;
+      const combined = combineSessionTokens({ tokensByModel: null, parsedSubagents });
+      const subOnly = {};
+      for (const [key, tok] of Object.entries(combined)) {
+        if (tok.model && tok.model !== parentModel) subOnly[key] = tok;
+      }
+      writeSessionTokens(dbModule, sessionId, subOnly);
+    } catch {
+      // non-fatal — token attribution is best-effort during a live run
+    }
+  }
+
   return { imported: subFiles.length, created };
 }
 

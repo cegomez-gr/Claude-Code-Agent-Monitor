@@ -40,9 +40,21 @@ export function AgentCard({ agent, session, label, onClick }: AgentCardProps) {
   // fallback carries no extra info next to the ID, so it is suppressed.
   const sessionName = session?.name?.trim() || "";
   const realSessionName = /^Session [0-9a-f]{8}$/i.test(sessionName) ? "" : sessionName;
+  // A subagent's own model lives in its metadata (resolved from its transcript,
+  // not the parent session's — see issue #185). Surface it so a Haiku QA agent
+  // under an Opus orchestrator reads as Haiku, not Opus.
+  let subagentModel: string | null = null;
+  if (!isMain && agent.metadata) {
+    try {
+      const parsed = JSON.parse(agent.metadata) as { model?: string };
+      subagentModel = parsed?.model ? formatModelName(parsed.model) : null;
+    } catch {
+      subagentModel = null;
+    }
+  }
   const subtitle = isMain
     ? [model, cwdBase].filter(Boolean).join(" · ") || null
-    : label || agent.subagent_type;
+    : [label || agent.subagent_type, subagentModel].filter(Boolean).join(" · ") || null;
 
   function handleClick() {
     if (onClick) {
