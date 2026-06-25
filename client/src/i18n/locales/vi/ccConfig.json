@@ -137,7 +137,15 @@
   "memory": {
     "userScope": "Bộ nhớ người dùng",
     "projectScope": "Bộ nhớ dự án",
-    "missing": "Không tìm thấy CLAUDE.md."
+    "missing": "Không tìm thấy CLAUDE.md.",
+    "autoTitle": "Kho bộ nhớ dự án",
+    "autoSubtitle": "Bộ nhớ theo tệp cho từng dự án trong ~/.claude/projects/<dự-án>/memory/ — một chỉ mục MEMORY.md cùng một tệp cho mỗi sự kiện được ghi nhớ. Chỉ đọc tại đây.",
+    "noMatches": "Không có tệp bộ nhớ nào khớp với tìm kiếm.",
+    "indexFiles": "Chỉ mục",
+    "fileCount_one": "{{count}} tệp",
+    "fileCount_other": "{{count}} tệp",
+    "factFiles_one": "{{count}} sự kiện",
+    "factFiles_other": "{{count}} sự kiện"
   },
   "edit": {
     "newButton": "Tạo mới",

@@ -160,6 +160,19 @@ fs.writeFileSync(
 
 fs.writeFileSync(path.join(FAKE_PROJECT, "CLAUDE.md"), "# Project memory\nHello.");
 
+// Per-project file-based memory store under ~/.claude/projects/<slug>/memory/
+// (MEMORY.md index + one file per remembered fact). notes.txt is a non-md
+// file that must be ignored.
+const FAKE_AUTO_MEM = path.join(FAKE_HOME, "projects", "-Users-test-proj", "memory");
+fs.mkdirSync(FAKE_AUTO_MEM, { recursive: true });
+fs.writeFileSync(path.join(FAKE_AUTO_MEM, "MEMORY.md"), "- [Foo fact](foo.md) — a hook\n");
+fs.writeFileSync(
+  path.join(FAKE_AUTO_MEM, "foo.md"),
+  "---\nname: foo\n---\nFoo fact body about widgets.\n"
+);
+fs.writeFileSync(path.join(FAKE_AUTO_MEM, "bar.md"), "Bar fact body.\n");
+fs.writeFileSync(path.join(FAKE_AUTO_MEM, "notes.txt"), "ignored non-md\n");
+
 process.env.CLAUDE_HOME = FAKE_HOME;
 const TEST_DB = path.join(TMP, "dashboard-test.db");
 process.env.DASHBOARD_DB_PATH = TEST_DB;
@@ -242,7 +255,9 @@ describe("/api/cc-config", () => {
     assert.equal(body.counts.agents.user, 1);
     assert.equal(body.counts.commands.user, 1);
     assert.equal(body.counts.plugins, 1);
-    assert.equal(body.counts.memory, 1);
+    // 1 project CLAUDE.md + 3 auto-memory files (MEMORY.md, foo.md, bar.md);
+    // notes.txt is ignored.
+    assert.equal(body.counts.memory, 4);
   });
 
   it("skills returns user + project items with parsed frontmatter", async () => {
@@ -367,6 +382,34 @@ describe("/api/cc-config", () => {
     const proj = body.items.find((x) => x.scope === "project");
     assert.ok(proj);
     assert.match(proj.preview, /Project memory/);
+  });
+
+  it("memory surfaces per-project auto-memory files (index sorted first)", async () => {
+    const { body } = await fetchJson(
+      `/api/cc-config/memory?cwd=${encodeURIComponent(FAKE_PROJECT)}`
+    );
+    const auto = body.items.filter((x) => x.scope === "auto-memory");
+    assert.equal(auto.length, 3); // MEMORY.md + foo.md + bar.md; notes.txt ignored
+    // Index file (MEMORY.md) sorts before the per-fact files.
+    assert.equal(auto[0].name, "MEMORY.md");
+    assert.equal(auto[0].isIndex, true);
+    assert.equal(auto[0].project, "-Users-test-proj");
+    const foo = auto.find((x) => x.name === "foo.md");
+    assert.ok(foo);
+    assert.equal(foo.isIndex, false);
+    assert.equal(foo.frontmatter.name, "foo"); // frontmatter parsed
+    assert.match(foo.preview, /Foo fact body/); // preview is the body, sans frontmatter
+    assert.doesNotMatch(foo.preview, /name: foo/);
+  });
+
+  it("file endpoint reads auto-memory files (they live under CLAUDE_HOME)", async () => {
+    const target = path.join(FAKE_AUTO_MEM, "foo.md");
+    const { status, body } = await fetchJson(
+      `/api/cc-config/file?cwd=${encodeURIComponent(FAKE_PROJECT)}&path=${encodeURIComponent(target)}`
+    );
+    assert.equal(status, 200);
+    assert.equal(body.ok, true);
+    assert.match(body.text, /Foo fact body/);
   });
 
   it("file endpoint reads inside CLAUDE_HOME", async () => {

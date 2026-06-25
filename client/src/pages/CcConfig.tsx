@@ -49,6 +49,7 @@ import {
   CircleSlash,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import { api } from "../lib/api";
 import type {
@@ -824,6 +825,7 @@ function TabPanel({
       return (
         <MemoryPanel
           items={data.memory}
+          search={search}
           onOpen={onOpenFile}
           onEdit={onEdit}
           onDelete={onDelete}
@@ -2011,6 +2013,7 @@ function SettingsValue({ value }: { value: unknown }) {
 
 interface MemoryPanelProps {
   items: CcMemoryItem[] | null;
+  search: string;
   onOpen: (p: string) => void;
   onEdit: (
     type: CcArtifactType,
@@ -2025,18 +2028,79 @@ interface MemoryPanelProps {
   onCreate: (scope: "user" | "project") => void;
 }
 
-function MemoryPanel({ items, onOpen, onEdit, onDelete, onCreate }: MemoryPanelProps) {
+// Strip a leading markdown heading then take a short snippet — used when a
+// per-fact memory file has no frontmatter description.
+function memoryDescription(m: CcMemoryItem): string {
+  return (
+    m.frontmatter?.description ||
+    m.preview
+      .replace(/^#+\s.*\n/, "")
+      .trim()
+      .slice(0, 200)
+  );
+}
+
+function MemoryPanel({ items, search, onOpen, onEdit, onDelete, onCreate }: MemoryPanelProps) {
   const { t } = useTranslation("ccConfig");
+
+  const q = search.trim().toLowerCase();
+
+  const { primary, autoFiltered, groups, missingScopes } = useMemo(() => {
+    const list = items ?? [];
+    const primaryItems = list.filter(
+      (m): m is CcMemoryItem & { scope: "user" | "project" } =>
+        m.scope === "user" || m.scope === "project"
+    );
+    const autoItems = list.filter((m) => m.scope === "auto-memory");
+
+    const matchesAuto = (m: CcMemoryItem) => {
+      if (!q) return true;
+      const blob = [m.name, m.project, m.frontmatter?.description, m.frontmatter?.name, m.preview]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return blob.includes(q);
+    };
+
+    // Search applies to the whole tab — match the CLAUDE.md cards on their
+    // scope label, path, and body too so the filter is consistent.
+    const primaryFilteredItems = primaryItems.filter((m) => {
+      if (!q) return true;
+      return [m.scope, m.file, m.preview].join(" ").toLowerCase().includes(q);
+    });
+
+    const filtered = autoItems.filter(matchesAuto);
+
+    // Group surviving auto-memory files by their project dir.
+    const byProject = new Map<string, CcMemoryItem[]>();
+    for (const m of filtered) {
+      const key = m.project || "(unknown)";
+      if (!byProject.has(key)) byProject.set(key, []);
+      byProject.get(key)!.push(m);
+    }
+    const grouped = [...byProject.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+
+    const present = new Set(primaryItems.map((m) => m.scope));
+    const missing = (["user", "project"] as const).filter((s) => !present.has(s));
+
+    return {
+      primary: primaryFilteredItems,
+      autoFiltered: filtered,
+      groups: grouped,
+      missingScopes: missing,
+    };
+  }, [items, q]);
+
   if (!items) return <SkeletonRows n={2} />;
 
-  const presentScopes = new Set(items.map((m) => m.scope));
-  const missingScopes: ("user" | "project")[] = (["user", "project"] as const).filter(
-    (s) => !presentScopes.has(s)
-  );
+  const totalAuto = items.filter((m) => m.scope === "auto-memory").length;
+  // The "create missing CLAUDE.md" prompts only make sense when not filtering.
+  const showMissing = !q;
 
   return (
     <div className="space-y-3">
-      {items.map((m) => (
+      {/* Primary CLAUDE.md memory (user + project) — editable */}
+      {primary.map((m) => (
         <div key={m.scope} className="rounded-lg border border-border bg-surface-2">
           <div className="border-b border-border px-4 py-2.5 flex items-center gap-2 flex-wrap">
             <ScopeBadge scope={m.scope} />
@@ -2078,24 +2142,182 @@ function MemoryPanel({ items, onOpen, onEdit, onDelete, onCreate }: MemoryPanelP
         </div>
       ))}
 
-      {missingScopes.map((s) => (
-        <div
-          key={`missing-${s}`}
-          className="rounded-lg border border-dashed border-border bg-surface-2 px-4 py-4 flex items-center justify-between gap-3"
-        >
-          <div className="flex items-center gap-2">
-            <ScopeBadge scope={s} />
-            <span className="text-xs text-gray-500">{t("memory.missing")}</span>
-          </div>
-          <button
-            onClick={() => onCreate(s)}
-            className="text-[11px] font-medium px-2.5 py-1 rounded-md border border-accent/30 bg-accent/10 hover:bg-accent/20 text-accent inline-flex items-center gap-1.5"
+      {showMissing &&
+        missingScopes.map((s) => (
+          <div
+            key={`missing-${s}`}
+            className="rounded-lg border border-dashed border-border bg-surface-2 px-4 py-4 flex items-center justify-between gap-3"
           >
-            <Plus className="w-3 h-3" />
-            {t("edit.newButton")}
-          </button>
+            <div className="flex items-center gap-2">
+              <ScopeBadge scope={s} />
+              <span className="text-xs text-gray-500">{t("memory.missing")}</span>
+            </div>
+            <button
+              onClick={() => onCreate(s)}
+              className="text-[11px] font-medium px-2.5 py-1 rounded-md border border-accent/30 bg-accent/10 hover:bg-accent/20 text-accent inline-flex items-center gap-1.5"
+            >
+              <Plus className="w-3 h-3" />
+              {t("edit.newButton")}
+            </button>
+          </div>
+        ))}
+
+      {/* Per-project file-based memory (~/.claude/projects/<slug>/memory/) */}
+      {totalAuto > 0 && (
+        <section className="pt-1">
+          <div className="flex items-center gap-2 mb-1">
+            <BookOpen className="w-3.5 h-3.5 text-teal-300" />
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+              {t("memory.autoTitle")}
+            </h3>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-surface-3 text-gray-400">
+              {q ? `${autoFiltered.length}/${totalAuto}` : totalAuto}
+            </span>
+          </div>
+          <p className="text-[11px] text-gray-500 mb-2.5 leading-relaxed">
+            {t("memory.autoSubtitle")}
+          </p>
+
+          {groups.length === 0 ? (
+            <div className="rounded-lg border border-border bg-surface-2 px-4 py-6 text-center text-sm text-gray-500">
+              {t("memory.noMatches")}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {groups.map(([project, files]) => (
+                <MemoryProjectGroup
+                  key={project}
+                  project={project}
+                  files={files}
+                  onOpen={onOpen}
+                  defaultOpen={!!q || groups.length === 1}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+    </div>
+  );
+}
+
+interface MemoryProjectGroupProps {
+  project: string;
+  files: CcMemoryItem[];
+  onOpen: (p: string) => void;
+  defaultOpen: boolean;
+}
+
+function MemoryProjectGroup({ project, files, onOpen, defaultOpen }: MemoryProjectGroupProps) {
+  const { t } = useTranslation("ccConfig");
+  const [open, setOpen] = useState(defaultOpen);
+  // Re-sync when the search-driven default flips (expand on search, collapse
+  // when cleared). User toggles within a stable search state are preserved.
+  useEffect(() => {
+    setOpen(defaultOpen);
+  }, [defaultOpen]);
+
+  const indexFiles = files.filter((f) => f.isIndex);
+  const factFiles = files.filter((f) => !f.isIndex);
+
+  return (
+    <div className="rounded-lg border border-border bg-surface-2 overflow-hidden">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-2 px-3 py-2.5 hover:bg-surface-3 transition-colors text-left"
+      >
+        <ChevronDown
+          className={`w-3.5 h-3.5 text-gray-500 flex-shrink-0 transition-transform ${
+            open ? "" : "-rotate-90"
+          }`}
+        />
+        <FolderTree className="w-3.5 h-3.5 text-teal-300 flex-shrink-0" />
+        <span className="font-mono text-xs text-gray-200 truncate flex-1 min-w-0">{project}</span>
+        <span className="text-[10px] text-gray-500 flex-shrink-0">
+          {t("memory.fileCount", { count: files.length })}
+        </span>
+      </button>
+
+      {open && (
+        <div className="border-t border-border p-2.5 space-y-2.5">
+          {indexFiles.length > 0 && (
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5 px-1">
+                {t("memory.indexFiles")}
+              </div>
+              <div className="space-y-1.5">
+                {indexFiles.map((m) => (
+                  <MemoryIndexCard key={m.file} item={m} onOpen={onOpen} />
+                ))}
+              </div>
+            </div>
+          )}
+          {factFiles.length > 0 && (
+            <div>
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5 px-1">
+                {t("memory.factFiles", { count: factFiles.length })}
+              </div>
+              <div className="space-y-1">
+                {factFiles.map((m) => (
+                  <MemoryFactRow key={m.file} item={m} onOpen={onOpen} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      ))}
+      )}
+    </div>
+  );
+}
+
+function MemoryIndexCard({ item, onOpen }: { item: CcMemoryItem; onOpen: (p: string) => void }) {
+  const { t } = useTranslation("ccConfig");
+  return (
+    <div className="rounded-md border border-teal-500/20 bg-teal-500/5">
+      <div className="flex items-center gap-2 px-3 py-1.5 border-b border-teal-500/15">
+        <BookOpen className="w-3 h-3 text-teal-300 flex-shrink-0" />
+        <span className="font-mono text-[11px] text-gray-200 truncate flex-1 min-w-0">
+          {item.name}
+        </span>
+        <span className="text-[10px] text-gray-600">{formatBytes(item.size)}</span>
+        <button
+          onClick={() => onOpen(item.file)}
+          className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-border bg-surface-1 hover:bg-surface-3 text-gray-300 hover:text-gray-100 inline-flex items-center gap-1"
+        >
+          <ExternalLink className="w-2.5 h-2.5" />
+          {t("common.viewSource")}
+        </button>
+      </div>
+      <pre className="px-3 py-2 text-[10.5px] font-mono text-gray-400 whitespace-pre-wrap break-words max-h-40 overflow-auto">
+        {item.preview}
+        {item.truncated && <span className="text-gray-600 italic">{"\n…"}</span>}
+      </pre>
+    </div>
+  );
+}
+
+function MemoryFactRow({ item, onOpen }: { item: CcMemoryItem; onOpen: (p: string) => void }) {
+  const { t } = useTranslation("ccConfig");
+  const desc = memoryDescription(item);
+  return (
+    <div className="flex items-start gap-2.5 rounded-md border border-border bg-surface-1 px-3 py-2 hover:border-border/80 transition-colors">
+      <FileText className="w-3 h-3 text-gray-500 flex-shrink-0 mt-0.5" />
+      <div className="min-w-0 flex-1">
+        <span className="font-mono text-[11px] text-gray-200 truncate block">{item.name}</span>
+        {desc && (
+          <p className="mt-0.5 text-[11px] text-gray-500 leading-snug line-clamp-2">{desc}</p>
+        )}
+      </div>
+      <span className="text-[10px] text-gray-600 flex-shrink-0 mt-0.5">
+        {formatBytes(item.size)}
+      </span>
+      <button
+        onClick={() => onOpen(item.file)}
+        className="text-[10px] font-medium px-1.5 py-0.5 rounded border border-border bg-surface-2 hover:bg-surface-3 text-gray-300 hover:text-gray-100 inline-flex items-center gap-1 flex-shrink-0"
+      >
+        <ExternalLink className="w-2.5 h-2.5" />
+        {t("common.viewSource")}
+      </button>
     </div>
   );
 }

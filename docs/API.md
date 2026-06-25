@@ -710,6 +710,8 @@ DELETE /api/cc-config/file     Body: { scope, type, name? }
 
 `scope` is `"user"` or `"project"`. `type` is one of `skills`, `agents`, `commands`, `output-styles`, `memory`. `name` is required for everything except `memory` (which is `CLAUDE.md` itself). On `PUT`, `name` is validated against `^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$`. Settings are returned with secret-like keys (matching `/token|secret|password|api[_-]?key|auth/i`) replaced by `"<redacted>"`.
 
+`GET /api/cc-config/memory` also surfaces the per-project file-based memory store — every `*.md` under `~/.claude/projects/<slug>/memory/` (the common pattern of a `MEMORY.md` index plus one file per remembered fact). Those items have `scope: "auto-memory"` and carry `project` (the `projects/<slug>` dir name), `name` (filename), `isIndex` (true for `MEMORY.md` / `INDEX-*.md`, which sort first), and parsed `frontmatter`. They are **read-only** in the dashboard — `cc-mutate` only writes the `user`/`project` `CLAUDE.md` files, so the create/edit/delete endpoints reject `auto-memory`. Read their bodies via `GET /api/cc-config/file` (they already live under `CLAUDE_HOME`).
+
 Backup paths look like `<root>/cc-config-backups/<type>/<base>.<ISO>.bak[.dir]` — outside the directories Claude Code scans, so a deleted skill cannot resurface as a backup-named one. The Backups modal in the UI auto-builds `mv` restore commands.
 
 ### Run Claude

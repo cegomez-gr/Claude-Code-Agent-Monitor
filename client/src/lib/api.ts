@@ -601,12 +601,20 @@ export interface CcSettingsSource {
 }
 
 export interface CcMemoryItem {
-  scope: "user" | "project";
+  // "user"/"project" are the two CLAUDE.md files (editable). "auto-memory"
+  // is a per-project file-based memory file under ~/.claude/projects/<slug>/
+  // memory/ — read-only in the dashboard for now.
+  scope: "user" | "project" | "auto-memory";
   file: string;
   size: number;
   mtime: number;
   truncated: boolean;
   preview: string;
+  // Present only for scope === "auto-memory":
+  project?: string; // the projects/<slug> dir name
+  name?: string; // the markdown filename (e.g. MEMORY.md, feedback_x.md)
+  isIndex?: boolean; // true for MEMORY.md / INDEX-*.md table-of-contents files
+  frontmatter?: Record<string, string>; // parsed YAML frontmatter, if any
 }
 
 export interface CcFileResponse {
