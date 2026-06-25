@@ -120,7 +120,7 @@ function Heatmap({ weeks }: { weeks: Array<Array<{ date: string; count: number }
 
   // Compute month label positions accurately. A label is ~3 columns wide (each
   // column is 16px, a 3-letter month ≈ 22px). The very first month is often a
-  // stub — the 52-week window starts mid-month, so e.g. "May" sits at col 0 and
+  // stub - the 52-week window starts mid-month, so e.g. "May" sits at col 0 and
   // "Jun" at col 1 and they overlap. Drop the *stub* (the earlier, partial one)
   // rather than the full month after it, so the next label isn't pushed away.
   const monthPositions = useMemo(() => {
@@ -141,7 +141,7 @@ function Heatmap({ weeks }: { weeks: Array<Array<{ date: string; count: number }
 
     // Drop a label when the *next* month starts too soon after it (it would
     // collide). Suppressing the earlier label leaves the later, full month in
-    // place — no gap is introduced.
+    // place - no gap is introduced.
     return starts.filter((s, i) => {
       const next = starts[i + 1];
       return !next || next.col - s.col >= MIN_LABEL_GAP;
@@ -700,7 +700,7 @@ export function Analytics() {
     return { date: dateStr, count: dailyMap[dateStr] ?? 0 };
   });
 
-  // Convert daily_sessions — server already returns local dates
+  // Convert daily_sessions - server already returns local dates
   const dailySessionsLocal: Array<{ date: string; count: number }> = [];
   const sessMap: Record<string, number> = {};
   for (const d of data?.daily_sessions ?? []) {
@@ -711,7 +711,7 @@ export function Analytics() {
   }
   dailySessionsLocal.sort((a, b) => a.date.localeCompare(b.date));
 
-  // Convert daily_costs — server already returns local dates
+  // Convert daily_costs - server already returns local dates
   const dailyCostsLocal: Array<{ date: string; cost: number }> = [];
   const costMap: Record<string, number> = {};
   for (const d of costData?.daily_costs ?? []) {

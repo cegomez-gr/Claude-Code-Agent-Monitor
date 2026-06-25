@@ -6,7 +6,7 @@
  * about. Read access for all surfaces; create / edit / delete for the
  * low-risk text-file surfaces (skills, agents, commands, output styles,
  * memory). Plugins, MCP, hooks-in-settings, and settings.json files stay
- * read-only — those have concurrent-write races with the live CLI.
+ * read-only - those have concurrent-write races with the live CLI.
  * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
@@ -269,7 +269,7 @@ export function CcConfig() {
     void fetchAll();
   }, [fetchAll]);
 
-  // Live updates — refetch whenever the server broadcasts that a config
+  // Live updates - refetch whenever the server broadcasts that a config
   // surface has changed (either via dashboard mutations or external file
   // edits picked up by the cc-watcher). Debounced because a single user
   // action can write multiple files (e.g. a skill backup + the skill itself
@@ -358,7 +358,7 @@ export function CcConfig() {
         kind: "success",
         message: result.created
           ? t("edit.saveSuccessNew")
-          : t("edit.saveSuccess", { path: result.backupPath || "—" }),
+          : t("edit.saveSuccess", { path: result.backupPath || "-" }),
       });
       void fetchAll();
     },
@@ -376,7 +376,7 @@ export function CcConfig() {
       setConfirmDelete(null);
       setToast({
         kind: "success",
-        message: t("edit.deleteSuccess", { path: result.backupPath || "—" }),
+        message: t("edit.deleteSuccess", { path: result.backupPath || "-" }),
       });
       void fetchAll();
     } catch (err: unknown) {
@@ -485,7 +485,7 @@ function Header({
         minute: "2-digit",
         second: "2-digit",
       })
-    : "—";
+    : "-";
   return (
     <header className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
       <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -837,7 +837,7 @@ function TabPanel({
 
 // ── Overview ──────────────────────────────────────────────────────────
 
-// Tone palette — each tone is { iconBg, iconText, border, accentBar }.
+// Tone palette - each tone is { iconBg, iconText, border, accentBar }.
 // Used by both root rows and summary stat tiles for a consistent color story.
 type Tone =
   | "sky"
@@ -1684,6 +1684,112 @@ function HooksPanel({
 
 // ── Settings ──────────────────────────────────────────────────────────
 
+// The settings that the TUI's `/config` editor manages, in display order.
+// Surfaced as a resolved at-a-glance summary so the user sees what `/config`
+// set (model, verbose, theme, …) without hunting through the raw JSON files.
+// Keys map 1:1 to settings.json keys per https://code.claude.com/docs/en/settings.
+const CONFIG_OPTION_GROUPS: { title: string; keys: { key: string; label: string }[] }[] = [
+  {
+    title: "Model & reasoning",
+    keys: [
+      { key: "model", label: "Model" },
+      { key: "effortLevel", label: "Effort level" },
+      { key: "alwaysThinkingEnabled", label: "Always thinking" },
+    ],
+  },
+  {
+    title: "Output & display",
+    keys: [
+      { key: "outputStyle", label: "Output style" },
+      { key: "verbose", label: "Verbose output" },
+      { key: "theme", label: "Theme" },
+      { key: "language", label: "Language" },
+      { key: "spinnerTipsEnabled", label: "Spinner tips" },
+      { key: "autoScrollEnabled", label: "Auto-scroll" },
+    ],
+  },
+  {
+    title: "Session & input",
+    keys: [
+      { key: "autoCompactEnabled", label: "Auto-compact" },
+      { key: "fileCheckpointingEnabled", label: "File checkpointing" },
+      { key: "editorMode", label: "Editor mode" },
+      { key: "preferredNotifChannel", label: "Notifications" },
+      { key: "awaySummaryEnabled", label: "Away summary" },
+    ],
+  },
+];
+
+/**
+ * Resolve each /config option across the settings sources (project-local >
+ * project > user precedence - later sources in the array win) and render a
+ * compact summary. Unset options show as "default" so the view reflects the
+ * effective configuration, not just whatever happens to be written to a file.
+ */
+function CurrentConfigPanel({ sources }: { sources: CcSettingsSource[] }) {
+  // Build effective map: { key → { value, scope } }. Sources arrive ordered
+  // user → project → project-local, so a later hit overrides an earlier one.
+  const effective = new Map<string, { value: unknown; scope: CcSettingsSource["scope"] }>();
+  for (const src of sources) {
+    if (!src.exists || !src.data || typeof src.data !== "object") continue;
+    const data = src.data as Record<string, unknown>;
+    for (const group of CONFIG_OPTION_GROUPS) {
+      for (const { key } of group.keys) {
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+          effective.set(key, { value: data[key], scope: src.scope });
+        }
+      }
+    }
+  }
+  const setCount = effective.size;
+
+  return (
+    <div className="rounded-lg border border-border bg-surface-2">
+      <div className="border-b border-border px-4 py-2.5 flex items-center gap-2">
+        <SettingsIcon className="w-3.5 h-3.5 text-violet-300/80" />
+        <span className="text-sm font-medium text-gray-100">Current configuration</span>
+        <span className="text-[11px] text-gray-500 ml-auto">
+          {setCount} option{setCount !== 1 ? "s" : ""} set · the rest use defaults
+        </span>
+      </div>
+      <div className="p-3 space-y-3">
+        {CONFIG_OPTION_GROUPS.map((group) => (
+          <div key={group.title}>
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 mb-1.5">
+              {group.title}
+            </div>
+            <div className="rounded-md border border-border bg-surface-1 divide-y divide-border">
+              {group.keys.map(({ key, label }) => {
+                const hit = effective.get(key);
+                return (
+                  <div
+                    key={key}
+                    className="px-3 py-1.5 grid grid-cols-[150px_1fr_auto] gap-3 items-center"
+                  >
+                    <div className="text-[11px] text-gray-300 truncate">{label}</div>
+                    <div className="min-w-0">
+                      {hit ? (
+                        <SettingsValue value={hit.value} />
+                      ) : (
+                        <span className="text-[10px] text-gray-600 italic">default</span>
+                      )}
+                    </div>
+                    {hit ? (
+                      <ScopeBadge scope={hit.scope} />
+                    ) : (
+                      <span className="text-[10px] text-gray-700">-</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SettingsPanel({
   sources,
   statusline,
@@ -1707,6 +1813,7 @@ function SettingsPanel({
           { cmd: t("explain.settings.cmd3"), note: t("explain.settings.cmd3Note") },
         ]}
       />
+      <CurrentConfigPanel sources={sources} />
       <div className="rounded-md border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-300/90 flex items-center gap-2">
         <Info className="w-3.5 h-3.5 flex-shrink-0" />
         {t("common.redactedNotice")}
@@ -1735,7 +1842,7 @@ function StatuslineBlock({ data, onOpen }: { data: CcStatusline; onOpen: (p: str
               {t("statusline.configured")}
             </div>
             <div className="rounded-md border border-border bg-surface-1 px-3 py-2 text-[11px] font-mono text-gray-200">
-              <span className="text-gray-500">type:</span> {data.config.type ?? "—"}
+              <span className="text-gray-500">type:</span> {data.config.type ?? "-"}
               {data.config.command && (
                 <>
                   <br />
@@ -1824,7 +1931,7 @@ function SettingsBlock({
 
 function SettingsKeyValueList({ data }: { data: Record<string, unknown> | null | undefined }) {
   if (!data || typeof data !== "object") {
-    return <div className="p-3 text-xs text-gray-500">—</div>;
+    return <div className="p-3 text-xs text-gray-500">-</div>;
   }
   const entries = Object.entries(data);
   if (entries.length === 0) {
@@ -2706,7 +2813,7 @@ function BackupRow({ backup }: { backup: CcBackup }) {
   const { t } = useTranslation("ccConfig");
   // Heuristic restore: rename the backup back to the active path. We don't
   // shell out from the dashboard for this (too risky to silently overwrite
-  // a current active version) — show the user a copyable mv command instead.
+  // a current active version) - show the user a copyable mv command instead.
   const restoreCmd = `mv ${shellEscape(backup.backupPath)} ${shellEscape(deriveActivePath(backup))}`;
   return (
     <div className="rounded-lg border border-border bg-surface-2 px-3 py-2.5">
@@ -2735,7 +2842,7 @@ function BackupRow({ backup }: { backup: CcBackup }) {
 // Best-effort: derive the active path the backup would restore to. We strip
 // the trailing `.<ISO>.bak` segment from the basename and put the result back
 // under the right active subdir. If the format doesn't match, fall back to
-// "(unknown)" — the user can still copy the backup path itself.
+// "(unknown)" - the user can still copy the backup path itself.
 function deriveActivePath(b: CcBackup): string {
   // Strip ".<ISO>.bak" suffix from the basename.
   const m = b.name.match(/^(.+?)\.[^.]+\.bak$/);

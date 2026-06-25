@@ -288,7 +288,7 @@ export function SessionComplexityScatter({ data, onSessionClick }: SessionComple
       .attr("font-size", "11")
       .text(t("complexity.agentCount"));
 
-    // Bubbles — sort largest to back so small ones are clickable
+    // Bubbles - sort largest to back so small ones are clickable
     const sorted = [...data].sort((a, b) => b.totalTokens - a.totalTokens);
 
     g.selectAll<SVGCircleElement, SessionComplexityItem>("circle")

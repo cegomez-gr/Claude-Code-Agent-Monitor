@@ -1,6 +1,6 @@
 /**
  * @file WorkflowRunsPanel.tsx
- * @description Surfaces dynamic Workflow-tool runs (issue #167) — fleets of
+ * @description Surfaces dynamic Workflow-tool runs (issue #167) - fleets of
  * inner sub-agents spawned by the Claude Code "Workflow" tool, ingested from
  * on-disk run journals. Works in two modes: controlled (pass `runs`, e.g. from
  * SessionDetail) or self-fetching (pass a `statusFilter`, e.g. the Workflows
@@ -84,7 +84,7 @@ function hashStr(s: string): number {
 /**
  * Surface a human-readable excerpt from an agent's result preview, which is
  * often a (frequently truncated) JSON blob. Prefer a known content field, then
- * the first substantial quoted string, then a de-JSON'd snippet — so the panel
+ * the first substantial quoted string, then a de-JSON'd snippet - so the panel
  * shows a sentence instead of raw `{"angle":"…","findings":[{"claim":"…`.
  */
 export function friendlyPreview(raw: unknown): string {
@@ -105,7 +105,7 @@ export function friendlyPreview(raw: unknown): string {
   return s;
 }
 
-/** Full, un-truncated content for the expanded view — pretty-printed if JSON. */
+/** Full, un-truncated content for the expanded view - pretty-printed if JSON. */
 export function fullPreview(raw: unknown): string {
   if (raw == null) return "";
   const s = String(raw);
@@ -129,7 +129,7 @@ function messageText(m: TranscriptMessage): string {
  * Derive an agent's full prompt and result from its fetched transcript: the
  * first user message carries the task prompt; the last assistant message that
  * has text carries the returned result. Either is "" when absent (e.g. a
- * schema-mode agent whose final turn is a tool call rather than text) — callers
+ * schema-mode agent whose final turn is a tool call rather than text) - callers
  * fall back to the journal teaser in that case.
  */
 export function extractPromptResult(messages: TranscriptMessage[]): {
@@ -409,14 +409,14 @@ export function WorkflowRunsPanel({
                               <span
                                 className={`badge text-[10px] border ${phaseColor(phaseTitles, a.phaseTitle)}`}
                               >
-                                {a.phaseTitle || "—"}
+                                {a.phaseTitle || "-"}
                               </span>
                             </td>
                             <td className="py-1 pr-3">
                               <span
                                 className={`badge text-[10px] border ${statusClass(String(a.state || ""))}`}
                               >
-                                {t(`runs.status.${a.state}`, String(a.state || "—"))}
+                                {t(`runs.status.${a.state}`, String(a.state || "-"))}
                               </span>
                             </td>
                             <td className="py-1 pr-3 text-right text-gray-400">
@@ -426,7 +426,7 @@ export function WorkflowRunsPanel({
                               {a.toolCalls || 0}
                             </td>
                             <td className="py-1 pr-3 text-right text-gray-400">
-                              {a.durationMs != null ? formatMs(a.durationMs) : "—"}
+                              {a.durationMs != null ? formatMs(a.durationMs) : "-"}
                             </td>
                           </tr>
                         ))}
@@ -437,7 +437,7 @@ export function WorkflowRunsPanel({
                   <p className="text-[11px] text-gray-600">{t("runs.noAgents")}</p>
                 )}
 
-                {/* Clickable, colored, expandable results — full content on click */}
+                {/* Clickable, colored, expandable results - full content on click */}
                 {resultRows.length > 0 && (
                   <div className="space-y-1.5">
                     <div className="text-[10px] font-medium uppercase tracking-wider text-gray-600">
@@ -495,7 +495,7 @@ export function WorkflowRunsPanel({
                                 <span
                                   className={`badge border ${statusClass(String(a.state || ""))}`}
                                 >
-                                  {t(`runs.status.${a.state}`, String(a.state || "—"))}
+                                  {t(`runs.status.${a.state}`, String(a.state || "-"))}
                                 </span>
                                 <span>
                                   {fmt(a.tokens || 0)} {t("runs.tokens")}

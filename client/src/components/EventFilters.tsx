@@ -1,8 +1,8 @@
 /**
  * @file EventFilters.tsx
  * @description Filter toolbar for the event list. Surfaces every filter the
- * backend supports on /api/events — event_type, tool_name, agent_id,
- * session_id, free-text search, and an ISO date range — as a single
+ * backend supports on /api/events - event_type, tool_name, agent_id,
+ * session_id, free-text search, and an ISO date range - as a single
  * controlled component. Parent owns the filter state; this component only
  * renders the inputs and emits change events.
  * @author Son Nguyen <hoangson091104@gmail.com>
@@ -78,7 +78,7 @@ export function expandStatusToEventTypes(statuses: string[]): string[] {
 type EventFiltersProps = {
   value: EventFiltersValue;
   onChange: (next: EventFiltersValue) => void;
-  // If set, hides the session filter — useful inside SessionDetail where the
+  // If set, hides the session filter - useful inside SessionDetail where the
   // session is already implicit.
   hideSessionFilter?: boolean;
   // Optional pre-known agent ids (SessionDetail passes the agents from its
@@ -102,7 +102,7 @@ export function EventFilters({
   });
   const [searchDraft, setSearchDraft] = useState(value.q);
 
-  // Debounce text search — only push up after 300ms of inactivity.
+  // Debounce text search - only push up after 300ms of inactivity.
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (searchTimer.current) clearTimeout(searchTimer.current);

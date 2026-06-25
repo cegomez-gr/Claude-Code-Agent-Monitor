@@ -123,7 +123,7 @@ function renderHistogram(svg: SVGSVGElement, histo: HistogramBucket[], opts: His
     .attr("font-size", 10)
     .attr("font-family", "Inter, sans-serif");
 
-  // X axis (compactions per session — one tick per bucket)
+  // X axis (compactions per session - one tick per bucket)
   g.append("g")
     .attr("transform", `translate(0,${innerH})`)
     .call(d3.axisBottom(xScale).tickSize(0).tickPadding(8))
@@ -156,7 +156,7 @@ function renderHistogram(svg: SVGSVGElement, histo: HistogramBucket[], opts: His
     .text(opts.y);
 
   // Bars + count labels + rich hover tooltip (full-height hit-area so every
-  // column — including empty buckets — responds, matching the other charts).
+  // column - including empty buckets - responds, matching the other charts).
   histo.forEach((d) => {
     const bx = xScale(d.count);
     if (bx === undefined) return;
@@ -303,7 +303,7 @@ export function CompactionImpact({ data }: CompactionImpactProps) {
 
   return (
     <div className="flex flex-col gap-5">
-      {/* What compaction is — one line so the numbers below make sense */}
+      {/* What compaction is - one line so the numbers below make sense */}
       <p className="text-xs text-gray-500 leading-relaxed">{t("compaction.help")}</p>
 
       {/* Stat tiles */}

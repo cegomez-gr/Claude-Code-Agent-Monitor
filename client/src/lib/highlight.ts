@@ -6,7 +6,7 @@
  * bash, html, css, sql, yaml, diff). Output is consumed by CodeBlock.tsx which renders
  * each token as a span with a colour class.
  *
- * The goal is "good enough to scan", not full lexical correctness — we accept the
+ * The goal is "good enough to scan", not full lexical correctness - we accept the
  * occasional mis-tokenization in favour of small bundle size and zero deps.
  *
  * @author Son Nguyen <hoangson091104@gmail.com>

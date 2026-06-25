@@ -41,7 +41,7 @@ describe("EventDetail", () => {
 
   it("renders scalar payload fields with humanized i18n labels", () => {
     render(<EventDetail event={baseEvent} />);
-    // Translated labels from common:eventDetail.* — never raw snake_case keys.
+    // Translated labels from common:eventDetail.* - never raw snake_case keys.
     expect(screen.getByText("Working directory")).toBeInTheDocument();
     expect(screen.getByText("/tmp")).toBeInTheDocument();
     expect(screen.getByText("Permission mode")).toBeInTheDocument();
@@ -59,7 +59,7 @@ describe("EventDetail", () => {
     expect(screen.getByText("Tool Input")).toBeInTheDocument();
     // Terminal renderer shows the raw command and the `# description` line,
     // not the pretty-printed JSON. Description appears both in the Summary
-    // block and in the terminal — `getAllByText` allows both.
+    // block and in the terminal - `getAllByText` allows both.
     expect(screen.getByText("ls -la")).toBeInTheDocument();
     expect(screen.getAllByText(/list files/).length).toBeGreaterThan(0);
   });

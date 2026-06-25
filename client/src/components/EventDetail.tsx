@@ -31,7 +31,7 @@ type EventDetailProps = {
   sessionNameById?: Map<string, string>;
 };
 
-/** Human-friendly label for an agent — `subagent_type · name` when both add
+/** Human-friendly label for an agent - `subagent_type · name` when both add
  *  signal, else whichever single field is present. Returns null for main
  *  agents whose name is just the session label (the agent_id row already
  *  carries the structural marker `<session>-main`, no need to repeat it). */
@@ -47,7 +47,7 @@ function agentDisplayLabel(info: AgentInfo): string | null {
   return null;
 }
 
-// Keys from the payload that are already rendered from event-level fields —
+// Keys from the payload that are already rendered from event-level fields -
 // skip them to avoid showing the same value twice. Includes `id` and
 // `event_id` defensively in case a future hook payload surfaces them.
 const DUPLICATE_KEYS = new Set(["id", "event_id", "session_id", "agent_id"]);
@@ -118,7 +118,7 @@ export function EventDetail({ event, agentInfoById, sessionNameById }: EventDeta
 
   const rows = useMemo<Row[]>(() => {
     const result: Row[] = [{ key: "event_id", label: t("eventDetail.eventId"), value: event.id }];
-    // Full date + time + timezone — list rows only show a short time, so the
+    // Full date + time + timezone - list rows only show a short time, so the
     // detail panel spells out exactly when the event was recorded.
     if (event.created_at) {
       result.push({
@@ -127,7 +127,7 @@ export function EventDetail({ event, agentInfoById, sessionNameById }: EventDeta
         value: formatDateTimeFull(event.created_at),
       });
     }
-    // Surface the session name above the raw id when we can resolve it —
+    // Surface the session name above the raw id when we can resolve it -
     // makes "f2f3c568-..." recognisable as e.g. "AI-Assistant-Chatbot
     // (enumerated-wandering-jellyfish)" without losing the id below.
     const sessionName = sessionNameById?.get(event.session_id);
@@ -140,7 +140,7 @@ export function EventDetail({ event, agentInfoById, sessionNameById }: EventDeta
       value: event.session_id,
     });
     if (event.agent_id) {
-      // Surface the agent name above the raw id when we can resolve it —
+      // Surface the agent name above the raw id when we can resolve it -
       // makes "f2f3c568-...-subagent-14" recognisable as e.g.
       // "technical-researcher · Subagent 14" without losing the id below.
       const info = agentInfoById?.get(event.agent_id);
@@ -270,7 +270,7 @@ function FieldRow({
   value,
   toolName,
 }: {
-  /** Raw payload key — used for tool-aware routing decisions so the renderer
+  /** Raw payload key - used for tool-aware routing decisions so the renderer
    *  doesn't break when the user-visible label is translated. */
   rowKey: string;
   label: string;

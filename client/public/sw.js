@@ -3,14 +3,14 @@
  * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
-// Bump this any time the SW logic changes — old clients will install the new
+// Bump this any time the SW logic changes - old clients will install the new
 // SW, drop their existing caches in `activate`, and `skipWaiting` so the
 // freshly-built bundle starts being served on the very next request.
 const CACHE_NAME = "dashboard-v2";
 
 self.addEventListener("install", () => {
   // No pre-cache: network-first below means the cache fills lazily, and
-  // there's nothing to "warm" — the v1 SW was pre-caching `/`, which is
+  // there's nothing to "warm" - the v1 SW was pre-caching `/`, which is
   // exactly the file most likely to go stale after a rebuild.
   self.skipWaiting();
 });
@@ -39,7 +39,7 @@ self.addEventListener("fetch", (event) => {
   )
     return;
 
-  // Hashed bundles under /assets/ are immutable for a given URL — cache-first
+  // Hashed bundles under /assets/ are immutable for a given URL - cache-first
   // is safe and fast. A new build emits new filenames, so stale entries simply
   // don't get re-requested.
   if (url.pathname.startsWith("/assets/")) {

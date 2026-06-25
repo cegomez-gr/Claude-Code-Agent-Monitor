@@ -41,7 +41,7 @@ function findRepeatedStep(steps: string[]): string | null {
 
 /**
  * Build a deterministic, value-dependent narrative for a workflow pattern.
- * Pure rule-based mapping — same input always yields the same output, so the
+ * Pure rule-based mapping - same input always yields the same output, so the
  * UI never produces hallucinated descriptions for ambiguous patterns.
  */
 function describePattern(pattern: WorkflowPattern, t: TFn): string {
@@ -181,7 +181,7 @@ function PatternItem({ pattern, rank, isSelected, onClick }: PatternItemProps) {
         {/* Frequency */}
         <PatternFrequency count={pattern.count} percentage={pattern.percentage} />
 
-        {/* Click affordance — visible only when not yet expanded so users know the row is interactive. */}
+        {/* Click affordance - visible only when not yet expanded so users know the row is interactive. */}
         {!isSelected && (
           <Info className="hidden sm:block w-3.5 h-3.5 text-gray-600 flex-shrink-0" />
         )}
@@ -237,7 +237,7 @@ function PatternDetail({ pattern }: { pattern: WorkflowPattern }) {
         />
       </div>
 
-      {/* Narrative — what this means */}
+      {/* Narrative - what this means */}
       <div>
         <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
           <Info className="w-3 h-3 text-indigo-400" />

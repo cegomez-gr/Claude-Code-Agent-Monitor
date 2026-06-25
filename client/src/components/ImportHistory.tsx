@@ -1,5 +1,5 @@
 /**
- * @file Import History panel — step-by-step instructions and three import modes
+ * @file Import History panel - step-by-step instructions and three import modes
  * (rescan default folder, scan any path, upload files/archives). Renders inside
  * the Settings page and keeps all I/O isolated behind the api.import.* client.
  *

@@ -18,6 +18,7 @@ import {
   Terminal,
   Info,
   AlertTriangle,
+  Pencil,
 } from "lucide-react";
 import type { TranscriptMessage, TranscriptContent } from "../../lib/types";
 import { ToolCallBlock } from "./ToolCallBlock";
@@ -61,6 +62,26 @@ function formatLocalTime(iso: string): string {
   } catch {
     return "";
   }
+}
+
+/** Centered marker for a session rename (/rename, `claude -n`, picker Ctrl+R).
+ *  These TUI-only commands write no conversation turn, so without this they're
+ *  invisible in the transcript. */
+function SessionEventRow({ title, timestamp }: { title?: string; timestamp: string | null }) {
+  return (
+    <div className="flex items-center justify-center py-1">
+      <div className="inline-flex items-center gap-2 text-[11px] text-gray-400 bg-surface-2/70 border border-surface-3 rounded-full px-3 py-1 max-w-full">
+        <Pencil className="w-3 h-3 text-violet-300/70 flex-shrink-0" />
+        <span className="text-gray-500">Renamed session →</span>
+        <span className="text-gray-200 font-medium truncate">{title || "(untitled)"}</span>
+        {timestamp && (
+          <span className="text-[10px] text-gray-600 font-mono flex-shrink-0">
+            {formatLocalTime(timestamp)}
+          </span>
+        )}
+      </div>
+    </div>
+  );
 }
 
 /** Compact pill for /command invocations parsed out of TUI markup. */
@@ -215,7 +236,7 @@ export function MessageList({ messages, loading }: MessageListProps) {
 
   const toolResultMap = buildToolResultMap(messages);
 
-  // Track which user messages are pure tool_result (no text) — we merge those into the preceding assistant message
+  // Track which user messages are pure tool_result (no text) - we merge those into the preceding assistant message
   const userMsgHasText = useMemo(() => {
     const map = new Map<number, boolean>();
     messages.forEach((msg, idx) => {
@@ -229,7 +250,13 @@ export function MessageList({ messages, loading }: MessageListProps) {
   return (
     <div className="space-y-3">
       {messages.map((msg, idx) => {
-        // Skip user messages that are purely tool_result — they're rendered inside ToolCallBlock
+        // Session lifecycle markers (e.g. /rename) render as a centered chip,
+        // not as a user/assistant row.
+        if (msg.type === "session_event") {
+          return <SessionEventRow key={idx} title={msg.title} timestamp={msg.timestamp} />;
+        }
+
+        // Skip user messages that are purely tool_result - they're rendered inside ToolCallBlock
         if (msg.type === "user" && !userMsgHasText.get(idx)) {
           return null;
         }

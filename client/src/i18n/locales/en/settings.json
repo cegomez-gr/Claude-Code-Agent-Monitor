@@ -25,13 +25,13 @@
     "tooltip": {
       "title": "How model pricing works",
       "howItWorks": "How it works",
-      "howItWorksBody": "When a session reports usage, the dashboard finds the first pricing rule whose pattern matches the model id and multiplies (input tokens / 1M) and (output tokens / 1M) by the rates below to compute cost. Rules are evaluated top-to-bottom — the first match wins.",
+      "howItWorksBody": "When a session reports usage, the dashboard finds the first pricing rule whose pattern matches the model id and multiplies (input tokens / 1M) and (output tokens / 1M) by the rates below to compute cost. Rules are evaluated top-to-bottom - the first match wins.",
       "patternsTitle": "Pattern syntax",
       "patternsBody": "Patterns are SQL-style globs. % is a wildcard that matches any characters. For example: claude-opus-4-7% matches every model id that starts with claude-opus-4-7 (e.g. claude-opus-4-7, claude-opus-4-7-20260101). claude-%-haiku matches any haiku variant. An exact id like claude-sonnet-4-6 only matches itself.",
       "manualUpdates": "You must update prices manually",
-      "manualUpdatesBody": "Anthropic publishes pricing changes on their website — there is no live feed. When a new model launches or rates change, edit the matching rule (or add a new one above the catch-all) so newly recorded sessions are costed correctly. Already-stored sessions keep the price that was applied at ingest time.",
-      "apiPricing": "Reference only — API rates",
-      "apiPricingBody": "These are pay-as-you-go API rates. If you use Claude Code on a subscription plan (Pro, Max, Team, or Enterprise), your actual cost is a flat monthly fee, not per-token — so these figures will usually be higher than what you really pay. Treat the costs here as a usage estimate for reference, not a bill."
+      "manualUpdatesBody": "Anthropic publishes pricing changes on their website - there is no live feed. When a new model launches or rates change, edit the matching rule (or add a new one above the catch-all) so newly recorded sessions are costed correctly. Already-stored sessions keep the price that was applied at ingest time.",
+      "apiPricing": "Reference only - API rates",
+      "apiPricingBody": "These are pay-as-you-go API rates. If you use Claude Code on a subscription plan (Pro, Max, Team, or Enterprise), your actual cost is a flat monthly fee, not per-token - so these figures will usually be higher than what you really pay. Treat the costs here as a usage estimate for reference, not a bill."
     },
     "cacheWrite5m": "Cache Write (5m)",
     "cacheWrite1h": "Cache Write (1h)",
@@ -75,7 +75,7 @@
   },
   "import": {
     "title": "Import History",
-    "description": "Bring existing Claude Code sessions into the dashboard. Token counts, per-model cost, compactions, subagents, tool uses, and turn durations are reconstructed from the original JSONL transcripts — identical to how live sessions are captured.",
+    "description": "Bring existing Claude Code sessions into the dashboard. Token counts, per-model cost, compactions, subagents, tool uses, and turn durations are reconstructed from the original JSONL transcripts - identical to how live sessions are captured.",
     "accuracyNote": "Re-running is safe. Sessions are deduplicated by session ID, and compaction baselines ensure token totals never double-count.",
     "supportedFiles": "Supported inputs: .jsonl, .meta.json, .zip, .tar, .tar.gz, .tgz, .gz",
     "instructions": "How to gather your history",
@@ -238,11 +238,11 @@
     "deleteMessage": "Delete \"{{name}}\"? Fired alerts will stop being delivered to this target. This cannot be undone.",
     "guideToggle": "How to set up {{provider}}",
     "guideDocs": "Official {{provider}} docs",
-    "guideStaleNote": "Provider setup screens change often, so these steps may be out of date — always confirm against the official docs."
+    "guideStaleNote": "Provider setup screens change often, so these steps may be out of date - always confirm against the official docs."
   },
   "alertsHub": {
     "title": "Alerts",
-    "description": "Define alert rules, route them to webhook channels, and review what has fired — all in one place.",
+    "description": "Define alert rules, route them to webhook channels, and review what has fired - all in one place.",
     "tabRules": "Rules",
     "tabChannels": "Channels",
     "tabActivity": "Activity",
@@ -271,7 +271,7 @@
         "In the target Teams channel, click ⋯ → 'Workflows'.",
         "Pick the template 'Post to a channel when a webhook request is received'.",
         "Finish the flow and copy the generated HTTP POST URL.",
-        "Paste it above. (Classic Office 365 connectors were retired in 2025 — use Workflows.)"
+        "Paste it above. (Classic Office 365 connectors were retired in 2025 - use Workflows.)"
       ]
     },
     "google_chat": {
@@ -300,7 +300,7 @@
         "Message @BotFather, run /newbot, and copy the bot token.",
         "Add the bot to your group/channel (or just DM it).",
         "Find the chat ID: send a message, open https://api.telegram.org/bot<token>/getUpdates, read result[].message.chat.id.",
-        "Enter the Bot token and Chat ID above — no URL needed."
+        "Enter the Bot token and Chat ID above - no URL needed."
       ]
     },
     "pagerduty": {
@@ -308,7 +308,7 @@
         "Open the target Service → Integrations → 'Add integration'.",
         "Choose 'Events API v2'.",
         "Copy the Integration Key (the routing key).",
-        "Enter it as the Routing key above — the Events API URL is prefilled."
+        "Enter it as the Routing key above - the Events API URL is prefilled."
       ]
     },
     "opsgenie": {
@@ -316,13 +316,13 @@
         "Settings → Integrations → add an 'API' integration.",
         "Copy the generated API key.",
         "Note your account region (US or EU).",
-        "Enter the API key and region above — the alerts URL is derived from the region."
+        "Enter the API key and region above - the alerts URL is derived from the region."
       ]
     },
     "splunk_oncall": {
       "steps": [
         "Integrations → REST Endpoint, and enable it.",
-        "Copy the REST URL — it already contains your API key.",
+        "Copy the REST URL - it already contains your API key.",
         "Replace the trailing '$routing_key' with one of your routing keys.",
         "Paste the full URL above."
       ]

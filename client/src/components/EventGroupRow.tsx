@@ -2,7 +2,7 @@
  * @file EventGroupRow.tsx
  * @description Compact row that represents one EventGroup (one tool_use_id, or
  * a single standalone event). Shows a status progression of the underlying
- * events — e.g. 🟢 → 🔵 for a Pre/Post pair — plus tool name, summary, and
+ * events - e.g. 🟢 → 🔵 for a Pre/Post pair - plus tool name, summary, and
  * the wall-clock duration between first and last event. Clicking the chevron
  * expands the group inline to reveal each underlying event row.
  * @author Son Nguyen <hoangson091104@gmail.com>
@@ -55,7 +55,7 @@ export function EventGroupRow({
     group.events.map((e) => statusFromEventType(e.event_type))
   );
   const duration = formatGroupDuration(group.durationMs);
-  // Every group is expandable — single-event groups show the EventDetail
+  // Every group is expandable - single-event groups show the EventDetail
   // directly; multi-event groups show a nested list where each event can be
   // expanded individually.
   const canExpand = group.events.length >= 1;

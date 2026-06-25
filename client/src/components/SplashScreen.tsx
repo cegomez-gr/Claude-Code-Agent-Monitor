@@ -49,7 +49,7 @@ export function SplashScreen() {
     try {
       sessionStorage.setItem(SESSION_KEY, "1");
     } catch {
-      /* sessionStorage may be unavailable (private mode) — show anyway */
+      /* sessionStorage may be unavailable (private mode) - show anyway */
     }
     exitTimer.current = window.setTimeout(beginExit, HOLD_MS);
     return () => {
@@ -79,7 +79,7 @@ export function SplashScreen() {
       <div className="splash-grain" aria-hidden="true" />
 
       <div className="splash-content">
-        {/* Brand mark — the node-graph hexagon, enlarged and animated */}
+        {/* Brand mark - the node-graph hexagon, enlarged and animated */}
         <div className="splash-mark" aria-hidden="true">
           <span className="splash-mark-glow" />
           <BrandMark />
@@ -230,7 +230,7 @@ const SPLASH_CSS = `
   overflow: hidden;
   background: #06060a;
   cursor: pointer;
-  /* Opaque from the very first paint — the overlay must NOT fade in, or the
+  /* Opaque from the very first paint - the overlay must NOT fade in, or the
      app rendered behind it flashes through for the fade duration. Only the
      content cascades in (below); the dark backdrop is solid immediately. */
 }

@@ -164,7 +164,7 @@ exports[`screen snapshots > Activity feed 1`] = `
           <span
             class="text-gray-500 font-normal"
           >
-            — 
+            - 
             Unlock deeper insights: badges, lifecycles, and filter mechanics explained.
           </span>
         </summary>
@@ -329,7 +329,7 @@ exports[`screen snapshots > Activity feed 1`] = `
                 <li
                   class="text-amber-300/90"
                 >
-                  Grouping tip: a grouped row needs both Pre and Post events. If you filter by Status, pick Working + Connected together to keep pairs intact — otherwise a group will only show half of the call.
+                  Grouping tip: a grouped row needs both Pre and Post events. If you filter by Status, pick Working + Connected together to keep pairs intact - otherwise a group will only show half of the call.
                 </li>
                 <li>
                   Text search matches summary, tool_name, and the raw payload (data column).
@@ -5935,7 +5935,7 @@ exports[`screen snapshots > Run 1`] = `
             class="text-[11.5px] text-gray-300 leading-[1.55] space-y-1 marker:text-emerald-500/40 list-disc pl-4"
           >
             <li>
-              Live streaming output — text, thinking, tool calls, tool results
+              Live streaming output - text, thinking, tool calls, tool results
             </li>
             <li>
               Multi-turn conversations & resuming any past session
@@ -6028,10 +6028,10 @@ exports[`screen snapshots > Run 1`] = `
               >
                 /compact
               </code>
-              ) — they mutate CLI-only state
+              ) - they mutate CLI-only state
             </li>
             <li>
-              Mid-session permission prompts — pick the mode at spawn time
+              Mid-session permission prompts - pick the mode at spawn time
             </li>
             <li>
               Compaction prompts mid-conversation
@@ -6099,7 +6099,7 @@ exports[`screen snapshots > Run 1`] = `
             <div
               class="text-[11px] text-gray-500 mt-0.5"
             >
-              Multi-turn — keep typing follow-ups while the agent works.
+              Multi-turn - keep typing follow-ups while the agent works.
             </div>
           </button>
           <button
@@ -8386,7 +8386,7 @@ exports[`screen snapshots > Settings 1`] = `
         <p
           class="text-xs text-gray-500 mb-4"
         >
-          Bring existing Claude Code sessions into the dashboard. Token counts, per-model cost, compactions, subagents, tool uses, and turn durations are reconstructed from the original JSONL transcripts — identical to how live sessions are captured.
+          Bring existing Claude Code sessions into the dashboard. Token counts, per-model cost, compactions, subagents, tool uses, and turn durations are reconstructed from the original JSONL transcripts - identical to how live sessions are captured.
         </p>
         <div
           class="card p-5 space-y-5"
@@ -9086,7 +9086,7 @@ exports[`screen snapshots > Settings 1`] = `
       <p
         class="text-xs text-gray-500 mb-4"
       >
-        Define alert rules, route them to webhook channels, and review what has fired — all in one place.
+        Define alert rules, route them to webhook channels, and review what has fired - all in one place.
       </p>
       <div
         class="space-y-4"
@@ -10339,9 +10339,9 @@ exports[`screen snapshots > Workflows 1`] = `
         >
           <span
             class="text-2xl font-semibold leading-none truncate text-violet-400"
-            title="—"
+            title="-"
           >
-            —
+            -
           </span>
           <button
             aria-expanded="false"

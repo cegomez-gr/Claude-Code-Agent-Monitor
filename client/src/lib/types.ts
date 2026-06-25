@@ -194,7 +194,7 @@ export interface UpdateStatusPayload {
   update_available: boolean;
   repo_root?: string;
   remote_ref?: string | null;
-  /** Remote name we compared against — "upstream" if configured (fork
+  /** Remote name we compared against - "upstream" if configured (fork
    * convention), else "origin", else whatever single remote is set up. */
   canonical_remote?: string | null;
   /** Local branch HEAD points at. null on detached HEAD. */
@@ -203,7 +203,7 @@ export interface UpdateStatusPayload {
    * no upstream is configured for the current branch. */
   tracking_upstream?: string | null;
   /** True when the local branch's tracked upstream is exactly remote_ref
-   * — i.e. a plain `git pull --ff-only` will do the right thing. */
+   * - i.e. a plain `git pull --ff-only` will do the right thing. */
   tracks_canonical?: boolean;
   /** Categorical hint for the UI. Discriminated so callers can branch on
    * shape (e.g. show "Restart after running" only when the command
@@ -708,7 +708,7 @@ export interface TranscriptContent {
 }
 
 export interface TranscriptMessage {
-  type: "user" | "assistant";
+  type: "user" | "assistant" | "session_event";
   timestamp: string | null;
   content: TranscriptContent[];
   model?: string;
@@ -718,6 +718,11 @@ export interface TranscriptMessage {
     cache_read_input_tokens?: number;
     cache_creation_input_tokens?: number;
   };
+  /** For type === "session_event": the TUI action this marker represents.
+   *  "rename" is a /rename, `claude -n`, or picker Ctrl+R title change. */
+  event_kind?: "rename";
+  /** For type === "session_event": the new session title. */
+  title?: string;
 }
 
 export interface TranscriptResult {

@@ -30,7 +30,7 @@ interface SessionOverviewProps {
   agents: Agent[];
 }
 
-/** Debounce window for stats refresh — coalesces bursts of hook events into one fetch. */
+/** Debounce window for stats refresh - coalesces bursts of hook events into one fetch. */
 const REFRESH_DEBOUNCE_MS = 600;
 
 /** Compact tile used in the top stat row. */
@@ -131,7 +131,7 @@ export function SessionOverview({ session, agents }: SessionOverviewProps) {
       const result = await api.sessions.stats(session.id);
       setStats(result);
     } catch {
-      // Non-fatal — overview just won't update this round.
+      // Non-fatal - overview just won't update this round.
     } finally {
       fetchingRef.current = false;
     }
@@ -187,7 +187,7 @@ export function SessionOverview({ session, agents }: SessionOverviewProps) {
 
   // Duration: ended_at - started_at, or now - started_at if active
   const durationLabel = useMemo(() => {
-    if (!session.started_at) return "—";
+    if (!session.started_at) return "-";
     const end = session.ended_at ?? new Date(now).toISOString();
     return formatDuration(session.started_at, end);
   }, [session.started_at, session.ended_at, now]);
@@ -224,7 +224,7 @@ export function SessionOverview({ session, agents }: SessionOverviewProps) {
 
   return (
     <div className="space-y-5 mb-6">
-      {/* Active-agent banner — only shows when session is running */}
+      {/* Active-agent banner - only shows when session is running */}
       {activeAgent && (
         <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
           <span className="relative flex h-2 w-2 flex-shrink-0">
@@ -330,7 +330,7 @@ export function SessionOverview({ session, agents }: SessionOverviewProps) {
          * The /api/sessions/:id/stats endpoint deliberately strips compaction
          * agents from `subagent_types` so the workflow analytics don't lump
          * them in. But on this overview a session with only compactions still
-         * has *something* to show — surfacing zero subagents while the agents
+         * has *something* to show - surfacing zero subagents while the agents
          * tab below clearly lists "Context Compaction" cards is confusing.
          *
          * We synthesize a compaction row from `stats.agents.compaction` and
@@ -419,7 +419,7 @@ export function SessionOverview({ session, agents }: SessionOverviewProps) {
         </div>
       )}
 
-      {/* Event-type breakdown — secondary, only top 6 */}
+      {/* Event-type breakdown - secondary, only top 6 */}
       {stats.events_by_type.length > 0 && (
         <div className="rounded-lg border border-surface-3 bg-surface-2/60 p-3.5">
           <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">

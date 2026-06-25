@@ -118,7 +118,7 @@ describe("WorkflowRunsPanel lazy transcript fetch", () => {
     });
 
     // Full fetched text appears (async) in a <pre>, and the prompt is the
-    // fetched one — not the short journal teaser.
+    // fetched one - not the short journal teaser.
     const resultPre = await screen.findByText(
       (_, el) => el?.tagName === "PRE" && (el.textContent || "").includes("runs well past"),
       { selector: "pre" }

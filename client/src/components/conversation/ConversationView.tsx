@@ -53,7 +53,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
   // manual refresh), we queue exactly one re-fetch so events that landed
   // during the in-flight request aren't silently dropped.
   const pendingFetchRef = useRef(false);
-  // Refresh-button spinner state — separate from initial `loading` so the
+  // Refresh-button spinner state - separate from initial `loading` so the
   // existing skeleton doesn't blink during a manual refresh.
   const [refreshing, setRefreshing] = useState(false);
 
@@ -222,7 +222,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
     }
     function onVisibility() {
       if (document.visibilityState === "visible") {
-        // Tab just became visible — fire a one-shot catch-up immediately
+        // Tab just became visible - fire a one-shot catch-up immediately
         // and resume polling. Backgrounded tabs throttle setInterval, so
         // restarting on focus avoids a stale conversation.
         fetchNewMessages();
@@ -239,7 +239,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
     };
   }, [fetchNewMessages]);
 
-  // Manual refresh — surfaces a control in the toolbar so users can force
+  // Manual refresh - surfaces a control in the toolbar so users can force
   // a sync without reloading the page.
   const refresh = useCallback(async () => {
     setRefreshing(true);
@@ -268,7 +268,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
       });
 
       if (result.messages.length === 0) {
-        // Nothing older exists — clear hasMore so the hint stops showing
+        // Nothing older exists - clear hasMore so the hint stops showing
         // even if the server still claims more is available.
         setHasMore(false);
         setLoadingHistory(false);
@@ -334,7 +334,7 @@ export function ConversationView({ sessionId, initialTranscriptId }: Conversatio
 
   return (
     <div className="relative flex flex-col" style={{ minHeight: 0 }}>
-      {/* Toolbar — always rendered after the initial load so users can
+      {/* Toolbar - always rendered after the initial load so users can
           refresh even when no messages have streamed yet. */}
       {!loading && (
         <div className="flex items-center gap-3 mb-3 flex-shrink-0">

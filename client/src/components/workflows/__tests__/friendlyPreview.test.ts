@@ -1,5 +1,5 @@
 /**
- * @file Unit tests for friendlyPreview — turns an agent's raw (often truncated)
+ * @file Unit tests for friendlyPreview - turns an agent's raw (often truncated)
  * JSON result preview into a human-readable excerpt for the Workflow Runs panel.
  * @author Son Nguyen <hoangson091104@gmail.com>
  */
