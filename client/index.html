@@ -1,6 +1,22 @@
 <!doctype html>
 <html lang="en" class="dark">
   <head>
+    <script>
+      // Anti-FOUC: apply the persisted theme before the first paint so the page
+      // never flashes the default palette. Keep in sync with src/hooks/useTheme.ts.
+      (function () {
+        try {
+          var t = localStorage.getItem("dashboard_theme");
+          var valid = ["claude-light", "claude-dark", "midnight"];
+          document.documentElement.setAttribute(
+            "data-theme",
+            valid.indexOf(t) !== -1 ? t : "claude-light"
+          );
+        } catch (e) {
+          document.documentElement.setAttribute("data-theme", "claude-light");
+        }
+      })();
+    </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
