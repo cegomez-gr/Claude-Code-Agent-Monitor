@@ -925,6 +925,15 @@ Notable prepared statements include `findStaleSessions` (used by `SessionStart` 
 - **Protocol:** Standard WebSocket (RFC 6455)
 - **Heartbeat:** Server sends `ping` every 30 seconds; clients that don't `pong` are terminated
 
+### Terminal PTY socket (`/terminal/:sessionId`)
+
+A second WebSocket endpoint backs the Session Detail **Terminal** tab. Because the `ws` `path` option only matches exactly (and would never match the parameterised `/terminal/<id>`), both endpoints are created in **`noServer` mode** and share a single `server.on("upgrade")` router that dispatches by path. The router enforces the same anti-DNS-rebinding **Host allowlist** and optional token that the main socket uses (Express middleware does not run on upgrades).
+
+- **Path:** `/terminal/:sessionId`
+- **Backend:** the server reads `session.metadata.tmux_session` and spawns `tmux attach-session -t <name>` through [`node-pty`](https://github.com/microsoft/node-pty), bridging the PTY ↔ socket bidirectionally (binary/text output down, keystrokes up, JSON `{type:"resize",cols,rows}` control frames). Closes with code `4404` when no tmux session is associated.
+- **Availability:** gated on `node-pty` loading; if it isn't installed the tab is disabled with a server warning rather than failing the dashboard.
+- **Capture:** `session.metadata.tmux_session` is written at `SessionStart` from the `$TMUX` the hook inherits as a child of `claude` (see the Event Ingestion Pipeline).
+
 ### Message Format
 
 All messages are JSON with this envelope:

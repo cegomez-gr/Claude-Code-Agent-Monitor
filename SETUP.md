@@ -14,6 +14,8 @@ Browser  ←  WebSocket broadcast  ←  Express server  ←  SQLite
 
 No extra Claude Code configuration is required in the normal host-run path — when you start the dashboard with `npm run dev` or `npm start`, the server configures the hooks automatically on startup. Container deployments are the exception: after the container is up, run `npm run install-hooks` on the host so Claude Code points at `http://localhost:4820`.
 
+**Embedded terminal (optional).** If you start `claude` from inside a tmux pane (`tmux new-session -s <name>` then `claude`), the `SessionStart` hook captures the tmux session name and Session Detail gains a **Terminal** tab that attaches to that tmux live (via `node-pty` over a `/terminal/:sessionId` WebSocket). It needs `tmux` on `PATH`; the bundled `node-pty` is kept working by a `postinstall` step that restores the execute bit on its `spawn-helper` (a dropped `+x` otherwise surfaces as `posix_spawnp failed`). Sessions started outside tmux behave exactly as before and simply omit the tab.
+
 ---
 
 ## Configuration
