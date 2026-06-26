@@ -4,6 +4,21 @@
   "exportData": "Export Data",
   "acrossSessions": "Across all tracked sessions",
   "basedOnUsage": "Based on per-model token usage",
+  "appearance": {
+    "title": "Appearance",
+    "description": "Choose the dashboard color theme.",
+    "terminal": {
+      "title": "Terminal",
+      "description": "Customize the embedded terminal's appearance.",
+      "themeMode": "Terminal theme",
+      "modeSync": "Sync with dashboard",
+      "modeClassic": "Classic black",
+      "modeClaudeDark": "Claude Dark",
+      "modeClaudeLight": "Claude Light",
+      "font": "Font",
+      "fontSize": "Font size"
+    }
+  },
   "tabby": {
     "title": "Tabby companion",
     "description": "A floating cat that reacts to your live sessions.",

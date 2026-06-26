@@ -62,6 +62,7 @@ import { ImportHistory } from "../components/ImportHistory";
 import { Skeleton } from "../components/Skeleton";
 import { AlertsNotifications } from "../components/AlertsNotifications";
 import { ThemeSelector } from "../components/ThemeSelector";
+import { TerminalSettings } from "../components/TerminalSettings";
 import type { ModelPricing, WSMessage } from "../lib/types";
 
 // In-page navigation for the (dense) Settings screen. Each entry maps to a
@@ -959,6 +960,7 @@ export function Settings() {
           </p>
         </div>
         <ThemeSelector />
+        <TerminalSettings />
       </section>
 
       {/* ─── MODEL PRICING ─── */}

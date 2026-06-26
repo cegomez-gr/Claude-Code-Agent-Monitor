@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import {
+  getTerminalPrefs,
+  resolveFontStack,
+  resolveXtermTheme,
+  useDashboardThemeAttr,
+  useTerminalPrefs,
+} from "../hooks/useTerminalPrefs";
 // xterm needs its stylesheet to lay out the row grid; without it the hidden
 // helper textarea renders as a stray white box. Static side-effect import
 // matches how the rest of the app loads CSS (see main.tsx, Tabby.tsx).
@@ -18,8 +25,15 @@ function getWsUrl(sessionId: string) {
 
 export function TerminalPane({ sessionId, tmuxSession }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const termRef = useRef<import("@xterm/xterm").Terminal | null>(null);
+  const fitRef = useRef<import("@xterm/addon-fit").FitAddon | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
+
+  // Appearance prefs + the active dashboard theme (the latter only matters in
+  // "sync" mode, where the xterm palette is derived from the live CSS vars).
+  const prefs = useTerminalPrefs();
+  const dashboardTheme = useDashboardThemeAttr();
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -33,14 +47,19 @@ export function TerminalPane({ sessionId, tmuxSession }: Props) {
 
       if (disposed || !containerRef.current) return;
 
+      // Read prefs from the store (not a stale closure) so a fresh terminal
+      // always opens with the user's current choice.
+      const p = getTerminalPrefs();
       term = new Terminal({
-        theme: { background: "#0d0d0d", foreground: "#e2e8f0" },
-        fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-        fontSize: 13,
+        theme: resolveXtermTheme(p.themeMode),
+        fontFamily: resolveFontStack(p.fontFamily),
+        fontSize: p.fontSize,
         cursorBlink: true,
       });
+      termRef.current = term;
 
       const fitAddon = new FitAddon();
+      fitRef.current = fitAddon;
       term.loadAddon(fitAddon);
       term.open(containerRef.current);
       fitAddon.fit();
@@ -92,11 +111,26 @@ export function TerminalPane({ sessionId, tmuxSession }: Props) {
       ws?.close(1000);
       term?.dispose();
       (containerRef.current as any)?._ro?.disconnect();
+      termRef.current = null;
+      fitRef.current = null;
     };
   }, [sessionId]);
 
+  // Apply appearance prefs to the live terminal without recreating it (which
+  // would drop the WebSocket and scrollback). In "sync" mode, dashboardTheme
+  // changes re-derive the palette from the now-current CSS variables. Re-fitting
+  // after a font change recomputes cols/rows and fires onResize → PTY resize.
+  useEffect(() => {
+    const term = termRef.current;
+    if (!term) return;
+    term.options.theme = resolveXtermTheme(prefs.themeMode);
+    term.options.fontFamily = resolveFontStack(prefs.fontFamily);
+    term.options.fontSize = prefs.fontSize;
+    fitRef.current?.fit();
+  }, [prefs.themeMode, prefs.fontFamily, prefs.fontSize, dashboardTheme]);
+
   return (
-    <div className="rounded-lg overflow-hidden border border-border bg-[#0d0d0d]">
+    <div className="rounded-lg overflow-hidden border border-border bg-surface-3">
       <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-surface-2">
         <span className="text-[11px] text-gray-500 font-mono">tmux: {tmuxSession}</span>
         <span
