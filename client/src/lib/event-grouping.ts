@@ -1,14 +1,19 @@
 /**
  * @file event-grouping.ts
- * @description Client-side grouping of DashboardEvent rows by `tool_use_id`.
- * A single tool invocation typically emits two events - `PreToolUse` (Working)
- * and `PostToolUse` (Connected) - both carrying the same `tool_use_id` inside
- * their hook payload. Grouping collapses each such pair into one `EventGroup`
- * so the UI can show "Bash: curl ... (2.3s)" as one row instead of two, while
- * keeping the individual events accessible when the group is expanded.
+ * @description Client-side grouping for the "Group by tool call" view.
+ * Two collapses happen, so this mode is meaningfully more compact than the flat
+ * stream (which renders one row per raw event):
  *
- * Events without a `tool_use_id` (Stop, Notification, TurnDuration, etc.)
- * become single-event groups and render identically to a flat row.
+ *   1. **Tool calls** — a single tool invocation emits `PreToolUse` (Working) +
+ *      `PostToolUse` (Connected) sharing one `tool_use_id`; these collapse into
+ *      one row ("Bash · git commit (2.3s)"), expandable to the underlying events.
+ *   2. **Activity runs** — consecutive events of the SAME non-tool `event_type`
+ *      (e.g. a burst of 40 `TurnDuration` metadata events between tool calls)
+ *      collapse into one "TurnDuration ×40" row. Without this the flat and
+ *      grouped views look nearly identical on real sessions, which are dominated
+ *      by such metadata events.
+ *
+ * A lone non-tool event stays a one-event group and renders like a flat row.
  *
  * @author Son Nguyen <hoangson091104@gmail.com>
  */
@@ -16,8 +21,9 @@
 import type { DashboardEvent } from "./types";
 
 export type EventGroup = {
-  /** Stable key - either the tool_use_id, or `single:<event.id>` for
-   *  ungroupable events. Safe to use as a React list key. */
+  /** Stable key - the tool_use_id for tool groups, or `run:<event_type>:<n>`
+   *  for a (possibly length-1) run of consecutive same-type non-tool events.
+   *  Safe to use as a React list key. */
   key: string;
   /** Events in the group, sorted chronologically (oldest → newest). */
   events: DashboardEvent[];
@@ -33,6 +39,12 @@ export type EventGroup = {
   durationMs: number | null;
   /** Best summary to display - prefers the most recent non-empty summary. */
   summary: string | null;
+  /** True when this is a collapsed run of >1 consecutive same-type non-tool
+   *  events (e.g. "TurnDuration ×40"), as opposed to a tool-call group. */
+  isRun: boolean;
+  /** The shared `event_type` when every event in the group has the same one
+   *  (always set for runs; also set for single-event groups), else null. */
+  eventType: string | null;
 };
 
 function extractToolUseId(event: DashboardEvent): string | null {
@@ -53,9 +65,29 @@ export function groupEvents(events: DashboardEvent[]): EventGroup[] {
   const byKey = new Map<string, DashboardEvent[]>();
   const order: string[] = [];
 
+  // Single ordered pass. Tool events group GLOBALLY by tool_use_id (Pre/Post
+  // pair up even when separated). Non-tool events collapse only across an
+  // ADJACENT run of the same event_type — a tool event (or a different type)
+  // breaks the run — so the timeline order is preserved.
+  let runSeq = 0;
+  let runKey: string | null = null;
+  let runType: string | null = null;
+
   for (const event of events) {
     const toolUseId = extractToolUseId(event);
-    const key = toolUseId ?? `single:${event.id}`;
+    let key: string;
+    if (toolUseId) {
+      key = toolUseId;
+      runKey = null;
+      runType = null;
+    } else if (runKey && runType === event.event_type) {
+      key = runKey; // extend the current consecutive same-type run
+    } else {
+      runSeq++;
+      key = `run:${event.event_type}:${runSeq}`;
+      runKey = key;
+      runType = event.event_type;
+    }
     if (!byKey.has(key)) {
       byKey.set(key, []);
       order.push(key);
@@ -75,16 +107,20 @@ export function groupEvents(events: DashboardEvent[]): EventGroup[] {
         : null;
     const summary =
       [...sorted].reverse().find((e) => e.summary && e.summary.length > 0)?.summary ?? null;
+    const isTool = !key.startsWith("run:");
+    const allSameType = sorted.every((e) => e.event_type === first.event_type);
 
     groups.push({
       key,
       events: sorted,
       tool_name: first.tool_name,
-      tool_use_id: key.startsWith("single:") ? null : key,
+      tool_use_id: isTool ? key : null,
       firstAt: first.created_at,
       lastAt: last.created_at,
       durationMs,
       summary,
+      isRun: !isTool && sorted.length > 1,
+      eventType: allSameType ? first.event_type : null,
     });
   }
 
@@ -413,6 +449,10 @@ export function buildEventTitle(event: DashboardEvent): string {
 }
 
 export function buildGroupTitle(group: EventGroup): string {
+  // A collapsed run of same-type metadata events reads "TurnDuration ×40".
+  if (group.isRun && group.eventType) {
+    return `${group.eventType} ×${group.events.length}`;
+  }
   // Prefer the earliest event (usually PreToolUse) because it carries the
   // intended tool_input; the post event may or may not echo the same shape.
   const primary = group.events[0];
