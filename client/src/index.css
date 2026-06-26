@@ -8,10 +8,97 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Theme tokens — every color is a space-separated RGB channel triplet so
+ * Tailwind utilities can apply opacity via `rgb(var(--token) / <alpha-value>)`.
+ * The active theme is selected by the `data-theme` attribute on <html>
+ * (set by the anti-FOUC script in index.html). `:root` doubles as the default
+ * (Claude Light) for the case where the script has not run yet.
+ *
+ * Gray ramp semantics are preserved across themes: gray-50/100 = most prominent
+ * text, gray-500 = secondary text. In the light theme the ramp is inverted
+ * (low numbers = dark) so existing `text-gray-100` etc. stay legible on cream.
+ */
+:root,
+[data-theme="claude-light"] {
+  --surface-0: 250 249 245;
+  --surface-1: 245 244 237;
+  --surface-2: 248 247 246;
+  --surface-3: 255 255 255;
+  --surface-4: 240 239 237;
+  --surface-5: 232 230 227;
+  --border: 216 212 203;
+  --border-light: 198 192 181;
+  --accent: 193 95 60;
+  --accent-hover: 161 74 47;
+  --gray-50: 44 44 44;
+  --gray-100: 44 44 44;
+  --gray-200: 58 55 51;
+  --gray-300: 87 83 78;
+  --gray-400: 107 99 90;
+  --gray-500: 133 124 112;
+  --gray-600: 156 147 136;
+  --gray-700: 181 172 160;
+  --gray-800: 214 211 206;
+  --gray-900: 232 230 227;
+  --selection: 193 95 60;
+  --selection-text: 44 44 44;
+}
+
+[data-theme="claude-dark"] {
+  --surface-0: 14 12 10;
+  --surface-1: 26 23 19;
+  --surface-2: 38 34 27;
+  --surface-3: 48 43 34;
+  --surface-4: 58 52 42;
+  --surface-5: 66 60 49;
+  --border: 64 58 47;
+  --border-light: 82 75 62;
+  --accent: 193 95 60;
+  --accent-hover: 212 115 79;
+  --gray-50: 250 249 245;
+  --gray-100: 232 230 227;
+  --gray-200: 214 211 206;
+  --gray-300: 184 179 171;
+  --gray-400: 147 141 130;
+  --gray-500: 122 115 104;
+  --gray-600: 99 92 82;
+  --gray-700: 74 68 58;
+  --gray-800: 51 46 37;
+  --gray-900: 32 29 24;
+  --selection: 193 95 60;
+  --selection-text: 232 230 227;
+}
+
+[data-theme="midnight"] {
+  --surface-0: 6 6 10;
+  --surface-1: 12 12 20;
+  --surface-2: 19 19 30;
+  --surface-3: 26 26 40;
+  --surface-4: 34 34 51;
+  --surface-5: 42 42 61;
+  --border: 42 42 61;
+  --border-light: 54 54 80;
+  --accent: 99 102 241;
+  --accent-hover: 129 140 248;
+  --gray-50: 249 250 251;
+  --gray-100: 243 244 246;
+  --gray-200: 229 231 235;
+  --gray-300: 209 213 219;
+  --gray-400: 156 163 175;
+  --gray-500: 107 114 128;
+  --gray-600: 75 85 99;
+  --gray-700: 55 65 81;
+  --gray-800: 31 41 55;
+  --gray-900: 17 24 39;
+  --selection: 99 102 241;
+  --selection-text: 228 228 237;
+}
+
 @layer base {
   * {
     scrollbar-width: thin;
-    scrollbar-color: #2a2a3d #0c0c14;
+    scrollbar-color: rgb(var(--surface-5)) rgb(var(--surface-1));
   }
 
   *::-webkit-scrollbar {
@@ -20,21 +107,21 @@
   }
 
   *::-webkit-scrollbar-track {
-    background: #0c0c14;
+    background: rgb(var(--surface-1));
   }
 
   *::-webkit-scrollbar-thumb {
-    background: #2a2a3d;
+    background: rgb(var(--surface-5));
     border-radius: 3px;
   }
 
   *::-webkit-scrollbar-thumb:hover {
-    background: #363650;
+    background: rgb(var(--border-light));
   }
 
   ::selection {
-    background: rgba(99, 102, 241, 0.3);
-    color: #e4e4ed;
+    background: rgb(var(--selection) / 0.3);
+    color: rgb(var(--selection-text));
   }
 
   ::-webkit-calendar-picker-indicator {
@@ -103,4 +190,30 @@
 
 .animate-pulse-dot {
   animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Light theme: lift cards off the cream background with a soft shadow so they
+   read as distinct surfaces despite the low background/surface contrast. */
+[data-theme="claude-light"] .card {
+  box-shadow:
+    0 1px 2px rgb(44 40 34 / 0.04),
+    0 1px 3px rgb(44 40 34 / 0.07);
+}
+
+/* Light theme: the shared status palette uses *-400 tones tuned for dark
+   backgrounds; the "waiting" yellow washes out on cream. Darken just the yellow
+   status tones to a readable golden hue, scoped to the light theme so the dark
+   themes keep their original colors. The `/10` and `/20` selectors target the
+   compiled Tailwind opacity utilities used by the badge. */
+[data-theme="claude-light"] .text-yellow-400 {
+  color: rgb(161 98 7);
+}
+[data-theme="claude-light"] .bg-yellow-400 {
+  background-color: rgb(161 98 7);
+}
+[data-theme="claude-light"] .bg-yellow-500\/10 {
+  background-color: rgb(202 138 4 / 0.12);
+}
+[data-theme="claude-light"] .border-yellow-500\/20 {
+  border-color: rgb(202 138 4 / 0.3);
 }
