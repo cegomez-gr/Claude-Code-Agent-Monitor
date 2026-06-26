@@ -7,6 +7,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import type { WSMessage } from "../lib/types";
 import { eventBus } from "../lib/eventBus";
+import { dashboardToken } from "../lib/api";
 
 type MessageHandler = (msg: WSMessage) => void;
 
@@ -38,7 +39,11 @@ export function useWebSocket(onMessage: MessageHandler) {
 
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = window.location.host;
-    const ws = new WebSocket(`${protocol}//${host}/ws`);
+    // Pass the optional dashboard token (GHSA-gr74-4xfh-6jw9) on the WS upgrade
+    // when one is configured; omitted entirely for the default loopback bind.
+    const token = dashboardToken();
+    const query = token ? `?token=${encodeURIComponent(token)}` : "";
+    const ws = new WebSocket(`${protocol}//${host}/ws${query}`);
 
     ws.onopen = () => {
       if (mountedRef.current) {

@@ -32,11 +32,31 @@ import type {
 
 const BASE = "/api";
 
+/**
+ * Optional dashboard auth token (GHSA-gr74-4xfh-6jw9). Only needed when the
+ * operator binds the server to a LAN and sets DASHBOARD_TOKEN; for the default
+ * loopback bind there is no token and this returns null (zero-config). Read from
+ * an injected global first, then localStorage so a LAN user can set it once.
+ */
+export function dashboardToken(): string | null {
+  try {
+    const injected = (globalThis as { __DASHBOARD_TOKEN__?: unknown }).__DASHBOARD_TOKEN__;
+    if (typeof injected === "string" && injected) return injected;
+    const stored = localStorage.getItem("dashboard_token");
+    return stored && stored.length > 0 ? stored : null;
+  } catch {
+    return null;
+  }
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
+  const token = dashboardToken();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(token ? { "x-dashboard-token": token } : {}),
+    ...((options?.headers as Record<string, string>) || {}),
+  };
+  const res = await fetch(`${BASE}${path}`, { ...options, headers });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body?.error?.message || `HTTP ${res.status}`);

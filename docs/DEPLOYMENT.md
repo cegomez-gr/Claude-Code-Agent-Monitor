@@ -238,9 +238,16 @@ node server/index.js
 
 ```bash
 # Server
-PORT=4820                              # Server port
+DASHBOARD_PORT=4820                    # Server port
 NODE_ENV=production                    # Environment mode
-CORS_ORIGIN=*                          # CORS allowed origins
+
+# Network exposure (SECURITY — GHSA-gr74-4xfh-6jw9)
+# The server binds 127.0.0.1 by default and is NOT network-reachable. It reads
+# transcripts, exports all data, and can spawn `claude`, so only widen the bind
+# deliberately — and require a token when you do.
+DASHBOARD_HOST=127.0.0.1               # set 0.0.0.0 ONLY if you must expose it
+DASHBOARD_TOKEN=                        # required on /api/* + WS when set; use with a non-loopback host
+DASHBOARD_ALLOWED_HOSTS=                # extra Host names (comma-sep) for a LAN bind
 
 # Database
 DASHBOARD_DB_PATH=/var/lib/agent-dashboard/dashboard.db
@@ -248,6 +255,12 @@ DASHBOARD_DB_PATH=/var/lib/agent-dashboard/dashboard.db
 # Logging
 LOG_LEVEL=info                         # debug | info | warn | error
 ```
+
+> **Reverse-proxy / Docker exposure:** the app binds loopback, so publish it to a
+> network only through a proxy you control that adds TLS + auth, or set
+> `DASHBOARD_HOST=0.0.0.0` **with** `DASHBOARD_TOKEN`. A `-p 4820:4820` Docker
+> mapping assumes a trusted host network — do not expose it publicly without a
+> token and a proxy.
 
 ---
 

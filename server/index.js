@@ -36,6 +36,14 @@ const swaggerUi = require("swagger-ui-express");
 const { initWebSocket } = require("./websocket");
 const { createOpenApiSpec } = require("./openapi");
 const { writeServerInfo, removeServerInfo } = require("./lib/server-info");
+const {
+  resolveHost,
+  isLoopbackHostname,
+  corsOptions,
+  hostGuard,
+  tokenGuard,
+  getDashboardToken,
+} = require("./lib/security");
 
 const sessionsRouter = require("./routes/sessions");
 const agentsRouter = require("./routes/agents");
@@ -58,8 +66,12 @@ function createApp() {
   const app = express();
   const openApiSpec = createOpenApiSpec();
 
-  app.use(cors());
+  // Security hardening (GHSA-gr74-4xfh-6jw9): loopback-only CORS, a Host-header
+  // allowlist (anti DNS-rebinding), and an optional bearer-token gate on /api/*.
+  app.use(cors(corsOptions()));
+  app.use(hostGuard);
   app.use(express.json({ limit: "1mb" }));
+  app.use("/api", tokenGuard);
 
   app.use("/api/sessions", sessionsRouter);
   app.use("/api/agents", agentsRouter);
@@ -137,14 +149,29 @@ function startServer(app, port) {
     });
   }
 
+  // Bind to loopback by default so the dashboard is not network-reachable out
+  // of the box (GHSA-gr74-4xfh-6jw9). Operators opt into a wider bind with
+  // DASHBOARD_HOST=0.0.0.0 — and are warned to set DASHBOARD_TOKEN when they do.
+  const host = resolveHost();
+  const boundLoopback = isLoopbackHostname(host);
+
   return new Promise((resolve) => {
-    server.listen(port, () => {
+    server.listen(port, host, () => {
       // Publish the live port so the Claude Code hook handler can find this
       // server even when it bound a non-default port (the desktop app falls
       // back off 4820 when that port is already taken).
       writeServerInfo(port);
       const mode = isProduction ? "production" : "development";
-      console.log(`Agent Dashboard server running on http://localhost:${port} (${mode})`);
+      const shown = boundLoopback ? "localhost" : host;
+      console.log(`Agent Dashboard server running on http://${shown}:${port} (${mode})`);
+      if (!boundLoopback) {
+        console.warn(
+          `⚠️  Dashboard bound to ${host} — reachable from the network. ` +
+            (getDashboardToken()
+              ? "DASHBOARD_TOKEN is set (API + WebSocket require it)."
+              : "Set DASHBOARD_TOKEN to require auth, or it is OPEN to anyone who can reach this port.")
+        );
+      }
       if (!isProduction) {
         console.log(`Client dev server expected at http://localhost:5173`);
       }
