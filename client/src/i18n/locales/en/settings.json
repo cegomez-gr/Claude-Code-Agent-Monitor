@@ -15,6 +15,9 @@
       "modeClassic": "Classic black",
       "modeClaudeDark": "Claude Dark",
       "modeClaudeLight": "Claude Light",
+      "groupBuiltin": "Built-in",
+      "searchPlaceholder": "Search themes…",
+      "noResults": "No themes found",
       "font": "Font",
       "fontSize": "Font size"
     }

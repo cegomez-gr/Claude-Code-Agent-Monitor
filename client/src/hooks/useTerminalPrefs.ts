@@ -11,18 +11,26 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import type { ITheme } from "@xterm/xterm";
+import { TERMINAL_THEME_CATALOG } from "../lib/terminalThemes";
 
-/** How the terminal derives its colors. */
-export type TerminalThemeMode = "sync" | "claude-dark" | "claude-light" | "classic-black";
+/**
+ * Built-in theme modes. "sync" follows the active dashboard theme; the others
+ * are fixed palettes. Beyond these reserved ids, `themeMode` may be any catalog
+ * theme id (see ../lib/terminalThemes).
+ */
+export type ReservedThemeMode = "sync" | "claude-dark" | "claude-light" | "classic-black";
 
 export interface TerminalPrefs {
-  /** Color source: "sync" follows the active dashboard theme; others are fixed. */
-  themeMode: TerminalThemeMode;
+  /** A reserved mode id or a catalog theme id. */
+  themeMode: string;
   /** Font registry id (see TERMINAL_FONTS). */
   fontFamily: string;
   /** Cell font size in px. */
   fontSize: number;
 }
+
+/** Catalog id → entry, for O(1) palette lookup. */
+const CATALOG_BY_ID = new Map(TERMINAL_THEME_CATALOG.map((e) => [e.id, e]));
 
 export const TERMINAL_PREFS_STORAGE_KEY = "dashboard_terminal_prefs";
 
@@ -59,8 +67,8 @@ export const TERMINAL_FONTS: TerminalFontMeta[] = [
   { id: "courier", label: "Courier", stack: "'Courier New', Courier, monospace" },
 ];
 
-/** Fixed xterm palettes for the non-synced modes. */
-const FIXED_THEMES: Record<Exclude<TerminalThemeMode, "sync">, ITheme> = {
+/** Fixed xterm palettes for the non-synced built-in modes. */
+const FIXED_THEMES: Record<Exclude<ReservedThemeMode, "sync">, ITheme> = {
   // Exact original look — preserve existing behavior for users who never opt in.
   "classic-black": { background: "#0d0d0d", foreground: "#e2e8f0" },
   "claude-dark": {
@@ -79,8 +87,10 @@ const FIXED_THEMES: Record<Exclude<TerminalThemeMode, "sync">, ITheme> = {
   },
 };
 
-function isThemeMode(v: unknown): v is TerminalThemeMode {
-  return v === "sync" || v === "claude-dark" || v === "claude-light" || v === "classic-black";
+const RESERVED_MODES = new Set<string>(["sync", "claude-dark", "claude-light", "classic-black"]);
+
+function isThemeMode(v: unknown): v is string {
+  return typeof v === "string" && (RESERVED_MODES.has(v) || CATALOG_BY_ID.has(v));
 }
 
 function normalize(raw: unknown): TerminalPrefs {
@@ -193,13 +203,17 @@ function cssVarRgba(name: string, alpha: number, fallback: string): string {
  * defaults; a synced *light* terminal may show low-contrast ANSI colors — fixed
  * "claude-light" has the same caveat. This is intentionally out of scope.
  */
-export function resolveXtermTheme(mode: TerminalThemeMode): ITheme {
-  if (mode !== "sync") return FIXED_THEMES[mode];
-  return {
-    background: cssVarRgb("--surface-1", "#1a1815"),
-    foreground: cssVarRgb("--gray-100", "#e8e6e3"),
-    cursor: cssVarRgb("--accent", "#c15f3c"),
-    cursorAccent: cssVarRgb("--surface-1", "#1a1815"),
-    selectionBackground: cssVarRgba("--accent", 0.3, "rgba(193,95,60,0.3)"),
-  };
+export function resolveXtermTheme(mode: string): ITheme {
+  if (mode === "sync") {
+    return {
+      background: cssVarRgb("--surface-1", "#1a1815"),
+      foreground: cssVarRgb("--gray-100", "#e8e6e3"),
+      cursor: cssVarRgb("--accent", "#c15f3c"),
+      cursorAccent: cssVarRgb("--surface-1", "#1a1815"),
+      selectionBackground: cssVarRgba("--accent", 0.3, "rgba(193,95,60,0.3)"),
+    };
+  }
+  if (mode in FIXED_THEMES) return FIXED_THEMES[mode as keyof typeof FIXED_THEMES];
+  const entry = CATALOG_BY_ID.get(mode);
+  return entry ? entry.theme : FIXED_THEMES["classic-black"];
 }

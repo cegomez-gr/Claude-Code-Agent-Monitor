@@ -8,6 +8,7 @@
 
 import { useTranslation } from "react-i18next";
 import { Select, type SelectOption } from "./Select";
+import { TerminalThemePicker } from "./TerminalThemePicker";
 import {
   FONT_SIZE_MAX,
   FONT_SIZE_MIN,
@@ -17,7 +18,6 @@ import {
   setTerminalPrefs,
   useDashboardThemeAttr,
   useTerminalPrefs,
-  type TerminalThemeMode,
 } from "../hooks/useTerminalPrefs";
 
 const FONT_SIZES: number[] = Array.from(
@@ -25,18 +25,31 @@ const FONT_SIZES: number[] = Array.from(
   (_, i) => FONT_SIZE_MIN + i
 );
 
+// xterm ITheme ANSI keys in standard 0-15 order, for the preview swatch row.
+const ANSI_KEYS = [
+  "black",
+  "red",
+  "green",
+  "yellow",
+  "blue",
+  "magenta",
+  "cyan",
+  "white",
+  "brightBlack",
+  "brightRed",
+  "brightGreen",
+  "brightYellow",
+  "brightBlue",
+  "brightMagenta",
+  "brightCyan",
+  "brightWhite",
+] as const;
+
 export function TerminalSettings() {
   const { t } = useTranslation("settings");
   const prefs = useTerminalPrefs();
   // Subscribe so the preview re-derives when the dashboard theme changes (sync mode).
   useDashboardThemeAttr();
-
-  const modeOptions: SelectOption<TerminalThemeMode>[] = [
-    { value: "sync", label: t("appearance.terminal.modeSync", "Sync with dashboard") },
-    { value: "classic-black", label: t("appearance.terminal.modeClassic", "Classic black") },
-    { value: "claude-dark", label: t("appearance.terminal.modeClaudeDark", "Claude Dark") },
-    { value: "claude-light", label: t("appearance.terminal.modeClaudeLight", "Claude Light") },
-  ];
 
   const fontOptions: SelectOption<string>[] = TERMINAL_FONTS.map((f) => ({
     value: f.id,
@@ -64,10 +77,9 @@ export function TerminalSettings() {
           <span className="block text-[11px] text-gray-400 mb-1.5">
             {t("appearance.terminal.themeMode", "Terminal theme")}
           </span>
-          <Select<TerminalThemeMode>
+          <TerminalThemePicker
             value={prefs.themeMode}
             onChange={(v) => setTerminalPrefs({ themeMode: v })}
-            options={modeOptions}
           />
         </label>
 
@@ -110,6 +122,20 @@ export function TerminalSettings() {
           <span style={{ opacity: 0.7 }}>$</span> claude --help
         </div>
         <div style={{ opacity: 0.85 }}>The quick brown fox jumps over 1234567890</div>
+        {/* 16-color ANSI palette row (omitted for built-ins that don't define it). */}
+        <div className="mt-2 flex gap-1">
+          {ANSI_KEYS.map((k) => {
+            const c = previewTheme[k];
+            return c ? (
+              <span
+                key={k}
+                className="h-3 w-3 rounded-sm"
+                style={{ background: c }}
+                title={`${k}: ${c}`}
+              />
+            ) : null;
+          })}
+        </div>
       </div>
     </div>
   );

@@ -8205,13 +8205,35 @@ exports[`screen snapshots > Settings 1`] = `
               class="relative"
             >
               <button
-                class="w-full flex items-center justify-between gap-2 bg-surface-2 border border-border rounded-md px-3 py-1.5 text-[11px] text-gray-100 focus:outline-none focus:border-accent/50 hover:bg-surface-3 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                class="w-full flex items-center justify-between gap-2 bg-surface-2 border border-border rounded-md px-3 py-1.5 text-[11px] text-gray-100 focus:outline-none focus:border-accent/50 hover:bg-surface-3 transition-colors"
                 type="button"
               >
                 <span
-                  class="truncate"
+                  class="flex items-center gap-2 truncate"
                 >
-                  Classic black
+                  <span
+                    aria-hidden="true"
+                    class="flex h-5 w-5 flex-shrink-0 items-center justify-center gap-px rounded border border-black/20"
+                    style="background: rgb(13, 13, 13);"
+                  >
+                    <span
+                      class="h-1.5 w-1.5 rounded-full"
+                    />
+                    <span
+                      class="h-1.5 w-1.5 rounded-full"
+                    />
+                    <span
+                      class="h-1.5 w-1.5 rounded-full"
+                    />
+                    <span
+                      class="h-1.5 w-1.5 rounded-full"
+                    />
+                  </span>
+                  <span
+                    class="truncate"
+                  >
+                    Classic black
+                  </span>
                 </span>
                 <svg
                   class="lucide lucide-chevron-down w-3.5 h-3.5 text-gray-500 flex-shrink-0"
@@ -8334,6 +8356,9 @@ exports[`screen snapshots > Settings 1`] = `
           >
             The quick brown fox jumps over 1234567890
           </div>
+          <div
+            class="mt-2 flex gap-1"
+          />
         </div>
       </div>
     </section>
