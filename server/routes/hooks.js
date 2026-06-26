@@ -441,6 +441,36 @@ const processEvent = db.transaction((hookType, data) => {
       broadcast("session_updated", stmts.getSession.get(sessionId));
       if (mainAgentId) broadcast("agent_updated", stmts.getAgent.get(mainAgentId));
 
+      // Background: capture tmux session name and persist in metadata.
+      // Prefer the name the hook already resolved (data._tmux_session): the hook
+      // runs inside claude's tmux pane with tmux on PATH, whereas this server
+      // process may run with a PATH that can't find tmux (ENOENT). Fall back to
+      // server-side resolution only for older hooks that don't send the name.
+      if (data._tmux_session || data._tmux || data._tmux_pane) {
+        const { resolveTmuxSession, SAFE_TMUX } = require("../lib/tmux");
+        const persist = (tmuxSession) => {
+          if (!tmuxSession) return;
+          const sess = stmts.getSession.get(sessionId);
+          if (!sess) return;
+          let meta = {};
+          try {
+            meta = JSON.parse(sess.metadata || "{}");
+          } catch {}
+          if (meta.tmux_session === tmuxSession) return;
+          meta.tmux_session = tmuxSession;
+          stmts.updateSession.run(null, null, null, JSON.stringify(meta), sessionId);
+          // Push the update so the Terminal tab appears without a manual refresh.
+          broadcast("session_updated", stmts.getSession.get(sessionId));
+        };
+        if (data._tmux_session && SAFE_TMUX.test(data._tmux_session)) {
+          persist(data._tmux_session);
+        } else {
+          resolveTmuxSession(data._tmux, data._tmux_pane)
+            .then(persist)
+            .catch(() => {});
+        }
+      }
+
       // Clean up orphaned sessions: when a user runs /resume inside a session,
       // the parent session never receives Stop or SessionEnd. Mark any active
       // session that hasn't seen events for STALE_MINUTES as abandoned.
@@ -782,14 +812,18 @@ const processEvent = db.transaction((hookType, data) => {
 });
 
 router.post("/event", (req, res) => {
-  const { hook_type, data } = req.body;
+  const { hook_type, data, _tmux, _tmux_pane, _tmux_session } = req.body;
   if (!hook_type || !data) {
     return res.status(400).json({
       error: { code: "INVALID_INPUT", message: "hook_type and data are required" },
     });
   }
 
-  const result = processEvent(hook_type, data);
+  // The hook handler sends tmux context as siblings of `data` in the request
+  // body, not inside it. Fold them onto the event payload so the SessionStart
+  // handler (which reads data._tmux*) can see them — without this merge the
+  // tmux session name was never captured.
+  const result = processEvent(hook_type, { ...data, _tmux, _tmux_pane, _tmux_session });
   if (!result) {
     return res.status(400).json({
       error: { code: "MISSING_SESSION", message: "session_id is required in data" },

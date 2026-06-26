@@ -22,6 +22,7 @@ import {
   AlertCircle,
   Play,
   ExternalLink,
+  TerminalSquare,
   Workflow,
 } from "lucide-react";
 import { api } from "../lib/api";
@@ -66,8 +67,9 @@ import type {
   WorkflowRun,
 } from "../lib/types";
 import { WorkflowRunsPanel } from "../components/workflows/WorkflowRunsPanel";
+import { TerminalPane } from "../components/TerminalPane";
 
-type DetailTab = "agents" | "conversation" | "timeline";
+type DetailTab = "agents" | "conversation" | "timeline" | "terminal";
 
 const EVENTS_INITIAL_BATCH = 50;
 const EVENTS_MORE_BATCH = 500;
@@ -461,6 +463,15 @@ export function SessionDetail() {
     };
   }, [load, refreshEventsWithPagination]);
 
+  const tmuxSession = useMemo(() => {
+    if (!session?.metadata) return null;
+    try {
+      return (JSON.parse(session.metadata) as { tmux_session?: string }).tmux_session ?? null;
+    } catch {
+      return null;
+    }
+  }, [session?.metadata]);
+
   if (loading) {
     return (
       <div className="animate-fade-in space-y-8" aria-busy="true">
@@ -628,6 +639,22 @@ export function SessionDetail() {
           <List className="w-4 h-4" />
           Timeline ({events.length}/{eventsTotal})
         </button>
+        {tmuxSession && (
+          <button
+            onClick={() => {
+              setActiveTab("terminal");
+              setTranscriptNotFound(false);
+            }}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "terminal"
+                ? "border-violet-500 text-violet-400"
+                : "border-transparent text-gray-500 hover:text-gray-300"
+            }`}
+          >
+            <TerminalSquare className="w-4 h-4" />
+            Terminal
+          </button>
+        )}
       </div>
 
       {/* Tab Content */}
@@ -991,6 +1018,12 @@ export function SessionDetail() {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {tmuxSession && visitedTabs.has("terminal") && (
+        <div hidden={activeTab !== "terminal"}>
+          <TerminalPane sessionId={session.id} tmuxSession={tmuxSession} />
         </div>
       )}
     </div>
