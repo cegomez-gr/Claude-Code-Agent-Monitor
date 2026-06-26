@@ -41,8 +41,9 @@ export function AgentCard({ agent, session, label, onClick }: AgentCardProps) {
   const sessionName = session?.name?.trim() || "";
   const realSessionName = /^Session [0-9a-f]{8}$/i.test(sessionName) ? "" : sessionName;
   // A subagent's own model lives in its metadata (resolved from its transcript,
-  // not the parent session's — see issue #185). Surface it so a Haiku QA agent
-  // under an Opus orchestrator reads as Haiku, not Opus.
+  // not the parent session's — see issue #185). Use it everywhere this card
+  // shows a model so a Haiku QA agent under an Opus orchestrator reads as
+  // Haiku, not Opus. Falls back to the session model only for the main agent.
   let subagentModel: string | null = null;
   if (!isMain && agent.metadata) {
     try {
@@ -52,9 +53,12 @@ export function AgentCard({ agent, session, label, onClick }: AgentCardProps) {
       subagentModel = null;
     }
   }
+  // The model badge (footer) must reflect THIS card's agent: the session model
+  // for main, the subagent's own model for subagents.
+  const displayModel = isMain ? model : subagentModel;
   const subtitle = isMain
     ? [model, cwdBase].filter(Boolean).join(" · ") || null
-    : [label || agent.subagent_type, subagentModel].filter(Boolean).join(" · ") || null;
+    : label || agent.subagent_type;
 
   function handleClick() {
     if (onClick) {
@@ -112,11 +116,12 @@ export function AgentCard({ agent, session, label, onClick }: AgentCardProps) {
         )}
         {/* Model badge - shown on every card when no tool is currently
             running (avoids clutter on actively-running agents that already
-            display the running tool name). */}
-        {model && !agent.current_tool && (
+            display the running tool name). Uses the agent's OWN model:
+            session model for main, the subagent's resolved model otherwise. */}
+        {displayModel && !agent.current_tool && (
           <span className="flex items-center gap-1 flex-shrink-0">
             <Cpu className="w-3 h-3" />
-            {model}
+            {displayModel}
           </span>
         )}
         {cost > 0 && (

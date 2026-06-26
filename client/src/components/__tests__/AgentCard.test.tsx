@@ -58,7 +58,7 @@ describe("AgentCard", () => {
     expect(screen.getByText("Explore")).toBeInTheDocument();
   });
 
-  it("should show the subagent's own model from metadata (issue #185)", () => {
+  it("should show the subagent's own model from metadata, not the session model (issue #185)", () => {
     renderCard(
       <AgentCard
         agent={makeAgent({
@@ -66,10 +66,23 @@ describe("AgentCard", () => {
           subagent_type: "qa",
           metadata: JSON.stringify({ model: "claude-haiku-4-5-20251001" }),
         })}
+        // Session is Opus, but the subagent card must read Haiku from metadata.
+        session={
+          {
+            id: "sess-1",
+            name: "S",
+            status: "active",
+            cwd: "/x",
+            model: "claude-opus-4-8",
+          } as never
+        }
       />
     );
-    const expected = `qa · ${formatModelName("claude-haiku-4-5-20251001")}`;
-    expect(screen.getByText(expected)).toBeInTheDocument();
+    // Subtitle is the subagent type; the model badge shows the subagent's OWN model.
+    expect(screen.getByText("qa")).toBeInTheDocument();
+    expect(screen.getByText(formatModelName("claude-haiku-4-5-20251001")!)).toBeInTheDocument();
+    // The Opus session model must NOT appear on a subagent card.
+    expect(screen.queryByText(formatModelName("claude-opus-4-8")!)).not.toBeInTheDocument();
   });
 
   it("should not render subagent_type when null", () => {
