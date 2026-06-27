@@ -1,0 +1,24 @@
+C4Container
+title Claude Runtime Platform - Containers
+
+Person(user, "Developer")
+System_Boundary(platform, "Claude-Code-Agent-Monitor") {
+  Container(web, "Dashboard", "React/xterm.js", "User interface")
+  Container(api, "API Server", "Node.js", "HTTP and WebSocket API")
+  Container(runtime, "Runtime Manager", "Node.js", "Provider selection and lifecycle")
+  Container(registry, "Session Registry", "Local storage", "Runtime session records")
+  Container(providerPty, "PtyRuntime", "node-pty", "Ephemeral sessions")
+  Container(providerTmux, "TmuxRuntime", "tmux/node-pty", "Persistent sessions")
+}
+System_Ext(claude, "Claude Code")
+System_Ext(tmux, "tmux")
+
+Rel(user, web, "Uses")
+Rel(web, api, "HTTP/WebSocket")
+Rel(api, runtime, "Delegates lifecycle")
+Rel(runtime, registry, "Reads/writes")
+Rel(runtime, providerPty, "Creates ephemeral sessions")
+Rel(runtime, providerTmux, "Creates persistent sessions")
+Rel(providerPty, claude, "Starts")
+Rel(providerTmux, tmux, "Creates/attaches")
+Rel(tmux, claude, "Runs")

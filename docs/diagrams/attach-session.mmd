@@ -1,0 +1,18 @@
+sequenceDiagram
+    participant UI as TerminalPane
+    participant WS as TerminalWebSocket
+    participant RM as RuntimeManager
+    participant Provider as RuntimeProvider
+    participant Process as Runtime Process
+
+    UI->>WS: connect(sessionId)
+    WS->>RM: attach(sessionId)
+    RM->>Provider: attach(RuntimeRef)
+    Provider->>Process: open terminal stream
+    Process-->>Provider: output
+    Provider-->>WS: data
+    WS-->>UI: output
+    UI->>WS: input
+    WS->>Provider: write(input)
+    UI->>WS: resize(cols, rows)
+    WS->>Provider: resize(cols, rows)

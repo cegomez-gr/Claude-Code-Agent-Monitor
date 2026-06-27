@@ -1,0 +1,21 @@
+sequenceDiagram
+    participant User
+    participant UI as Dashboard
+    participant API
+    participant RM as RuntimeManager
+    participant Tmux as TmuxRuntime
+    participant Reg as SessionRegistry
+    participant tmux
+    participant Claude
+
+    User->>UI: Click "New session" + keep running
+    UI->>API: POST /api/runtime-sessions { persistence: "persistent" }
+    API->>RM: create(request)
+    RM->>Tmux: create()
+    Tmux->>tmux: tmux new-session -d ...
+    tmux->>Claude: start claude
+    Tmux-->>RM: RuntimeRef
+    RM->>Reg: save RuntimeSessionRecord
+    RM-->>API: RuntimeRef
+    API-->>UI: sessionId
+    UI->>API: WebSocket attach
