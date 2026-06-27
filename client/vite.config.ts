@@ -27,6 +27,15 @@ export default defineConfig({
         target: `ws://127.0.0.1:${DASHBOARD_PORT}`,
         ws: true,
       },
+      // Embedded terminal PTY socket (/terminal/:sessionId). Dev-only: in
+      // production the client is served by the same Express process, so this
+      // path reaches the server's terminal WebSocketServer directly without a
+      // proxy. Without this entry Vite swallows the upgrade and the Terminal
+      // tab connects to nothing.
+      "/terminal": {
+        target: `ws://127.0.0.1:${DASHBOARD_PORT}`,
+        ws: true,
+      },
     },
   },
   build: {

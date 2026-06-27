@@ -135,6 +135,14 @@ export const api = {
         `/sessions/${encodeURIComponent(id)}/transcript${q ? `?${q}` : ""}`
       );
     },
+    file: (id: string, filePath: string) =>
+      request<{
+        path: string;
+        relPath: string;
+        content: string;
+        ext: string;
+        kind: "markdown" | "code";
+      }>(`/sessions/${encodeURIComponent(id)}/file?path=${encodeURIComponent(filePath)}`),
   },
 
   agents: {

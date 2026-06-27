@@ -50,9 +50,39 @@ process.stdin.on("end", () => {
     parsedData = { raw: input };
   }
 
+  // SessionStart inside tmux: resolve the tmux session name HERE and send it in
+  // the payload. The handler runs as a child of `claude`, so it inherits $TMUX
+  // AND claude's PATH (which includes tmux). The dashboard server frequently
+  // runs with a GUI/mise PATH that lacks /opt/homebrew/bin, so resolving the
+  // name server-side fails silently — sending the already-resolved name avoids
+  // that entirely. We also surface a visible startup notice to the user.
+  let tmuxSessionName = null;
+  if (hookType === "SessionStart" && process.env.TMUX) {
+    try {
+      const { execFileSync } = require("child_process");
+      const name = execFileSync("tmux", ["display-message", "-p", "#S"], {
+        timeout: 1000,
+        encoding: "utf8",
+      }).trim();
+      if (/^[a-zA-Z0-9_\-:.]{1,64}$/.test(name)) {
+        tmuxSessionName = name;
+        process.stdout.write(
+          JSON.stringify({
+            systemMessage: `📟 tmux "${name}" detectado — la pestaña Terminal estará disponible en el dashboard para esta sesión.`,
+          })
+        );
+      }
+    } catch {
+      // tmux not resolvable — stay silent, never block startup
+    }
+  }
+
   const payload = JSON.stringify({
     hook_type: hookType,
     data: parsedData,
+    _tmux: process.env.TMUX || null,
+    _tmux_pane: process.env.TMUX_PANE || null,
+    _tmux_session: tmuxSessionName,
   });
   const contentLength = Buffer.byteLength(payload);
 

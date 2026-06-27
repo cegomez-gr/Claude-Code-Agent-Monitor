@@ -50,6 +50,7 @@ import {
   History,
   ChevronLeft,
   ChevronRight,
+  Palette,
 } from "lucide-react";
 import { api } from "../lib/api";
 import { eventBus } from "../lib/eventBus";
@@ -60,6 +61,8 @@ import { Tip } from "../components/Tip";
 import { ImportHistory } from "../components/ImportHistory";
 import { Skeleton } from "../components/Skeleton";
 import { AlertsNotifications } from "../components/AlertsNotifications";
+import { ThemeSelector } from "../components/ThemeSelector";
+import { TerminalSettings } from "../components/TerminalSettings";
 import type { ModelPricing, WSMessage } from "../lib/types";
 
 // In-page navigation for the (dense) Settings screen. Each entry maps to a
@@ -70,6 +73,7 @@ const SETTINGS_SECTIONS: {
   fallback?: string;
   Icon: typeof DollarSign;
 }[] = [
+  { id: "appearance", labelKey: "appearance.title", fallback: "Appearance", Icon: Palette },
   { id: "pricing", labelKey: "pricing.title", Icon: DollarSign },
   { id: "hooks", labelKey: "hooks.title", Icon: Plug },
   { id: "claude-home", labelKey: "claudeHome.title", Icon: FolderOpen },
@@ -316,7 +320,7 @@ function PricingInfoTooltip() {
         <div
           ref={popoverRef}
           role="tooltip"
-          className="fixed z-50 p-3 bg-[#12121f] border border-[#2a2a4a] rounded-lg shadow-2xl text-[11px] text-gray-300 pointer-events-none"
+          className="fixed z-50 p-3 bg-surface-2 border border-border rounded-lg shadow-2xl text-[11px] text-gray-300 pointer-events-none"
           style={{ left: pos.left, top: pos.top, width: 320 }}
         >
           <p className="text-xs font-semibold text-gray-100 mb-2">{t("pricing.tooltip.title")}</p>
@@ -380,7 +384,7 @@ export function Settings() {
   const [claudeHomeInput, setClaudeHomeInput] = useState("");
   const [claudeHomeSaving, setClaudeHomeSaving] = useState(false);
   const [claudeHomeError, setClaudeHomeError] = useState<string | null>(null);
-  const [activeSection, setActiveSection] = useState<string>("pricing");
+  const [activeSection, setActiveSection] = useState<string>("appearance");
   const tocRef = useRef<HTMLDivElement | null>(null);
   const [tocOverflow, setTocOverflow] = useState({ left: false, right: false });
 
@@ -943,6 +947,21 @@ export function Settings() {
           </div>
         </div>
       </div>
+
+      {/* ─── APPEARANCE ─── */}
+      <section id="appearance" className="scroll-mt-24">
+        <div className="mb-4">
+          <h3 className="text-sm font-medium text-gray-300 flex items-center gap-2">
+            <Palette className="w-4 h-4 text-gray-500" />
+            {t("appearance.title", "Appearance")}
+          </h3>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {t("appearance.description", "Choose the dashboard color theme.")}
+          </p>
+        </div>
+        <ThemeSelector />
+        <TerminalSettings />
+      </section>
 
       {/* ─── MODEL PRICING ─── */}
       <section id="pricing" className="scroll-mt-24">

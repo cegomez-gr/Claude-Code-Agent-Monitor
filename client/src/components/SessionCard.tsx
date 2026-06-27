@@ -8,7 +8,7 @@
  */
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { FolderOpen, Bot, Clock, Coins, Cpu } from "lucide-react";
+import { FolderOpen, Bot, Clock, Coins, Cpu, TerminalSquare } from "lucide-react";
 import { SessionStatusBadge } from "./StatusBadge";
 import { effectiveSessionStatus, isSessionAwaitingInput } from "../lib/types";
 import type { Session } from "../lib/types";
@@ -17,6 +17,17 @@ import { formatDuration, timeAgo, formatModelName } from "../lib/format";
 interface SessionCardProps {
   session: Session;
   onClick?: () => void;
+}
+
+/** Extract the attached tmux session name from a session's metadata JSON. */
+function tmuxName(metadata: string | null): string | null {
+  if (!metadata) return null;
+  try {
+    const name = (JSON.parse(metadata) as { tmux_session?: unknown })?.tmux_session;
+    return typeof name === "string" && name ? name : null;
+  } catch {
+    return null;
+  }
 }
 
 function formatCost(cost: number): string {
@@ -36,6 +47,7 @@ export function SessionCard({ session, onClick }: SessionCardProps) {
   const agentCount = session.agent_count ?? 0;
   const model = formatModelName(session.model);
   const lastActivity = session.last_activity || session.ended_at || session.started_at;
+  const tmux = tmuxName(session.metadata);
 
   function handleClick() {
     if (onClick) onClick();
@@ -65,7 +77,18 @@ export function SessionCard({ session, onClick }: SessionCardProps) {
             </p>
           </div>
         </div>
-        <SessionStatusBadge status={status} />
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {tmux && (
+            <span
+              className="badge bg-accent/10 text-accent border-accent/20"
+              title={`tmux: ${tmux}`}
+            >
+              <TerminalSquare className="w-3 h-3" />
+              tmux
+            </span>
+          )}
+          <SessionStatusBadge status={status} />
+        </div>
       </div>
 
       {session.cwd && (

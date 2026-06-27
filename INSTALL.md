@@ -11,6 +11,7 @@ A step-by-step guide to get the Claude Code Agent Monitor up and running on your
 | Claude Code | 2.x+ | Required for hook integration |
 | Python | 3.6+ | Optional — statusline utility only |
 | Git | Any | For cloning the repository |
+| tmux | Any | Optional — only for the per-session **Terminal** tab. Requires launching `claude` inside a tmux pane (see Step 4) |
 
 ---
 
@@ -72,6 +73,15 @@ Start a new Claude Code session from any directory **after** the dashboard serve
 # In a separate terminal, from any project directory:
 claude
 ```
+
+> **Want the embedded Terminal tab?** Launch `claude` from inside a tmux pane:
+>
+> ```bash
+> tmux new-session -s my-work    # puts you INSIDE tmux
+> claude                         # look for: 📟 tmux "my-work" detectado
+> ```
+>
+> The `SessionStart` hook captures the tmux session name (it inherits `$TMUX`), and Session Detail then shows a **Terminal** tab that attaches to that tmux via `node-pty`. Sessions started outside tmux work exactly as before — they simply don't show the tab. Requires `tmux` on `PATH`.
 
 ---
 
