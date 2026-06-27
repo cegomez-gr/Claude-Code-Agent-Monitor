@@ -61,6 +61,20 @@ const ccConfigRouter = require("./routes/cc-config");
 const runRouter = require("./routes/run");
 const alertsRouter = require("./routes/alerts");
 const webhooksRouter = require("./routes/webhooks");
+const runtimeSessionsRouter = require("./routes/runtime-sessions");
+
+function runStartupRuntimeReconciliation() {
+  try {
+    const { RuntimeManager } = require("./runtime/runtime-manager");
+    const { TmuxRuntime } = require("./runtime/providers/tmux-runtime");
+    const manager = new RuntimeManager({ tmuxRuntime: new TmuxRuntime() });
+    manager.reconcile().catch((err) => {
+      console.warn("[runtime] startup reconciliation skipped:", err.message);
+    });
+  } catch (err) {
+    console.warn("[runtime] startup reconciliation skipped:", err.message);
+  }
+}
 
 function createApp() {
   const app = express();
@@ -89,6 +103,7 @@ function createApp() {
   app.use("/api/run", runRouter);
   app.use("/api/alerts", alertsRouter);
   app.use("/api/webhooks", webhooksRouter);
+  app.use("/api/runtime-sessions", runtimeSessionsRouter);
   app.get("/api/openapi.json", (_req, res) => {
     res.json(openApiSpec);
   });
@@ -175,6 +190,7 @@ function startServer(app, port) {
       if (!isProduction) {
         console.log(`Client dev server expected at http://localhost:5173`);
       }
+      runStartupRuntimeReconciliation();
       resolve(server);
     });
   });

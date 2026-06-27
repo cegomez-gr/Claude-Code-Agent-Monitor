@@ -30,6 +30,22 @@
 - `implementation/test-strategy.md`
 - `implementation/rollout-plan.md`
 - `implementation/codex-working-guide.md`
+<<<<<<< HEAD
+||||||| parent of 9eb9a63 (feat(runtime): implement Runtime Platform — Manager, TmuxRuntime, PtyRuntime, SessionRegistry, API routes, and tests)
+=======
+- `implementation/launchd-service.md`
+- `implementation/runtime-platform-qa-checklist.md`
+
+## Generated Specifications
+
+- `generated/technical-specification.md`
+- `generated/runtime-provider-interface.md`
+- `generated/session-registry-specification.md`
+- `generated/api-specification.md`
+- `generated/open-questions.md`
+- `generated/specification-review.md`
+- `generated/pr-plan.md`
+>>>>>>> 9eb9a63 (feat(runtime): implement Runtime Platform — Manager, TmuxRuntime, PtyRuntime, SessionRegistry, API routes, and tests)
 
 ## Prompts
 

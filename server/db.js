@@ -244,6 +244,26 @@ db.exec(`
     ended_at TEXT
   );
 
+  CREATE TABLE IF NOT EXISTS runtime_sessions (
+    session_id TEXT PRIMARY KEY,
+    title TEXT,
+    cwd TEXT,
+    command TEXT NOT NULL,
+    args TEXT,
+    env TEXT,
+    persistence TEXT NOT NULL CHECK(persistence IN ('ephemeral', 'persistent')),
+    provider TEXT NOT NULL CHECK(provider IN ('pty', 'tmux')),
+    provider_id TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('starting', 'running', 'detached', 'exited', 'stale', 'error')),
+    capabilities TEXT NOT NULL,
+    metadata TEXT,
+    created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+    last_attached_at TEXT,
+    exited_at TEXT,
+    FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+  );
+
   CREATE INDEX IF NOT EXISTS idx_agents_session ON agents(session_id);
   CREATE INDEX IF NOT EXISTS idx_agents_status ON agents(status);
   CREATE INDEX IF NOT EXISTS idx_events_session ON events(session_id);
@@ -257,6 +277,9 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_agents_session_type ON agents(session_id, type);
   CREATE INDEX IF NOT EXISTS idx_dashboard_runs_started ON dashboard_runs(started_at DESC);
   CREATE INDEX IF NOT EXISTS idx_dashboard_runs_session ON dashboard_runs(session_id);
+  CREATE INDEX IF NOT EXISTS idx_runtime_sessions_provider ON runtime_sessions(provider, provider_id);
+  CREATE INDEX IF NOT EXISTS idx_runtime_sessions_status ON runtime_sessions(status);
+  CREATE INDEX IF NOT EXISTS idx_runtime_sessions_persistence ON runtime_sessions(persistence);
 
   -- Rules-based alerting engine. Rules are evaluated server-side: event-driven
   -- types (event_pattern, token_threshold) on hook ingest, time-based types

@@ -61,6 +61,11 @@ function initWebSocket(server) {
 
   let ptyWss = null;
   if (nodePty) {
+    const { RuntimeManager } = require("./runtime/runtime-manager");
+    const { TmuxRuntime } = require("./runtime/providers/tmux-runtime");
+    const tmuxRuntime = new TmuxRuntime({ nodePty });
+    const runtimeManager = new RuntimeManager({ tmuxRuntime });
+
     ptyWss = new WebSocketServer({
       noServer: true,
       maxPayload: 256 * 1024,
@@ -73,51 +78,29 @@ function initWebSocket(server) {
         return;
       }
 
-      let ptyProc = null;
+      let attachment = null;
       try {
-        const { stmts } = require("./db");
-        const row = stmts.getSession.get(sessionId);
-        if (!row) {
-          ws.close(4404, "session not found");
-          return;
-        }
-        let meta = {};
-        try {
-          meta = JSON.parse(row.metadata || "{}");
-        } catch {}
-        const tmuxSession = meta.tmux_session;
-        if (!tmuxSession) {
-          ws.close(4404, "no tmux session");
-          return;
-        }
+        attachment = runtimeManager.attach(sessionId);
 
-        // Augment PATH with the Homebrew bin dirs: the server is often launched
-        // from a GUI/mise context whose PATH can't find tmux, which would make
-        // this spawn fail with ENOENT even after the session name was captured.
-        const { withTmuxPath } = require("./lib/tmux");
-        ptyProc = nodePty.spawn("tmux", ["attach-session", "-t", tmuxSession], {
-          name: "xterm-256color",
-          cols: 220,
-          rows: 50,
-          cwd: row.cwd || process.env.HOME,
-          env: withTmuxPath({ ...process.env, TERM: "xterm-256color" }),
-        });
-
-        ptyProc.onData((data) => {
+        attachment.onData((data) => {
           if (ws.readyState === ws.OPEN) ws.send(data);
         });
-        ptyProc.onExit(() => ws.close(1000));
+        attachment.onExit(() => ws.close(1000));
 
         ws.on("message", (msg) => {
           try {
             const parsed = JSON.parse(msg.toString());
-            if (parsed.type === "resize") ptyProc.resize(parsed.cols, parsed.rows);
-            else ptyProc.write(msg.toString());
+            if (parsed.type === "resize") attachment.resize(parsed.cols, parsed.rows);
+            else attachment.write(msg.toString());
           } catch {
-            ptyProc.write(typeof msg === "string" ? msg : msg.toString());
+            attachment.write(typeof msg === "string" ? msg : msg.toString());
           }
         });
       } catch (err) {
+        if (err.code === "RUNTIME_NOT_FOUND" || err.code === "RUNTIME_NOT_ATTACHABLE") {
+          ws.close(4404, err.message);
+          return;
+        }
         console.error("[PTY] spawn error:", err.message);
         ws.close(4500, "pty error");
         return;
@@ -125,7 +108,7 @@ function initWebSocket(server) {
 
       ws.on("close", () => {
         try {
-          ptyProc?.kill();
+          attachment?.dispose();
         } catch {}
       });
       ws.on("error", (err) => {

@@ -448,6 +448,7 @@ const processEvent = db.transaction((hookType, data) => {
       // server-side resolution only for older hooks that don't send the name.
       if (data._tmux_session || data._tmux || data._tmux_pane) {
         const { resolveTmuxSession, SAFE_TMUX } = require("../lib/tmux");
+        const { mirrorTmuxMetadata } = require("../runtime/tmux-registry");
         const persist = (tmuxSession) => {
           if (!tmuxSession) return;
           const sess = stmts.getSession.get(sessionId);
@@ -456,11 +457,17 @@ const processEvent = db.transaction((hookType, data) => {
           try {
             meta = JSON.parse(sess.metadata || "{}");
           } catch {}
-          if (meta.tmux_session === tmuxSession) return;
-          meta.tmux_session = tmuxSession;
-          stmts.updateSession.run(null, null, null, JSON.stringify(meta), sessionId);
-          // Push the update so the Terminal tab appears without a manual refresh.
-          broadcast("session_updated", stmts.getSession.get(sessionId));
+          if (meta.tmux_session !== tmuxSession) {
+            meta.tmux_session = tmuxSession;
+            stmts.updateSession.run(null, null, null, JSON.stringify(meta), sessionId);
+            // Push the update so the Terminal tab appears without a manual refresh.
+            broadcast("session_updated", stmts.getSession.get(sessionId));
+          }
+          try {
+            mirrorTmuxMetadata({ session: stmts.getSession.get(sessionId), tmuxSession });
+          } catch (err) {
+            console.warn("[runtime] failed to mirror tmux metadata:", err.message);
+          }
         };
         if (data._tmux_session && SAFE_TMUX.test(data._tmux_session)) {
           persist(data._tmux_session);

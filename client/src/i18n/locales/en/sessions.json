@@ -20,6 +20,18 @@
   "tableCost": "Cost",
   "tableDirectory": "Directory",
   "defaultName": "Session ",
+  "create": {
+    "open": "New session",
+    "title": "New session",
+    "close": "Close",
+    "name": "Name",
+    "namePlaceholder": "Claude session",
+    "directory": "Directory",
+    "directoryPlaceholder": "Current working directory",
+    "keepRunning": "Keep running after dashboard closes",
+    "submit": "Create session",
+    "error": "Failed to create session"
+  },
   "detail": {
     "failedLoad": "Failed to load session",
     "loading": "Loading session...",

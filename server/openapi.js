@@ -62,6 +62,7 @@ function createOpenApiSpec() {
       { name: "Analytics", description: "Aggregated analytics views" },
       { name: "Hooks", description: "Claude hook ingestion endpoint" },
       { name: "Pricing", description: "Model pricing and token cost calculations" },
+      { name: "Runtime Sessions", description: "Runtime session lifecycle and registry views" },
       { name: "Workflows", description: "Workflow intelligence and session drill-in" },
       { name: "Settings", description: "Operational maintenance endpoints" },
       {
@@ -88,6 +89,13 @@ function createOpenApiSpec() {
           required: true,
           schema: { type: "string" },
           description: "Session ID",
+        },
+        RuntimeSessionIdPath: {
+          name: "sessionId",
+          in: "path",
+          required: true,
+          schema: { type: "string" },
+          description: "Runtime session ID",
         },
         AgentIdPath: {
           name: "id",
@@ -154,6 +162,23 @@ function createOpenApiSpec() {
           },
           description: "Filter workflow aggregates by session status",
         },
+        RuntimeStatusQuery: {
+          name: "status",
+          in: "query",
+          required: false,
+          schema: {
+            type: "string",
+            enum: ["starting", "running", "detached", "exited", "stale", "error"],
+          },
+          description: "Filter by runtime status",
+        },
+        RuntimePersistenceQuery: {
+          name: "persistence",
+          in: "query",
+          required: false,
+          schema: { type: "string", enum: ["ephemeral", "persistent"] },
+          description: "Filter by persistence policy",
+        },
       },
       schemas: {
         ErrorObject: {
@@ -184,6 +209,115 @@ function createOpenApiSpec() {
         CountMap: {
           type: "object",
           additionalProperties: { type: "integer" },
+        },
+        RuntimeCapabilities: {
+          type: "object",
+          required: ["attach", "resize", "write", "terminate", "persistent"],
+          properties: {
+            attach: { type: "boolean" },
+            resize: { type: "boolean" },
+            write: { type: "boolean" },
+            terminate: { type: "boolean" },
+            persistent: { type: "boolean" },
+            externalAttach: { type: "boolean" },
+            supportsCreate: { type: "boolean" },
+          },
+        },
+        RuntimeSessionSummary: {
+          type: "object",
+          required: [
+            "sessionId",
+            "command",
+            "persistence",
+            "status",
+            "capabilities",
+            "createdAt",
+            "updatedAt",
+          ],
+          properties: {
+            sessionId: { type: "string" },
+            title: { type: "string", nullable: true },
+            cwd: { type: "string", nullable: true },
+            command: { type: "string" },
+            args: { type: "array", items: { type: "string" } },
+            persistence: { type: "string", enum: ["ephemeral", "persistent"] },
+            status: {
+              type: "string",
+              enum: ["starting", "running", "detached", "exited", "stale", "error"],
+            },
+            capabilities: { $ref: "#/components/schemas/RuntimeCapabilities" },
+            createdAt: { type: "string", format: "date-time" },
+            updatedAt: { type: "string", format: "date-time" },
+            lastAttachedAt: { type: "string", format: "date-time", nullable: true },
+            exitedAt: { type: "string", format: "date-time", nullable: true },
+          },
+        },
+        RuntimeSessionDebug: {
+          allOf: [
+            { $ref: "#/components/schemas/RuntimeSessionSummary" },
+            {
+              type: "object",
+              required: ["provider", "providerId"],
+              properties: {
+                provider: { type: "string", enum: ["pty", "tmux"] },
+                providerId: { type: "string" },
+                metadata: { type: "object", additionalProperties: true },
+              },
+            },
+          ],
+        },
+        RuntimeSessionListResponse: {
+          type: "object",
+          required: ["items", "total", "limit", "offset"],
+          properties: {
+            items: {
+              type: "array",
+              items: { $ref: "#/components/schemas/RuntimeSessionSummary" },
+            },
+            total: { type: "integer" },
+            limit: { type: "integer" },
+            offset: { type: "integer" },
+          },
+        },
+        RuntimeSessionCreateRequest: {
+          type: "object",
+          required: ["persistence"],
+          properties: {
+            sessionId: {
+              type: "string",
+              description: "Optional caller-provided application session ID.",
+            },
+            title: { type: "string" },
+            cwd: { type: "string" },
+            command: {
+              type: "string",
+              description: "Configured Claude command. Provider selection is not accepted here.",
+            },
+            args: {
+              type: "array",
+              items: { type: "string" },
+            },
+            env: {
+              type: "object",
+              additionalProperties: { type: "string" },
+            },
+            persistence: { type: "string", enum: ["ephemeral", "persistent"] },
+          },
+          additionalProperties: false,
+        },
+        RuntimeSessionResponse: {
+          type: "object",
+          required: ["item"],
+          properties: {
+            item: { $ref: "#/components/schemas/RuntimeSessionSummary" },
+          },
+        },
+        RuntimeSessionDebugResponse: {
+          type: "object",
+          required: ["item"],
+          properties: {
+            item: { $ref: "#/components/schemas/RuntimeSessionDebug" },
+          },
         },
         Session: {
           type: "object",
@@ -1231,6 +1365,143 @@ function createOpenApiSpec() {
               content: {
                 "application/json": {
                   schema: { $ref: "#/components/schemas/HealthResponse" },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/api/runtime-sessions": {
+        get: {
+          tags: ["Runtime Sessions"],
+          summary: "List runtime sessions",
+          description:
+            "Read-only runtime-neutral list. Provider details and provider metadata are intentionally omitted from this normal endpoint.",
+          operationId: "listRuntimeSessions",
+          parameters: [
+            { $ref: "#/components/parameters/RuntimeStatusQuery" },
+            { $ref: "#/components/parameters/RuntimePersistenceQuery" },
+            {
+              name: "cwd",
+              in: "query",
+              required: false,
+              schema: { type: "string" },
+              description: "Filter by working directory",
+            },
+            { $ref: "#/components/parameters/LimitQuery" },
+            { $ref: "#/components/parameters/OffsetQuery" },
+          ],
+          responses: {
+            200: {
+              description: "Runtime session list",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/RuntimeSessionListResponse" },
+                },
+              },
+            },
+            400: {
+              description: "Invalid filter",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+              },
+            },
+          },
+        },
+        post: {
+          tags: ["Runtime Sessions"],
+          summary: "Create runtime session",
+          description:
+            "Creates a runtime session from user intent. Normal clients send persistence policy only; provider selection is resolved by RuntimeManager and is not accepted in this request.",
+          operationId: "createRuntimeSession",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/RuntimeSessionCreateRequest" },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: "Runtime session created",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/RuntimeSessionResponse" },
+                },
+              },
+            },
+            400: {
+              description: "Invalid create request",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+              },
+            },
+            503: {
+              description: "Runtime provider unavailable",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/api/runtime-sessions/{sessionId}": {
+        get: {
+          tags: ["Runtime Sessions"],
+          summary: "Get runtime session",
+          description:
+            "Read-only runtime-neutral detail. Provider details are available only from the debug endpoint.",
+          operationId: "getRuntimeSession",
+          parameters: [{ $ref: "#/components/parameters/RuntimeSessionIdPath" }],
+          responses: {
+            200: {
+              description: "Runtime session",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/RuntimeSessionResponse" },
+                },
+              },
+            },
+            404: {
+              description: "Runtime session not found",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/api/runtime-sessions/{sessionId}/debug": {
+        get: {
+          tags: ["Runtime Sessions"],
+          summary: "Get runtime session debug details",
+          description:
+            "Optional debug endpoint exposing provider name, provider ID, and provider metadata. Normal runtime UI should not depend on this response.",
+          operationId: "getRuntimeSessionDebug",
+          parameters: [{ $ref: "#/components/parameters/RuntimeSessionIdPath" }],
+          responses: {
+            200: {
+              description: "Runtime session debug details",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/RuntimeSessionDebugResponse" },
+                },
+              },
+            },
+            404: {
+              description: "Runtime session not found",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
                 },
               },
             },

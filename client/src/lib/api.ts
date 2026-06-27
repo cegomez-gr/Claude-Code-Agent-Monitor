@@ -16,6 +16,8 @@ import type {
   SessionDrillIn,
   SessionStats,
   Stats,
+  RuntimePersistence,
+  RuntimeSessionSummary,
   TranscriptListResult,
   TranscriptResult,
   UpdateStatusPayload,
@@ -143,6 +145,21 @@ export const api = {
         ext: string;
         kind: "markdown" | "code";
       }>(`/sessions/${encodeURIComponent(id)}/file?path=${encodeURIComponent(filePath)}`),
+  },
+
+  runtimeSessions: {
+    create: (input: {
+      title?: string;
+      cwd?: string;
+      command?: string;
+      args?: string[];
+      env?: Record<string, string>;
+      persistence: RuntimePersistence;
+    }) =>
+      request<{ item: RuntimeSessionSummary }>("/runtime-sessions", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
   },
 
   agents: {

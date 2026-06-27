@@ -36,6 +36,34 @@ export interface Session {
   awaiting_input_since?: string | null;
 }
 
+export type RuntimePersistence = "ephemeral" | "persistent";
+export type RuntimeStatus = "starting" | "running" | "detached" | "exited" | "stale" | "error";
+
+export interface RuntimeCapabilities {
+  attach: boolean;
+  resize: boolean;
+  write: boolean;
+  terminate: boolean;
+  persistent: boolean;
+  externalAttach?: boolean;
+  supportsCreate?: boolean;
+}
+
+export interface RuntimeSessionSummary {
+  sessionId: string;
+  title?: string;
+  cwd?: string;
+  command: string;
+  args?: string[];
+  persistence: RuntimePersistence;
+  status: RuntimeStatus;
+  capabilities: RuntimeCapabilities;
+  createdAt: string;
+  updatedAt: string;
+  lastAttachedAt?: string;
+  exitedAt?: string;
+}
+
 export interface Agent {
   id: string;
   session_id: string;

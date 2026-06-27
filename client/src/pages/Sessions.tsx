@@ -4,7 +4,7 @@
  * @author Son Nguyen <hoangson091104@gmail.com>
  */
 
-import { useEffect, useState, useCallback, useSyncExternalStore } from "react";
+import { useEffect, useState, useCallback, useSyncExternalStore, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -16,6 +16,9 @@ import {
   SortAsc,
   ChevronDown,
   Play,
+  Plus,
+  X,
+  Loader2,
 } from "lucide-react";
 import { api } from "../lib/api";
 import { eventBus } from "../lib/eventBus";
@@ -49,6 +52,12 @@ export function Sessions() {
   // Set of session IDs that are currently being driven by an in-flight Run
   // handle on /run. Lets us badge those rows with a "Run" link.
   const [dashboardRunIds, setDashboardRunIds] = useState<Set<string>>(new Set());
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createTitle, setCreateTitle] = useState("");
+  const [createCwd, setCreateCwd] = useState("");
+  const [createPersistent, setCreatePersistent] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [creating, setCreating] = useState(false);
 
   const FILTER_OPTIONS: Array<{ label: string; value: string }> = [
     { label: t("filterAll"), value: "" },
@@ -180,6 +189,40 @@ export function Sessions() {
 
   const wsConnected = useSyncExternalStore(eventBus.onConnection, () => eventBus.connected);
 
+  const openCreateModal = () => {
+    setCreateTitle("");
+    setCreateCwd(cwd);
+    setCreatePersistent(false);
+    setCreateError("");
+    setCreateOpen(true);
+  };
+
+  const closeCreateModal = () => {
+    if (creating) return;
+    setCreateOpen(false);
+    setCreateError("");
+  };
+
+  const handleCreateSession = async (event: FormEvent) => {
+    event.preventDefault();
+    setCreating(true);
+    setCreateError("");
+    try {
+      const res = await api.runtimeSessions.create({
+        title: createTitle.trim() || undefined,
+        cwd: createCwd.trim() || undefined,
+        persistence: createPersistent ? "persistent" : "ephemeral",
+      });
+      setCreateOpen(false);
+      await load();
+      navigate(`/sessions/${res.item.sessionId}`);
+    } catch (err) {
+      setCreateError(err instanceof Error ? err.message : t("create.error"));
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <div className="animate-fade-in">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
@@ -208,10 +251,94 @@ export function Sessions() {
             </p>
           </div>
         </div>
-        <button onClick={load} className="btn-ghost flex-shrink-0">
-          <RefreshCw className="w-4 h-4" /> {t("common:refresh")}
-        </button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button onClick={openCreateModal} className="btn-primary">
+            <Plus className="w-4 h-4" /> {t("create.open")}
+          </button>
+          <button onClick={load} className="btn-ghost">
+            <RefreshCw className="w-4 h-4" /> {t("common:refresh")}
+          </button>
+        </div>
       </div>
+
+      {createOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center px-4 py-10 overflow-y-auto bg-black/60 backdrop-blur-sm animate-fade-in">
+          <form
+            onSubmit={handleCreateSession}
+            className="w-full max-w-lg rounded-xl border border-border bg-surface-1 shadow-2xl shadow-black/60"
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <h2 className="text-base font-semibold text-gray-100">{t("create.title")}</h2>
+              <button
+                type="button"
+                onClick={closeCreateModal}
+                className="w-7 h-7 rounded-md text-gray-500 hover:text-gray-200 hover:bg-surface-3 inline-flex items-center justify-center"
+                aria-label={t("create.close")}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <label className="block">
+                <span className="block text-xs font-medium text-gray-400 mb-1.5">
+                  {t("create.name")}
+                </span>
+                <input
+                  value={createTitle}
+                  onChange={(event) => setCreateTitle(event.target.value)}
+                  className="input w-full"
+                  placeholder={t("create.namePlaceholder")}
+                  autoFocus
+                />
+              </label>
+
+              <label className="block">
+                <span className="block text-xs font-medium text-gray-400 mb-1.5">
+                  {t("create.directory")}
+                </span>
+                <input
+                  value={createCwd}
+                  onChange={(event) => setCreateCwd(event.target.value)}
+                  className="input w-full font-mono"
+                  placeholder={t("create.directoryPlaceholder")}
+                />
+              </label>
+
+              <label className="flex items-center justify-between gap-4 rounded-lg border border-border bg-surface-2 px-3 py-3">
+                <span className="text-sm font-medium text-gray-200">{t("create.keepRunning")}</span>
+                <input
+                  type="checkbox"
+                  checked={createPersistent}
+                  onChange={(event) => setCreatePersistent(event.target.checked)}
+                  className="h-4 w-4 accent-accent"
+                />
+              </label>
+
+              {createError && (
+                <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+                  {createError}
+                </div>
+              )}
+            </div>
+
+            <div className="px-5 py-4 border-t border-border bg-surface-2/40 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeCreateModal}
+                disabled={creating}
+                className="btn-ghost border border-border text-xs disabled:opacity-50"
+              >
+                {t("common:cancel")}
+              </button>
+              <button type="submit" disabled={creating} className="btn-primary text-xs disabled:opacity-50">
+                {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                {t("create.submit")}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap lg:flex-nowrap items-center gap-3 mb-6 bg-surface-2/40 p-2 rounded-xl border border-border w-full">
