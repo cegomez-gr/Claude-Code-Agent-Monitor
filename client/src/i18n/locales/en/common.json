@@ -170,5 +170,9 @@
     }
   },
   "examples": "Examples",
-  "help": "Help"
+  "help": "Help",
+  "terminal": {
+    "expand": "Expand terminal",
+    "collapse": "Restore terminal height"
+  }
 }

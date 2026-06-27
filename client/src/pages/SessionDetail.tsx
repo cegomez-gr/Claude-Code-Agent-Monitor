@@ -99,6 +99,9 @@ export function SessionDetail() {
     return new Set<string>();
   });
   const [activeTab, setActiveTab] = useState<DetailTab>("agents");
+  // When the terminal tab is maximized we collapse the chrome above it (session
+  // metadata + tab bar) so the terminal grows up to just under the page title.
+  const [terminalExpanded, setTerminalExpanded] = useState(false);
   // Keep tabs mounted once visited so switching between them doesn't unmount/
   // remount their subtrees (which causes a perceptible flash on click).
   const [visitedTabs, setVisitedTabs] = useState<Set<DetailTab>>(() => new Set(["agents"]));
@@ -520,8 +523,12 @@ export function SessionDetail() {
     );
   }
 
+  // When the terminal is maximized, hide the metadata + tab chrome so it grows
+  // up to just under the title (the page title and sidebar stay visible).
+  const terminalMaximized = activeTab === "terminal" && terminalExpanded;
+
   return (
-    <div className="animate-fade-in space-y-8">
+    <div className={terminalMaximized ? "animate-fade-in space-y-3" : "animate-fade-in space-y-8"}>
       {/* Header */}
       <div className="flex items-start gap-4">
         <button onClick={goBack} className="btn-ghost mt-1">
@@ -534,37 +541,41 @@ export function SessionDetail() {
             </h2>
             <SessionStatusBadge status={effectiveSessionStatus(session)} />
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
-            <span className="inline-flex items-center gap-1.5 text-xs text-gray-500 font-mono bg-surface-2 px-2 py-1 rounded">
-              {session.id.slice(0, 16)}
-            </span>
-            {session.model && (
-              <span className="inline-flex items-center gap-1.5 text-xs text-gray-400 bg-surface-2 px-2 py-1 rounded">
-                <Cpu className="w-3 h-3 text-gray-500" />
-                {formatModelName(session.model)}
-              </span>
-            )}
-            <span className="inline-flex items-center gap-1.5 text-xs text-gray-400 bg-surface-2 px-2 py-1 rounded">
-              <Clock className="w-3 h-3 text-gray-500" />
-              {formatDateTime(session.started_at)}
-              {session.ended_at && (
-                <span className="text-gray-500 ml-1">
-                  ({formatDuration(session.started_at, session.ended_at)})
+          {!terminalMaximized && (
+            <>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1">
+                <span className="inline-flex items-center gap-1.5 text-xs text-gray-500 font-mono bg-surface-2 px-2 py-1 rounded">
+                  {session.id.slice(0, 16)}
                 </span>
+                {session.model && (
+                  <span className="inline-flex items-center gap-1.5 text-xs text-gray-400 bg-surface-2 px-2 py-1 rounded">
+                    <Cpu className="w-3 h-3 text-gray-500" />
+                    {formatModelName(session.model)}
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1.5 text-xs text-gray-400 bg-surface-2 px-2 py-1 rounded">
+                  <Clock className="w-3 h-3 text-gray-500" />
+                  {formatDateTime(session.started_at)}
+                  {session.ended_at && (
+                    <span className="text-gray-500 ml-1">
+                      ({formatDuration(session.started_at, session.ended_at)})
+                    </span>
+                  )}
+                </span>
+                {cost && cost.total_cost > 0 && (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">
+                    <DollarSign className="w-3 h-3" />
+                    {fmtCostFull(cost.total_cost).slice(1)}
+                  </span>
+                )}
+              </div>
+              {session.cwd && (
+                <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-2">
+                  <FolderOpen className="w-3 h-3 flex-shrink-0" />
+                  <span className="font-mono truncate">{session.cwd}</span>
+                </div>
               )}
-            </span>
-            {cost && cost.total_cost > 0 && (
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">
-                <DollarSign className="w-3 h-3" />
-                {fmtCostFull(cost.total_cost).slice(1)}
-              </span>
-            )}
-          </div>
-          {session.cwd && (
-            <div className="flex items-center gap-1.5 text-xs text-gray-500 mt-2">
-              <FolderOpen className="w-3 h-3 flex-shrink-0" />
-              <span className="font-mono truncate">{session.cwd}</span>
-            </div>
+            </>
           )}
         </div>
         <button onClick={load} className="btn-ghost">
@@ -572,7 +583,7 @@ export function SessionDetail() {
         </button>
       </div>
 
-      {isDashboardRun && (
+      {!terminalMaximized && isDashboardRun && (
         <Link
           to={`/run?session=${encodeURIComponent(id || "")}`}
           className="flex items-center gap-3 rounded-lg border border-emerald-500/30 bg-emerald-500/[0.06] hover:bg-emerald-500/[0.12] hover:border-emerald-500/50 px-4 py-2.5 transition-colors group"
@@ -596,66 +607,68 @@ export function SessionDetail() {
       )}
 
       {/* Tab Navigation */}
-      <div className="flex items-center gap-1 border-b border-border">
-        <button
-          onClick={() => {
-            setActiveTab("agents");
-            setTranscriptNotFound(false);
-          }}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === "agents"
-              ? "border-violet-500 text-violet-400"
-              : "border-transparent text-gray-500 hover:text-gray-300"
-          }`}
-        >
-          <Bot className="w-4 h-4" />
-          {t("detail.agents")} ({agents.length})
-        </button>
-        <button
-          onClick={() => {
-            setActiveTab("conversation");
-            setTranscriptNotFound(false);
-          }}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === "conversation"
-              ? "border-violet-500 text-violet-400"
-              : "border-transparent text-gray-500 hover:text-gray-300"
-          }`}
-        >
-          <MessageSquare className="w-4 h-4" />
-          Conversation
-        </button>
-        <button
-          onClick={() => {
-            setActiveTab("timeline");
-            setTranscriptNotFound(false);
-          }}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === "timeline"
-              ? "border-violet-500 text-violet-400"
-              : "border-transparent text-gray-500 hover:text-gray-300"
-          }`}
-        >
-          <List className="w-4 h-4" />
-          Timeline ({events.length}/{eventsTotal})
-        </button>
-        {tmuxSession && (
+      {!terminalMaximized && (
+        <div className="flex items-center gap-1 border-b border-border">
           <button
             onClick={() => {
-              setActiveTab("terminal");
+              setActiveTab("agents");
               setTranscriptNotFound(false);
             }}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === "terminal"
+              activeTab === "agents"
                 ? "border-violet-500 text-violet-400"
                 : "border-transparent text-gray-500 hover:text-gray-300"
             }`}
           >
-            <TerminalSquare className="w-4 h-4" />
-            Terminal
+            <Bot className="w-4 h-4" />
+            {t("detail.agents")} ({agents.length})
           </button>
-        )}
-      </div>
+          <button
+            onClick={() => {
+              setActiveTab("conversation");
+              setTranscriptNotFound(false);
+            }}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "conversation"
+                ? "border-violet-500 text-violet-400"
+                : "border-transparent text-gray-500 hover:text-gray-300"
+            }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            Conversation
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("timeline");
+              setTranscriptNotFound(false);
+            }}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === "timeline"
+                ? "border-violet-500 text-violet-400"
+                : "border-transparent text-gray-500 hover:text-gray-300"
+            }`}
+          >
+            <List className="w-4 h-4" />
+            Timeline ({events.length}/{eventsTotal})
+          </button>
+          {tmuxSession && (
+            <button
+              onClick={() => {
+                setActiveTab("terminal");
+                setTranscriptNotFound(false);
+              }}
+              className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === "terminal"
+                  ? "border-violet-500 text-violet-400"
+                  : "border-transparent text-gray-500 hover:text-gray-300"
+              }`}
+            >
+              <TerminalSquare className="w-4 h-4" />
+              Terminal
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Tab Content */}
       {transcriptNotFound && (
@@ -1023,7 +1036,12 @@ export function SessionDetail() {
 
       {tmuxSession && visitedTabs.has("terminal") && (
         <div hidden={activeTab !== "terminal"}>
-          <TerminalPane sessionId={session.id} tmuxSession={tmuxSession} />
+          <TerminalPane
+            sessionId={session.id}
+            tmuxSession={tmuxSession}
+            expanded={terminalExpanded}
+            onToggleExpanded={() => setTerminalExpanded((v) => !v)}
+          />
         </div>
       )}
     </div>

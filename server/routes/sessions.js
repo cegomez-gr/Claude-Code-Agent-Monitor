@@ -897,6 +897,85 @@ function truncateObj(obj, maxLen) {
   return { _truncated: truncate(json, maxLen) };
 }
 
+// Files served to the terminal's clickable document links. Reads are sandboxed
+// to the session's working directory (its project root), never the wider FS.
+const MAX_VIEWER_FILE_BYTES = 2 * 1024 * 1024;
+const MARKDOWN_EXTS = new Set([".md", ".markdown", ".mdx"]);
+
+/**
+ * GET /:id/file?path=<abs|rel>
+ * Read a single file for the in-page document viewer. `path` may be absolute or
+ * relative to the session cwd; either way the resolved target must stay under
+ * the session's working directory. Returns { path, relPath, content, ext, kind }.
+ */
+router.get("/:id/file", (req, res) => {
+  const session = stmts.getSession.get(req.params.id);
+  if (!session) {
+    return res.status(404).json({ error: { code: "NOT_FOUND", message: "session not found" } });
+  }
+
+  const rawPath = req.query.path;
+  if (typeof rawPath !== "string" || !rawPath) {
+    return res.status(400).json({ error: { code: "BAD_PATH", message: "path is required" } });
+  }
+
+  if (!session.cwd) {
+    return res
+      .status(400)
+      .json({ error: { code: "NO_ROOT", message: "session has no working directory" } });
+  }
+  const root = path.resolve(session.cwd);
+
+  // Resolve relative paths against the session root; absolute paths are honored
+  // but still re-checked against the root below.
+  const resolved = path.resolve(root, rawPath);
+  const lexicalRel = path.relative(root, resolved);
+  if (lexicalRel.startsWith("..") || path.isAbsolute(lexicalRel)) {
+    return res
+      .status(403)
+      .json({ error: { code: "OUT_OF_ROOT", message: "path is outside the session directory" } });
+  }
+
+  let st;
+  try {
+    st = fs.statSync(resolved);
+  } catch {
+    return res.status(404).json({ error: { code: "NOT_FOUND", message: "file not found" } });
+  }
+  if (!st.isFile()) {
+    return res.status(400).json({ error: { code: "NOT_FILE", message: "not a regular file" } });
+  }
+  if (st.size > MAX_VIEWER_FILE_BYTES) {
+    return res.status(413).json({ error: { code: "TOO_LARGE", message: "file exceeds 2 MB" } });
+  }
+
+  // Defense in depth: re-check via realpath so a symlink under the root can't
+  // point outside it.
+  try {
+    const realRoot = fs.realpathSync(root);
+    const realResolved = fs.realpathSync(resolved);
+    const realRel = path.relative(realRoot, realResolved);
+    if (realRel.startsWith("..") || path.isAbsolute(realRel)) {
+      return res
+        .status(403)
+        .json({ error: { code: "OUT_OF_ROOT", message: "path is outside the session directory" } });
+    }
+  } catch {
+    // realpath can fail on exotic mounts; the lexical guard above already held.
+  }
+
+  let content;
+  try {
+    content = fs.readFileSync(resolved, "utf8");
+  } catch {
+    return res.status(400).json({ error: { code: "READ_FAILED", message: "file not readable" } });
+  }
+
+  const ext = path.extname(resolved).toLowerCase();
+  const kind = MARKDOWN_EXTS.has(ext) ? "markdown" : "code";
+  res.json({ path: resolved, relPath: lexicalRel, content, ext, kind });
+});
+
 module.exports = router;
 // Exported for unit tests — sender attribution is correctness-critical.
 module.exports.classifyTranscriptSender = classifyTranscriptSender;
