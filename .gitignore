@@ -51,6 +51,7 @@ Thumbs.db
 .vs/
 .superpowers/
 .omc/
+.obsidian/
 *.swp
 *.swo
 *.sublime-project
