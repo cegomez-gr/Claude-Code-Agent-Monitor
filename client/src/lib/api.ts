@@ -148,6 +148,20 @@ export const api = {
   },
 
   runtimeSessions: {
+    list: (params?: { status?: string; limit?: number; offset?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.status) qs.set("status", params.status);
+      if (params?.limit != null) qs.set("limit", String(params.limit));
+      if (params?.offset != null) qs.set("offset", String(params.offset));
+      const q = qs.toString();
+      return request<{ items: RuntimeSessionSummary[]; total: number }>(
+        `/runtime-sessions${q ? `?${q}` : ""}`
+      );
+    },
+    get: (sessionId: string) =>
+      request<{ item: RuntimeSessionSummary }>(
+        `/runtime-sessions/${encodeURIComponent(sessionId)}`
+      ),
     create: (input: {
       title?: string;
       cwd?: string;
@@ -160,6 +174,12 @@ export const api = {
         method: "POST",
         body: JSON.stringify(input),
       }),
+    terminate: (sessionId: string) =>
+      request<{ ok: true }>(`/runtime-sessions/${encodeURIComponent(sessionId)}`, {
+        method: "DELETE",
+      }),
+    terminalUrl: (sessionId: string): string =>
+      `${BASE}/runtime-sessions/${encodeURIComponent(sessionId)}/terminal`,
   },
 
   agents: {
