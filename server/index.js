@@ -66,12 +66,12 @@ const runtimeSessionsRouter = require("./routes/runtime-sessions");
 
 function runStartupRuntimeReconciliation() {
   try {
-    const { RuntimeManager } = require("./runtime/runtime-manager");
-    const { TmuxRuntime } = require("./runtime/providers/tmux-runtime");
-    const manager = new RuntimeManager({ tmuxRuntime: new TmuxRuntime() });
-    manager.reconcile().catch((err) => {
-      console.warn("[runtime] startup reconciliation skipped:", err.message);
-    });
+    const { getRuntimeManager } = require("./runtime/runtime-instance");
+    getRuntimeManager()
+      .reconcile()
+      .catch((err) => {
+        console.warn("[runtime] startup reconciliation skipped:", err.message);
+      });
   } catch (err) {
     console.warn("[runtime] startup reconciliation skipped:", err.message);
   }

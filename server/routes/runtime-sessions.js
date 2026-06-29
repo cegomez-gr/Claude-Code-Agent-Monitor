@@ -2,14 +2,14 @@ const { Router } = require("express");
 const crypto = require("crypto");
 const { PersistencePolicy, RuntimeStatus, RuntimeErrorCode } = require("../runtime/contracts");
 const { SessionRegistry } = require("../runtime/session-registry");
-const { RuntimeManager } = require("../runtime/runtime-manager");
-const { TmuxRuntime } = require("../runtime/providers/tmux-runtime");
-const { PtyRuntime } = require("../runtime/providers/pty-runtime");
+const { getRuntimeManager, setRuntimeManagerForTests } = require("../runtime/runtime-instance");
 
 const router = Router();
+// Reads (list/get/debug) hit the registry directly: it is backed by the shared
+// SQLite table, so a local instance sees the same records the singleton writes.
+// Only create/terminate go through getRuntimeManager(), where the live PTY
+// handles (in-memory) must stay on one provider instance.
 const registry = new SessionRegistry();
-let runtimeManager = null;
-let runtimeManagerForTests = null;
 
 const VALID_STATUSES = new Set(Object.values(RuntimeStatus));
 const VALID_PERSISTENCE = new Set(Object.values(PersistencePolicy));
@@ -37,18 +37,6 @@ function runtimeErrorStatus(code) {
   if (code === RuntimeErrorCode.PROVIDER_UNAVAILABLE) return 503;
   if (code === RuntimeErrorCode.UNSUPPORTED_OPERATION) return 501;
   return 500;
-}
-
-function getRuntimeManager() {
-  if (runtimeManagerForTests) return runtimeManagerForTests;
-  if (!runtimeManager) {
-    runtimeManager = new RuntimeManager({
-      tmuxRuntime: new TmuxRuntime(),
-      ptyRuntime: new PtyRuntime({ nodePty: require("node-pty") }),
-      registry,
-    });
-  }
-  return runtimeManager;
 }
 
 function createSessionId() {
@@ -214,7 +202,7 @@ router.delete("/:sessionId", (req, res) => {
 });
 
 function __setRuntimeManagerForTests(manager) {
-  runtimeManagerForTests = manager;
+  setRuntimeManagerForTests(manager);
 }
 
 module.exports = router;

@@ -70,10 +70,11 @@ function initWebSocket(server) {
 
   let ptyWss = null;
   if (nodePty) {
-    const { RuntimeManager } = require("./runtime/runtime-manager");
-    const { TmuxRuntime } = require("./runtime/providers/tmux-runtime");
-    const tmuxRuntime = new TmuxRuntime({ nodePty });
-    const runtimeManager = new RuntimeManager({ tmuxRuntime });
+    // Use the shared RuntimeManager singleton (ADR-001) so attach operates on
+    // the same provider instances the create API used. A PtyRuntime keeps its
+    // live PTY handles in-memory, so a separate manager here could not attach
+    // to dashboard-created ephemeral sessions.
+    const { getRuntimeManager } = require("./runtime/runtime-instance");
 
     ptyWss = new WebSocketServer({
       noServer: true,
@@ -81,6 +82,7 @@ function initWebSocket(server) {
     });
 
     ptyWss.on("connection", (ws, req) => {
+      const runtimeManager = getRuntimeManager();
       const sessionId = extractRuntimeSessionId(req.url);
       if (!sessionId) {
         ws.close(4404, "missing sessionId");

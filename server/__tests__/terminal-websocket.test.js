@@ -23,6 +23,7 @@ const WebSocket = require("ws");
 
 const websocketPath = require.resolve("../websocket");
 const runtimeManagerPath = require.resolve("../runtime/runtime-manager");
+const runtimeInstancePath = require.resolve("../runtime/runtime-instance");
 const sessionRegistryPath = require.resolve("../runtime/session-registry");
 
 function once(target, event) {
@@ -113,7 +114,12 @@ async function withTerminalServer({ rows }, run) {
 
   Module._load = function patchedLoad(request, parent, isMain) {
     if (request === "node-pty") return mockPty.module;
-    if (request === "./session-registry" && parent?.filename === runtimeManagerPath) {
+    // The shared singleton (runtime-instance) builds the registry now, while
+    // runtime-manager keeps its own legacy fallback path; mock both parents.
+    if (
+      request === "./session-registry" &&
+      (parent?.filename === runtimeManagerPath || parent?.filename === runtimeInstancePath)
+    ) {
       return {
         SessionRegistry: class MockSessionRegistry {
           get() {
@@ -139,6 +145,7 @@ async function withTerminalServer({ rows }, run) {
 
   delete require.cache[websocketPath];
   delete require.cache[runtimeManagerPath];
+  delete require.cache[runtimeInstancePath];
   delete require.cache[sessionRegistryPath];
   const { initWebSocket } = require("../websocket");
   const server = http.createServer((_req, res) => {
