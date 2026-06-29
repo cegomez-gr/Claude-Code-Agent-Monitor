@@ -1,34 +1,44 @@
-# Codex Project Instructions
+# Agent Instructions
 
-## Project intent
-- Keep this repository a stable, local-first Claude Code monitoring platform.
-- Maintain correctness across hooks, API, DB, websocket, UI, and MCP integration.
+These instructions apply to AI coding agents working on runtime, terminal, session or dashboard-related code.
 
-## Priorities
-- Correctness over cleverness.
-- Small, scoped, reversible diffs.
-- Preserve existing behavior unless change is requested.
-- Update docs whenever workflow or architecture changes.
+## Mandatory reading before making changes
 
-## Where to work
-- `server/` for API/routes/data processing.
-- `client/` for React UI behavior.
-- `mcp/` for local MCP server tooling.
-- `scripts/` for hook/install/import/cleanup utilities.
+Before modifying runtime-related code, read:
 
-## Validation expectations
-- Backend changes: run `npm run test:server` when possible.
-- Frontend changes: run `npm run test:client` when possible.
-- MCP changes: run `npm run mcp:typecheck` and `npm run mcp:build`.
-- If any check is skipped, report it explicitly.
+- `docs/architecture/vision.md`
+- `docs/architecture/runtime-platform.md`
+- `docs/architecture/runtime-manager.md`
+- `docs/architecture/runtime-providers.md`
+- `docs/architecture/session-registry.md`
+- `docs/architecture/api.md`
+- `docs/implementation/implementation-plan.md`
+- `docs/adr/`
 
-## Safety expectations
-- Keep destructive capabilities behind explicit configuration gates.
-- Never broaden destructive behavior without explicit user request.
-- Treat hook execution path as fail-safe and non-blocking.
+## Non-negotiable rules
 
-## Useful commands
-- Setup: `npm run setup`
-- Dev: `npm run dev`
-- Build/start: `npm run build` then `npm start`
-- MCP helpers: `npm run mcp:install`, `npm run mcp:build`, `npm run mcp:start`
+- Do not put tmux-specific logic in React components.
+- Do not make xterm.js aware of the runtime provider.
+- Do not let the frontend choose `provider=tmux` or `provider=pty` directly.
+- The frontend expresses intent: `persistence=ephemeral` or `persistence=persistent`.
+- The Runtime Manager resolves that intent into a concrete provider.
+- Runtime-specific logic belongs behind a Runtime Provider.
+- Preserve compatibility with existing tmux session discovery and attach flows.
+- Prefer incremental, reviewable changes over large rewrites.
+- Do not remove the current terminal functionality until the replacement is fully tested.
+
+## Implementation preference
+
+Prefer this order:
+
+1. Extract existing tmux attach logic behind a provider.
+2. Introduce RuntimeManager.
+3. Add SessionRegistry.
+4. Add PtyRuntime for ephemeral sessions.
+5. Add session creation API.
+6. Add UI controls for creating sessions.
+7. Add launchd/background service support later.
+
+## When uncertain
+
+Do not invent architecture. Add a TODO in the generated document or implementation plan and ask for review.

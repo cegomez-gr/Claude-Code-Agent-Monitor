@@ -1,0 +1,19 @@
+sequenceDiagram
+    participant User
+    participant UI as Dashboard
+    participant API
+    participant RM as RuntimeManager
+    participant Pty as PtyRuntime
+    participant Reg as SessionRegistry
+    participant Claude
+
+    User->>UI: Click "New session"
+    UI->>API: POST /api/runtime-sessions { persistence: "ephemeral" }
+    API->>RM: create(request)
+    RM->>Pty: create()
+    Pty->>Claude: spawn claude via node-pty
+    Pty-->>RM: RuntimeRef
+    RM->>Reg: save RuntimeSessionRecord
+    RM-->>API: RuntimeRef
+    API-->>UI: sessionId
+    UI->>API: WebSocket attach

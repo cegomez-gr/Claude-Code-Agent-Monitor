@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant launchd
+    participant Service
+    participant RM as RuntimeManager
+    participant Reg as SessionRegistry
+    participant Tmux as TmuxRuntime
+
+    launchd->>Service: start at login
+    Service->>RM: initialize()
+    RM->>Reg: load known sessions
+    RM->>Tmux: discover()
+    Tmux-->>RM: running tmux sessions
+    RM->>Reg: reconcile statuses
+    Service-->>launchd: running

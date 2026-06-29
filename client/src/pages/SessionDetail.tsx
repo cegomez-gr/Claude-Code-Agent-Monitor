@@ -22,6 +22,7 @@ import {
   AlertCircle,
   Play,
   ExternalLink,
+  Square,
   TerminalSquare,
   Workflow,
 } from "lucide-react";
@@ -65,6 +66,7 @@ import type {
   CostResult,
   TranscriptInfo,
   WorkflowRun,
+  RuntimeSessionSummary,
 } from "../lib/types";
 import { WorkflowRunsPanel } from "../components/workflows/WorkflowRunsPanel";
 import { TerminalPane } from "../components/TerminalPane";
@@ -108,6 +110,11 @@ export function SessionDetail() {
   useEffect(() => {
     setVisitedTabs((prev) => (prev.has(activeTab) ? prev : new Set(prev).add(activeTab)));
   }, [activeTab]);
+  const [runtimeSession, setRuntimeSession] = useState<RuntimeSessionSummary | null>(null);
+  const [runtimeDebug, setRuntimeDebug] = useState<
+    import("../lib/types").RuntimeSessionDebug | null
+  >(null);
+  const [showDebug, setShowDebug] = useState(false);
   const [transcripts, setTranscripts] = useState<TranscriptInfo[]>([]);
   const [pendingTranscriptId, setPendingTranscriptId] = useState<string | null>(null);
   const [transcriptNotFound, setTranscriptNotFound] = useState(false);
@@ -192,6 +199,14 @@ export function SessionDetail() {
       setWorkflows(data.workflows || []);
       setCost(costData);
       setError(null);
+      api.runtimeSessions
+        .get(id)
+        .then((res) => setRuntimeSession(res.item))
+        .catch(() => setRuntimeSession(null));
+      api.runtimeSessions
+        .debug(id)
+        .then((res) => setRuntimeDebug(res.item))
+        .catch(() => setRuntimeDebug(null));
     } catch (err) {
       setError(err instanceof Error ? err.message : t("detail.failedLoad"));
     } finally {
@@ -475,6 +490,20 @@ export function SessionDetail() {
     }
   }, [session?.metadata]);
 
+  const canAttach = runtimeSession ? runtimeSession.capabilities.attach : !!tmuxSession;
+  const canTerminate = runtimeSession?.capabilities.terminate ?? false;
+
+  const handleTerminate = useCallback(async () => {
+    if (!id || !canTerminate) return;
+    if (!window.confirm(t("detail.terminateConfirm"))) return;
+    try {
+      await api.runtimeSessions.terminate(id);
+      await load();
+    } catch {
+      alert(t("detail.terminateError"));
+    }
+  }, [id, canTerminate, t, load]);
+
   if (loading) {
     return (
       <div className="animate-fade-in space-y-8" aria-busy="true">
@@ -578,10 +607,59 @@ export function SessionDetail() {
             </>
           )}
         </div>
+        {canTerminate && (
+          <button
+            onClick={handleTerminate}
+            className="btn-ghost text-red-400 hover:text-red-300"
+            title={t("detail.terminate")}
+          >
+            <Square className="w-4 h-4" />
+          </button>
+        )}
         <button onClick={load} className="btn-ghost">
           <RefreshCw className="w-4 h-4" />
         </button>
       </div>
+
+      {runtimeSession && (
+        <div className="mb-2">
+          <button
+            onClick={() => setShowDebug((v) => !v)}
+            className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+          >
+            {showDebug ? t("detail.hideDebug") : t("detail.showDebug")}
+          </button>
+          {showDebug && (
+            <div className="mt-2 rounded-lg border border-slate-700 bg-slate-800/50 p-3 text-xs font-mono text-slate-300 space-y-1">
+              <div className="font-semibold text-slate-400 mb-2">{t("detail.debugDetails")}</div>
+              {runtimeDebug ? (
+                <>
+                  <div>
+                    <span className="text-slate-500">{t("detail.debugProvider")}:</span>{" "}
+                    {runtimeDebug.provider}
+                  </div>
+                  {runtimeDebug.providerId && (
+                    <div>
+                      <span className="text-slate-500">{t("detail.debugProviderId")}:</span>{" "}
+                      {runtimeDebug.providerId}
+                    </div>
+                  )}
+                  {runtimeDebug.metadata && Object.keys(runtimeDebug.metadata).length > 0 && (
+                    <div>
+                      <span className="text-slate-500">{t("detail.debugMetadata")}:</span>
+                      <pre className="mt-1 text-slate-400 whitespace-pre-wrap break-all">
+                        {JSON.stringify(runtimeDebug.metadata, null, 2)}
+                      </pre>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-slate-500 italic">Unavailable</div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {!terminalMaximized && isDashboardRun && (
         <Link
@@ -651,7 +729,7 @@ export function SessionDetail() {
             <List className="w-4 h-4" />
             Timeline ({events.length}/{eventsTotal})
           </button>
-          {tmuxSession && (
+          {canAttach && (
             <button
               onClick={() => {
                 setActiveTab("terminal");
@@ -1034,11 +1112,10 @@ export function SessionDetail() {
         </div>
       )}
 
-      {tmuxSession && visitedTabs.has("terminal") && (
+      {canAttach && visitedTabs.has("terminal") && (
         <div hidden={activeTab !== "terminal"}>
           <TerminalPane
             sessionId={session.id}
-            tmuxSession={tmuxSession}
             expanded={terminalExpanded}
             onToggleExpanded={() => setTerminalExpanded((v) => !v)}
           />

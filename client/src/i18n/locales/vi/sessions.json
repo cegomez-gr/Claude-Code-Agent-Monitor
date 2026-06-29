@@ -20,6 +20,18 @@
   "tableCost": "Chi phí",
   "tableDirectory": "Thư mục",
   "defaultName": "Phiên ",
+  "create": {
+    "open": "Phiên mới",
+    "title": "Phiên mới",
+    "close": "Đóng",
+    "name": "Tên",
+    "namePlaceholder": "Phiên Claude",
+    "directory": "Thư mục",
+    "directoryPlaceholder": "Thư mục làm việc hiện tại",
+    "keepRunning": "Tiếp tục chạy sau khi đóng dashboard",
+    "submit": "Tạo phiên",
+    "error": "Không thể tạo phiên"
+  },
   "detail": {
     "failedLoad": "Không thể tải phiên",
     "loading": "Đang tải phiên...",

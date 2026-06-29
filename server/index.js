@@ -35,6 +35,7 @@ const http = require("http");
 const swaggerUi = require("swagger-ui-express");
 const { initWebSocket } = require("./websocket");
 const { createOpenApiSpec } = require("./openapi");
+const { redocBundlePath, renderRedocHtml } = require("./lib/redoc");
 const { writeServerInfo, removeServerInfo } = require("./lib/server-info");
 const {
   resolveHost,
@@ -61,6 +62,20 @@ const ccConfigRouter = require("./routes/cc-config");
 const runRouter = require("./routes/run");
 const alertsRouter = require("./routes/alerts");
 const webhooksRouter = require("./routes/webhooks");
+const runtimeSessionsRouter = require("./routes/runtime-sessions");
+
+function runStartupRuntimeReconciliation() {
+  try {
+    const { getRuntimeManager } = require("./runtime/runtime-instance");
+    getRuntimeManager()
+      .reconcile()
+      .catch((err) => {
+        console.warn("[runtime] startup reconciliation skipped:", err.message);
+      });
+  } catch (err) {
+    console.warn("[runtime] startup reconciliation skipped:", err.message);
+  }
+}
 
 function createApp() {
   const app = express();
@@ -89,6 +104,7 @@ function createApp() {
   app.use("/api/run", runRouter);
   app.use("/api/alerts", alertsRouter);
   app.use("/api/webhooks", webhooksRouter);
+  app.use("/api/runtime-sessions", runtimeSessionsRouter);
   app.get("/api/openapi.json", (_req, res) => {
     res.json(openApiSpec);
   });
@@ -99,6 +115,26 @@ function createApp() {
       customSiteTitle: "Agent Dashboard API Docs",
     })
   );
+
+  // ReDoc — a read-optimized, three-panel rendering of the same OpenAPI spec
+  // (complements Swagger UI's interactive console at /api/docs). The bundle is
+  // served from node_modules, never a CDN, so the reference works offline.
+  app.get("/api/redoc/redoc.standalone.js", (_req, res) => {
+    res.sendFile(redocBundlePath(), (err) => {
+      if (err && !res.headersSent) res.status(500).end();
+    });
+  });
+  app.get("/api/redoc", (_req, res) => {
+    res
+      .type("html")
+      .send(
+        renderRedocHtml(
+          "/api/openapi.json",
+          "/api/redoc/redoc.standalone.js",
+          "Agent Dashboard API Reference"
+        )
+      );
+  });
 
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -175,6 +211,7 @@ function startServer(app, port) {
       if (!isProduction) {
         console.log(`Client dev server expected at http://localhost:5173`);
       }
+      runStartupRuntimeReconciliation();
       resolve(server);
     });
   });
@@ -429,11 +466,21 @@ if (require.main === module) {
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.on("SIGINT", () => shutdown("SIGINT"));
 
-  // Auto-install Claude Code hooks on every startup so users don't have to
+  // Auto-install Claude Code hooks on every startup so users don't have to.
+  // Skipped inside containers (issue #193): a container-internal handler path
+  // would poison a bind-mounted host ~/.claude and break every host hook, so
+  // hooks must be installed on the host (`npm run install-hooks`).
   try {
-    const { installHooks } = require("../scripts/install-hooks");
-    installHooks(true);
-    console.log("Claude Code hooks auto-configured.");
+    const { installHooks, isInsideContainer } = require("../scripts/install-hooks");
+    if (installHooks(true)) {
+      console.log("Claude Code hooks auto-configured.");
+    } else if (isInsideContainer()) {
+      console.log(
+        "Claude Code hooks NOT auto-configured: running inside a container. " +
+          "Run `npm run install-hooks` on the host so hooks point at a host path and " +
+          "POST to http://localhost:4820 (this container's published port)."
+      );
+    }
   } catch {
     // Non-fatal — user can run npm run install-hooks manually
   }

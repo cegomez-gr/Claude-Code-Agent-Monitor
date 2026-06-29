@@ -80,6 +80,11 @@ vi.mock("../../lib/api", () => ({
     pricing: {
       sessionCost: vi.fn(() => Promise.resolve({ total_cost: 0, breakdown: [] })),
     },
+    runtimeSessions: {
+      get: vi.fn(() => Promise.reject(new Error("not found"))),
+      terminate: vi.fn(() => Promise.resolve()),
+      debug: vi.fn(() => Promise.reject(new Error("not found"))),
+    },
     events: {
       list: vi.fn(() =>
         Promise.resolve({

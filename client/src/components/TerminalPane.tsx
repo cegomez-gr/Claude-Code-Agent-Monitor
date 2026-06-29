@@ -17,7 +17,7 @@ import "@xterm/xterm/css/xterm.css";
 
 type Props = {
   sessionId: string;
-  tmuxSession: string;
+  tmuxSession?: string;
   /**
    * When true the parent hides the surrounding chrome (session metadata + tabs)
    * so the terminal grows upward to just under the page title. The pane itself
@@ -224,7 +224,7 @@ export function TerminalPane({
     <>
       <div className="rounded-lg overflow-hidden border border-border bg-surface-3">
         <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border bg-surface-2">
-          <span className="text-[11px] text-gray-500 font-mono">tmux: {tmuxSession}</span>
+          <span className="text-[11px] text-gray-500 font-mono">Terminal</span>
           {onToggleExpanded && (
             <button
               type="button"

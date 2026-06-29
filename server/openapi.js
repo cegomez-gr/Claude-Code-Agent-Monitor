@@ -4,10 +4,34 @@
  */
 
 const pkg = require("../package.json");
+const extraSpec = require("./openapi-extra");
 
 function normalizeRepositoryUrl(url) {
   if (!url || typeof url !== "string") return null;
   return url.replace(/^git\+/, "").replace(/\.git$/, "");
+}
+
+/**
+ * Merge supplementary tags/schemas/paths (from server/openapi-extra) into the
+ * base spec. Extra `paths` and `schemas` override base entries with the same
+ * key; `tags` are appended only when a tag with that `name` isn't already
+ * present. Mutates and returns `spec`.
+ */
+function mergeExtraSpec(spec, extra) {
+  if (!extra) return spec;
+  if (Array.isArray(extra.tags) && extra.tags.length > 0) {
+    const have = new Set((spec.tags || []).map((t) => t && t.name));
+    for (const tag of extra.tags) {
+      if (tag && !have.has(tag.name)) spec.tags.push(tag);
+    }
+  }
+  if (extra.schemas) {
+    spec.components.schemas = { ...spec.components.schemas, ...extra.schemas };
+  }
+  if (extra.paths) {
+    spec.paths = { ...spec.paths, ...extra.paths };
+  }
+  return spec;
 }
 
 function createOpenApiSpec() {
@@ -20,7 +44,7 @@ function createOpenApiSpec() {
         : null;
   const defaultPort = Number.parseInt(process.env.DASHBOARD_PORT || "4820", 10) || 4820;
 
-  return {
+  const spec = {
     openapi: "3.0.3",
     info: {
       title: "Agent Dashboard for Claude Code API",
@@ -62,6 +86,7 @@ function createOpenApiSpec() {
       { name: "Analytics", description: "Aggregated analytics views" },
       { name: "Hooks", description: "Claude hook ingestion endpoint" },
       { name: "Pricing", description: "Model pricing and token cost calculations" },
+      { name: "Runtime Sessions", description: "Runtime session lifecycle and registry views" },
       { name: "Workflows", description: "Workflow intelligence and session drill-in" },
       { name: "Settings", description: "Operational maintenance endpoints" },
       {
@@ -88,6 +113,13 @@ function createOpenApiSpec() {
           required: true,
           schema: { type: "string" },
           description: "Session ID",
+        },
+        RuntimeSessionIdPath: {
+          name: "sessionId",
+          in: "path",
+          required: true,
+          schema: { type: "string" },
+          description: "Runtime session ID",
         },
         AgentIdPath: {
           name: "id",
@@ -154,6 +186,23 @@ function createOpenApiSpec() {
           },
           description: "Filter workflow aggregates by session status",
         },
+        RuntimeStatusQuery: {
+          name: "status",
+          in: "query",
+          required: false,
+          schema: {
+            type: "string",
+            enum: ["starting", "running", "detached", "exited", "stale", "error"],
+          },
+          description: "Filter by runtime status",
+        },
+        RuntimePersistenceQuery: {
+          name: "persistence",
+          in: "query",
+          required: false,
+          schema: { type: "string", enum: ["ephemeral", "persistent"] },
+          description: "Filter by persistence policy",
+        },
       },
       schemas: {
         ErrorObject: {
@@ -184,6 +233,115 @@ function createOpenApiSpec() {
         CountMap: {
           type: "object",
           additionalProperties: { type: "integer" },
+        },
+        RuntimeCapabilities: {
+          type: "object",
+          required: ["attach", "resize", "write", "terminate", "persistent"],
+          properties: {
+            attach: { type: "boolean" },
+            resize: { type: "boolean" },
+            write: { type: "boolean" },
+            terminate: { type: "boolean" },
+            persistent: { type: "boolean" },
+            externalAttach: { type: "boolean" },
+            supportsCreate: { type: "boolean" },
+          },
+        },
+        RuntimeSessionSummary: {
+          type: "object",
+          required: [
+            "sessionId",
+            "command",
+            "persistence",
+            "status",
+            "capabilities",
+            "createdAt",
+            "updatedAt",
+          ],
+          properties: {
+            sessionId: { type: "string" },
+            title: { type: "string", nullable: true },
+            cwd: { type: "string", nullable: true },
+            command: { type: "string" },
+            args: { type: "array", items: { type: "string" } },
+            persistence: { type: "string", enum: ["ephemeral", "persistent"] },
+            status: {
+              type: "string",
+              enum: ["starting", "running", "detached", "exited", "stale", "error"],
+            },
+            capabilities: { $ref: "#/components/schemas/RuntimeCapabilities" },
+            createdAt: { type: "string", format: "date-time" },
+            updatedAt: { type: "string", format: "date-time" },
+            lastAttachedAt: { type: "string", format: "date-time", nullable: true },
+            exitedAt: { type: "string", format: "date-time", nullable: true },
+          },
+        },
+        RuntimeSessionDebug: {
+          allOf: [
+            { $ref: "#/components/schemas/RuntimeSessionSummary" },
+            {
+              type: "object",
+              required: ["provider", "providerId"],
+              properties: {
+                provider: { type: "string", enum: ["pty", "tmux"] },
+                providerId: { type: "string" },
+                metadata: { type: "object", additionalProperties: true },
+              },
+            },
+          ],
+        },
+        RuntimeSessionListResponse: {
+          type: "object",
+          required: ["items", "total", "limit", "offset"],
+          properties: {
+            items: {
+              type: "array",
+              items: { $ref: "#/components/schemas/RuntimeSessionSummary" },
+            },
+            total: { type: "integer" },
+            limit: { type: "integer" },
+            offset: { type: "integer" },
+          },
+        },
+        RuntimeSessionCreateRequest: {
+          type: "object",
+          required: ["persistence"],
+          properties: {
+            sessionId: {
+              type: "string",
+              description: "Optional caller-provided application session ID.",
+            },
+            title: { type: "string" },
+            cwd: { type: "string" },
+            command: {
+              type: "string",
+              description: "Configured Claude command. Provider selection is not accepted here.",
+            },
+            args: {
+              type: "array",
+              items: { type: "string" },
+            },
+            env: {
+              type: "object",
+              additionalProperties: { type: "string" },
+            },
+            persistence: { type: "string", enum: ["ephemeral", "persistent"] },
+          },
+          additionalProperties: false,
+        },
+        RuntimeSessionResponse: {
+          type: "object",
+          required: ["item"],
+          properties: {
+            item: { $ref: "#/components/schemas/RuntimeSessionSummary" },
+          },
+        },
+        RuntimeSessionDebugResponse: {
+          type: "object",
+          required: ["item"],
+          properties: {
+            item: { $ref: "#/components/schemas/RuntimeSessionDebug" },
+          },
         },
         Session: {
           type: "object",
@@ -1231,6 +1389,143 @@ function createOpenApiSpec() {
               content: {
                 "application/json": {
                   schema: { $ref: "#/components/schemas/HealthResponse" },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/api/runtime-sessions": {
+        get: {
+          tags: ["Runtime Sessions"],
+          summary: "List runtime sessions",
+          description:
+            "Read-only runtime-neutral list. Provider details and provider metadata are intentionally omitted from this normal endpoint.",
+          operationId: "listRuntimeSessions",
+          parameters: [
+            { $ref: "#/components/parameters/RuntimeStatusQuery" },
+            { $ref: "#/components/parameters/RuntimePersistenceQuery" },
+            {
+              name: "cwd",
+              in: "query",
+              required: false,
+              schema: { type: "string" },
+              description: "Filter by working directory",
+            },
+            { $ref: "#/components/parameters/LimitQuery" },
+            { $ref: "#/components/parameters/OffsetQuery" },
+          ],
+          responses: {
+            200: {
+              description: "Runtime session list",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/RuntimeSessionListResponse" },
+                },
+              },
+            },
+            400: {
+              description: "Invalid filter",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+              },
+            },
+          },
+        },
+        post: {
+          tags: ["Runtime Sessions"],
+          summary: "Create runtime session",
+          description:
+            "Creates a runtime session from user intent. Normal clients send persistence policy only; provider selection is resolved by RuntimeManager and is not accepted in this request.",
+          operationId: "createRuntimeSession",
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/RuntimeSessionCreateRequest" },
+              },
+            },
+          },
+          responses: {
+            201: {
+              description: "Runtime session created",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/RuntimeSessionResponse" },
+                },
+              },
+            },
+            400: {
+              description: "Invalid create request",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+              },
+            },
+            503: {
+              description: "Runtime provider unavailable",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/api/runtime-sessions/{sessionId}": {
+        get: {
+          tags: ["Runtime Sessions"],
+          summary: "Get runtime session",
+          description:
+            "Read-only runtime-neutral detail. Provider details are available only from the debug endpoint.",
+          operationId: "getRuntimeSession",
+          parameters: [{ $ref: "#/components/parameters/RuntimeSessionIdPath" }],
+          responses: {
+            200: {
+              description: "Runtime session",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/RuntimeSessionResponse" },
+                },
+              },
+            },
+            404: {
+              description: "Runtime session not found",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
+                },
+              },
+            },
+          },
+        },
+      },
+      "/api/runtime-sessions/{sessionId}/debug": {
+        get: {
+          tags: ["Runtime Sessions"],
+          summary: "Get runtime session debug details",
+          description:
+            "Optional debug endpoint exposing provider name, provider ID, and provider metadata. Normal runtime UI should not depend on this response.",
+          operationId: "getRuntimeSessionDebug",
+          parameters: [{ $ref: "#/components/parameters/RuntimeSessionIdPath" }],
+          responses: {
+            200: {
+              description: "Runtime session debug details",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/RuntimeSessionDebugResponse" },
+                },
+              },
+            },
+            404: {
+              description: "Runtime session not found",
+              content: {
+                "application/json": {
+                  schema: { $ref: "#/components/schemas/ErrorResponse" },
                 },
               },
             },
@@ -2703,6 +2998,8 @@ function createOpenApiSpec() {
         get: {
           tags: ["Documentation"],
           summary: "Get OpenAPI specification JSON",
+          description:
+            "Returns this OpenAPI 3.0 document as JSON. Both API explorers consume it: Swagger UI (`/api/docs`) for interactive try-it-out requests, and ReDoc (`/api/redoc`) for a read-optimized reference.",
           operationId: "getOpenApiJson",
           responses: {
             200: {
@@ -2716,6 +3013,36 @@ function createOpenApiSpec() {
           },
         },
       },
+      "/api/docs": {
+        get: {
+          tags: ["Documentation"],
+          summary: "Swagger UI explorer",
+          description:
+            "Interactive Swagger UI rendering of this specification, with try-it-out request execution against the live local server.",
+          operationId: "getSwaggerUi",
+          responses: {
+            200: {
+              description: "Swagger UI HTML page",
+              content: { "text/html": { schema: { type: "string" } } },
+            },
+          },
+        },
+      },
+      "/api/redoc": {
+        get: {
+          tags: ["Documentation"],
+          summary: "ReDoc API reference",
+          description:
+            "Read-optimized, three-panel ReDoc rendering of this specification. The ReDoc bundle is served locally from `/api/redoc/redoc.standalone.js` (bundled with the server, never fetched from a CDN), so the reference works fully offline.",
+          operationId: "getRedoc",
+          responses: {
+            200: {
+              description: "ReDoc HTML page",
+              content: { "text/html": { schema: { type: "string" } } },
+            },
+          },
+        },
+      },
     },
     ...(issuesUrl
       ? {
@@ -2723,6 +3050,8 @@ function createOpenApiSpec() {
         }
       : {}),
   };
+
+  return mergeExtraSpec(spec, extraSpec);
 }
 
 module.exports = { createOpenApiSpec };

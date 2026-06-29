@@ -17,6 +17,9 @@ process.env.DASHBOARD_DB_PATH = TEST_DB;
 
 const { createApp, startServer } = require("../index");
 const { db, stmts } = require("../db");
+const { SessionRegistry } = require("../runtime/session-registry");
+const { defineCapabilities } = require("../runtime/contracts");
+const runtimeSessionsRouter = require("../routes/runtime-sessions");
 
 let server;
 let BASE;
@@ -24,6 +27,10 @@ const EXPECTED_API_PATHS = [
   "/api/health",
   "/api/sessions",
   "/api/sessions/{id}",
+  "/api/sessions/facets",
+  "/api/sessions/{id}/stats",
+  "/api/sessions/{id}/transcripts",
+  "/api/sessions/{id}/transcript",
   "/api/agents",
   "/api/agents/{id}",
   "/api/events",
@@ -37,6 +44,8 @@ const EXPECTED_API_PATHS = [
   "/api/pricing/cost/{sessionId}",
   "/api/workflows",
   "/api/workflows/session/{id}",
+  "/api/workflows/runs",
+  "/api/workflows/runs/{runId}",
   "/api/settings/info",
   "/api/settings/clear-data",
   "/api/settings/reimport",
@@ -44,6 +53,7 @@ const EXPECTED_API_PATHS = [
   "/api/settings/reset-pricing",
   "/api/settings/export",
   "/api/settings/cleanup",
+  "/api/settings/claude-home",
   "/api/import/guide",
   "/api/import/rescan",
   "/api/import/scan-path",
@@ -55,7 +65,43 @@ const EXPECTED_API_PATHS = [
   "/api/alerts/rules/{id}",
   "/api/alerts/{id}/ack",
   "/api/alerts/ack-all",
+  "/api/runtime-sessions",
+  "/api/runtime-sessions/{sessionId}",
+  "/api/runtime-sessions/{sessionId}/debug",
+  "/api/push/vapid-public-key",
+  "/api/push/subscribe",
+  "/api/push/send",
+  "/api/cc-config/overview",
+  "/api/cc-config/skills",
+  "/api/cc-config/agents",
+  "/api/cc-config/commands",
+  "/api/cc-config/output-styles",
+  "/api/cc-config/plugins",
+  "/api/cc-config/mcp",
+  "/api/cc-config/hooks",
+  "/api/cc-config/settings",
+  "/api/cc-config/memory",
+  "/api/cc-config/marketplaces",
+  "/api/cc-config/keybindings",
+  "/api/cc-config/statusline",
+  "/api/cc-config/hook-scripts",
+  "/api/cc-config/file",
+  "/api/cc-config/backups",
+  "/api/run",
+  "/api/run/history",
+  "/api/run/cwds",
+  "/api/run/files",
+  "/api/run/binary",
+  "/api/run/{id}",
+  "/api/run/{id}/message",
+  "/api/webhooks",
+  "/api/webhooks/providers",
+  "/api/webhooks/{id}",
+  "/api/webhooks/{id}/test",
+  "/api/webhooks/{id}/deliveries",
   "/api/openapi.json",
+  "/api/docs",
+  "/api/redoc",
 ];
 
 function fetch(urlPath, options = {}) {
@@ -148,6 +194,21 @@ describe("OpenAPI / Swagger", () => {
     assert.equal(res.status, 200);
     assert.match(res.headers["content-type"], /text\/html/);
     assert.match(res.body, /swagger/i);
+  });
+
+  it("should serve the ReDoc reference page", async () => {
+    const res = await fetch("/api/redoc");
+    assert.equal(res.status, 200);
+    assert.match(res.headers["content-type"], /text\/html/);
+    // References the spec and the locally-served bundle (no CDN).
+    assert.match(res.body, /spec-url="\/api\/openapi\.json"/);
+    assert.match(res.body, /src="\/api\/redoc\/redoc\.standalone\.js"/);
+  });
+
+  it("should serve the self-hosted ReDoc bundle", async () => {
+    const res = await fetch("/api/redoc/redoc.standalone.js");
+    assert.equal(res.status, 200);
+    assert.match(res.headers["content-type"], /javascript/);
   });
 });
 
@@ -866,6 +927,30 @@ describe("Hook Event Processing", () => {
     assert.ok(main.awaiting_input_since, "fresh main agent should be flagged Waiting");
   });
 
+  it("mirrors hook-discovered tmux metadata into the runtime registry", async () => {
+    const sid = "hook-sess-tmux-registry";
+    await post("/api/hooks/event", {
+      hook_type: "SessionStart",
+      data: { session_id: sid, source: "startup" },
+      _tmux_session: "claude-main",
+    });
+
+    const session = stmts.getSession.get(sid);
+    assert.equal(JSON.parse(session.metadata).tmux_session, "claude-main");
+
+    const runtime = db.prepare("SELECT * FROM runtime_sessions WHERE session_id = ?").get(sid);
+    assert.equal(runtime.provider, "tmux");
+    assert.equal(runtime.provider_id, "claude-main");
+    assert.equal(runtime.persistence, "persistent");
+    assert.equal(runtime.status, "running");
+    assert.equal(JSON.parse(runtime.capabilities).supportsCreate, false);
+    assert.deepEqual(JSON.parse(runtime.metadata).tmux, {
+      sessionName: "claude-main",
+      externallyDiscovered: true,
+      dashboardOwned: false,
+    });
+  });
+
   it("should clear awaiting_input_since and promote main to working on UserPromptSubmit", async () => {
     // The bug this guards: text-only assistant turns emit no PreToolUse,
     // so without UserPromptSubmit the Waiting badge would persist for the
@@ -1475,6 +1560,305 @@ describe("Hook Event Processing", () => {
     assert.equal(updatedSonnet.output_tokens, 130);
 
     fs.unlinkSync(transcriptPath);
+  });
+});
+
+// ============================================================
+// Runtime Sessions Read API
+// ============================================================
+describe("Runtime Sessions API", () => {
+  function seedRuntimeSession(overrides = {}) {
+    const registry = new SessionRegistry({ db });
+    const sessionId = overrides.sessionId || `runtime-api-${Date.now()}-${Math.random()}`;
+    const providerId = overrides.providerId || "runtime-tmux";
+    const persistence = overrides.persistence || "persistent";
+    stmts.insertSession.run(
+      sessionId,
+      overrides.title || "Runtime API Session",
+      "active",
+      overrides.cwd || "/tmp/runtime-api",
+      "claude-sonnet-4-5",
+      JSON.stringify({ tmux_session: providerId })
+    );
+    return registry.create({
+      sessionId,
+      title: overrides.title || "Runtime API Session",
+      cwd: overrides.cwd || "/tmp/runtime-api",
+      command: "claude",
+      args: [],
+      env: {},
+      persistence,
+      provider: overrides.provider || "tmux",
+      providerId,
+      status: overrides.status || "running",
+      capabilities: defineCapabilities({
+        attach: true,
+        resize: true,
+        write: true,
+        terminate: false,
+        persistent: persistence === "persistent",
+        externalAttach: true,
+        supportsCreate: false,
+      }),
+      metadata: overrides.metadata || {
+        tmux: {
+          sessionName: providerId,
+          externallyDiscovered: true,
+          dashboardOwned: false,
+        },
+      },
+    });
+  }
+
+  it("lists runtime-neutral records without provider metadata", async () => {
+    const record = seedRuntimeSession({
+      sessionId: "runtime-api-list-1",
+      providerId: "runtime-list-tmux",
+      cwd: "/tmp/runtime-list",
+    });
+
+    const res = await fetch("/api/runtime-sessions?status=running&persistence=persistent");
+
+    assert.equal(res.status, 200);
+    const item = res.body.items.find((row) => row.sessionId === record.sessionId);
+    assert.ok(item);
+    assert.equal(item.status, "running");
+    assert.equal(item.persistence, "persistent");
+    assert.equal(item.cwd, "/tmp/runtime-list");
+    assert.equal(item.capabilities.attach, true);
+    assert.equal(item.provider, undefined);
+    assert.equal(item.providerId, undefined);
+    assert.equal(item.metadata, undefined);
+  });
+
+  it("gets one runtime-neutral record and returns normalized 404s", async () => {
+    const record = seedRuntimeSession({
+      sessionId: "runtime-api-get-1",
+      providerId: "runtime-get-tmux",
+    });
+
+    const res = await fetch(`/api/runtime-sessions/${record.sessionId}`);
+    assert.equal(res.status, 200);
+    assert.equal(res.body.item.sessionId, record.sessionId);
+    assert.equal(res.body.item.provider, undefined);
+    assert.equal(res.body.item.metadata, undefined);
+
+    const missing = await fetch("/api/runtime-sessions/missing-runtime-session");
+    assert.equal(missing.status, 404);
+    assert.deepEqual(missing.body.error, {
+      code: "RUNTIME_NOT_FOUND",
+      message: "Runtime session not found.",
+    });
+  });
+
+  it("exposes provider details only on the debug endpoint", async () => {
+    const record = seedRuntimeSession({
+      sessionId: "runtime-api-debug-1",
+      providerId: "runtime-debug-tmux",
+    });
+
+    const res = await fetch(`/api/runtime-sessions/${record.sessionId}/debug`);
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.item.provider, "tmux");
+    assert.equal(res.body.item.providerId, "runtime-debug-tmux");
+    assert.deepEqual(res.body.item.metadata.tmux, {
+      sessionName: "runtime-debug-tmux",
+      externallyDiscovered: true,
+      dashboardOwned: false,
+    });
+  });
+
+  it("creates ephemeral runtime sessions from persistence intent only", async () => {
+    const createCalls = [];
+    runtimeSessionsRouter.__setRuntimeManagerForTests({
+      create(request) {
+        createCalls.push(request);
+        return new SessionRegistry({ db }).upsert({
+          sessionId: request.sessionId,
+          title: request.title,
+          cwd: request.cwd,
+          command: request.command,
+          args: request.args,
+          env: {},
+          persistence: request.persistence,
+          provider: "pty",
+          providerId: "pty-api-create",
+          status: "running",
+          capabilities: defineCapabilities({
+            attach: true,
+            resize: true,
+            write: true,
+            terminate: true,
+            persistent: false,
+            externalAttach: false,
+            supportsCreate: true,
+          }),
+          metadata: { pty: { pid: 4321 } },
+        });
+      },
+    });
+
+    try {
+      const res = await post("/api/runtime-sessions", {
+        sessionId: "runtime-api-create-1",
+        title: "Runtime API Create",
+        cwd: "/tmp/runtime-create",
+        command: "claude",
+        args: ["--continue"],
+        persistence: "ephemeral",
+      });
+
+      assert.equal(res.status, 201);
+      assert.equal(res.body.item.sessionId, "runtime-api-create-1");
+      assert.equal(res.body.item.persistence, "ephemeral");
+      assert.equal(res.body.item.status, "running");
+      assert.equal(res.body.item.cwd, "/tmp/runtime-create");
+      assert.equal(res.body.item.provider, undefined);
+      assert.equal(res.body.item.providerId, undefined);
+      assert.equal(res.body.item.metadata, undefined);
+      assert.equal(createCalls.length, 1);
+      assert.equal(createCalls[0].provider, undefined);
+      assert.equal(createCalls[0].persistence, "ephemeral");
+
+      const debug = await fetch("/api/runtime-sessions/runtime-api-create-1/debug");
+      assert.equal(debug.status, 200);
+      assert.equal(debug.body.item.provider, "pty");
+      assert.equal(debug.body.item.providerId, "pty-api-create");
+    } finally {
+      runtimeSessionsRouter.__setRuntimeManagerForTests(null);
+    }
+  });
+
+  it("creates persistent runtime sessions from persistence intent only", async () => {
+    const createCalls = [];
+    runtimeSessionsRouter.__setRuntimeManagerForTests({
+      create(request) {
+        createCalls.push(request);
+        return new SessionRegistry({ db }).upsert({
+          sessionId: request.sessionId,
+          title: request.title,
+          cwd: request.cwd,
+          command: request.command,
+          args: request.args,
+          env: {},
+          persistence: request.persistence,
+          provider: "tmux",
+          providerId: "tmux-api-create",
+          status: "running",
+          capabilities: defineCapabilities({
+            attach: true,
+            resize: true,
+            write: true,
+            terminate: false,
+            persistent: true,
+            externalAttach: true,
+            supportsCreate: true,
+          }),
+          metadata: {
+            tmux: {
+              sessionName: "tmux-api-create",
+              externallyDiscovered: false,
+              dashboardOwned: true,
+            },
+          },
+        });
+      },
+    });
+
+    try {
+      const res = await post("/api/runtime-sessions", {
+        sessionId: "runtime-api-create-persistent-1",
+        title: "Runtime API Persistent",
+        cwd: "/tmp/runtime-persistent",
+        persistence: "persistent",
+      });
+
+      assert.equal(res.status, 201);
+      assert.equal(res.body.item.sessionId, "runtime-api-create-persistent-1");
+      assert.equal(res.body.item.persistence, "persistent");
+      assert.equal(res.body.item.provider, undefined);
+      assert.equal(createCalls.length, 1);
+      assert.equal(createCalls[0].provider, undefined);
+      assert.equal(createCalls[0].persistence, "persistent");
+
+      const debug = await fetch("/api/runtime-sessions/runtime-api-create-persistent-1/debug");
+      assert.equal(debug.status, 200);
+      assert.equal(debug.body.item.provider, "tmux");
+      assert.equal(debug.body.item.providerId, "tmux-api-create");
+    } finally {
+      runtimeSessionsRouter.__setRuntimeManagerForTests(null);
+    }
+  });
+
+  it("rejects invalid read filters and provider-selected create requests", async () => {
+    const badStatus = await fetch("/api/runtime-sessions?status=paused");
+    assert.equal(badStatus.status, 400);
+    assert.equal(badStatus.body.error.code, "RUNTIME_INVALID_REQUEST");
+
+    const providerAttempt = await post("/api/runtime-sessions", {
+      persistence: "ephemeral",
+      provider: "tmux",
+    });
+    assert.equal(providerAttempt.status, 400);
+    assert.deepEqual(providerAttempt.body.error, {
+      code: "RUNTIME_INVALID_REQUEST",
+      message: "Runtime provider is selected by RuntimeManager.",
+    });
+  });
+
+  it("DELETE /api/runtime-sessions/:sessionId terminates and returns 204", async () => {
+    let terminated = null;
+    runtimeSessionsRouter.__setRuntimeManagerForTests({
+      terminate(sessionId) {
+        terminated = sessionId;
+      },
+    });
+    try {
+      const res = await fetch("/api/runtime-sessions/session-to-kill", {
+        method: "DELETE",
+      });
+      assert.equal(res.status, 204);
+      assert.equal(terminated, "session-to-kill");
+    } finally {
+      runtimeSessionsRouter.__setRuntimeManagerForTests(null);
+    }
+  });
+
+  it("DELETE /api/runtime-sessions/:sessionId returns 404 when session not found", async () => {
+    const { RuntimeError } = require("../runtime/errors");
+    runtimeSessionsRouter.__setRuntimeManagerForTests({
+      terminate() {
+        throw new RuntimeError("RUNTIME_NOT_FOUND", "session not found");
+      },
+    });
+    try {
+      const res = await fetch("/api/runtime-sessions/ghost-session", {
+        method: "DELETE",
+      });
+      assert.equal(res.status, 404);
+      assert.equal(res.body.error.code, "RUNTIME_NOT_FOUND");
+    } finally {
+      runtimeSessionsRouter.__setRuntimeManagerForTests(null);
+    }
+  });
+
+  it("DELETE /api/runtime-sessions/:sessionId returns 501 for unsupported terminate", async () => {
+    const { RuntimeError } = require("../runtime/errors");
+    runtimeSessionsRouter.__setRuntimeManagerForTests({
+      terminate() {
+        throw new RuntimeError("RUNTIME_UNSUPPORTED_OPERATION", "terminate not supported");
+      },
+    });
+    try {
+      const res = await fetch("/api/runtime-sessions/pty-session", {
+        method: "DELETE",
+      });
+      assert.equal(res.status, 501);
+      assert.equal(res.body.error.code, "RUNTIME_UNSUPPORTED_OPERATION");
+    } finally {
+      runtimeSessionsRouter.__setRuntimeManagerForTests(null);
+    }
   });
 });
 

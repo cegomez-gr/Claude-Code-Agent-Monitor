@@ -57,6 +57,9 @@
     "dev:client": "cd client && npm run dev",
     "build": "cd client && npm run build",
     "start": "node server/index.js",
+    "service:install": "bash scripts/install-launchd-service.sh",
+    "service:uninstall": "bash scripts/uninstall-launchd-service.sh",
+    "service:status": "bash scripts/status-launchd-service.sh",
     "setup": "npm install && (cd client && npm install) && (cd vscode-extension && npm install)",
     "update:pull-setup": "git pull --ff-only && npm run setup",
     "mcp:install": "npm --prefix mcp install",
@@ -89,13 +92,15 @@
     "test:client": "cd client && npm test",
     "test:mcp": "npm --prefix mcp run test",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "openapi:yaml": "node scripts/generate-openapi-yaml.js"
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "multer": "^2.0.0",
+    "redoc": "^2.5.3",
     "swagger-ui-express": "^5.0.1",
     "tar": "^7.4.3",
     "uuid": "^11.1.0",
@@ -108,6 +113,7 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
+    "js-yaml": "^4.1.0",
     "prettier": "^3.8.1"
   },
   "engines": {

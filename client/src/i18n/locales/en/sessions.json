@@ -20,6 +20,18 @@
   "tableCost": "Cost",
   "tableDirectory": "Directory",
   "defaultName": "Session ",
+  "create": {
+    "open": "New session",
+    "title": "New session",
+    "close": "Close",
+    "name": "Name",
+    "namePlaceholder": "Claude session",
+    "directory": "Directory",
+    "directoryPlaceholder": "Current working directory",
+    "keepRunning": "Keep running after dashboard closes",
+    "submit": "Create session",
+    "error": "Failed to create session"
+  },
   "detail": {
     "failedLoad": "Failed to load session",
     "loading": "Loading session...",
@@ -30,6 +42,15 @@
     "unparented": "Unparented Subagents",
     "costBreakdown": "Cost Breakdown",
     "eventTimeline": "Event Timeline",
-    "noEvents": "No events recorded."
+    "noEvents": "No events recorded.",
+    "terminate": "Terminate",
+    "terminateConfirm": "Terminate this session? This action cannot be undone.",
+    "terminateError": "Failed to terminate session",
+    "showDebug": "Show debug details",
+    "hideDebug": "Hide debug details",
+    "debugDetails": "Debug Details",
+    "debugProvider": "Provider",
+    "debugProviderId": "Provider ID",
+    "debugMetadata": "Metadata"
   }
 }

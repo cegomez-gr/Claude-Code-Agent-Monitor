@@ -4,6 +4,8 @@
 
 A professional dashboard to track and visualize your Claude Code agent sessions, tool usage, and subagent orchestration in real-time. Built with Node.js, Express, React, and SQLite, it integrates directly with Claude Code via its native hook system for seamless session tracking and analytics.
 
+> **Runtime Platform.** This fork evolves the embedded terminal into a provider-agnostic runtime. The dashboard manages Claude sessions through a **Runtime Manager**: the frontend expresses only _intent_ (`ephemeral` or `persistent`) and never selects a provider (tmux/PTY) directly — tmux is one provider, not the platform. xterm.js stays runtime-agnostic. Before changing any runtime, terminal, websocket, tmux, or session code, read [`AGENTS.md`](AGENTS.md), the architecture docs under [`docs/architecture/`](docs/architecture/), and the ADRs under [`docs/adr/`](docs/adr/).
+
 ![Claude Code](https://img.shields.io/badge/Claude_Code-orange?style=flat-square&logo=claude&logoColor=white)
 ![Claude Code Plugins](https://img.shields.io/badge/Claude_Code-Plugins_&_Skills-orange?style=flat-square&logo=anthropic&logoColor=white)
 ![Model Context Protocol](https://img.shields.io/badge/Model_Context_Protocol-1.0-0f766e?style=flat-square&logo=modelcontextprotocol&logoColor=white)
@@ -279,7 +281,6 @@ The dashboard offers a comprehensive set of features to monitor and analyze your
 | **Kanban Board**                   | Two views with a header toggle (persisted in `localStorage`): **Agents** — 4 columns (Working / Waiting / Completed / Error) — and **Sessions** — 5 columns (Active / Waiting / Completed / Error / Abandoned). The **Waiting** column maps directly to the persisted `waiting` status on agents — set when Claude Code is sitting at a prompt (fresh session, between turns, or blocked on a permission Notification) and transitions to `working` the moment the user resumes (UserPromptSubmit / PreToolUse). Each column header shows a `?` tooltip explaining lifecycle transitions. Cards fetch by persisted status from the server (effectively unlimited per status), then paginate client-side at 10 cards per column with a "Show more" affordance. WS subscription scopes to the active view (`agent_*` vs `session_*` frames) so off-view updates don't trigger refetches. |
 | **Sessions**                       | Searchable, filterable, **server-paginated** table of every recorded session. Each page click hits `/api/sessions?status=&q=&limit=10&offset=…`, so cost computation runs only over the visible page — independent of how many sessions exist in the database. The search box (`q=`) does case-insensitive matching across `id` / `name` / `cwd` on the server with a 300 ms debounce, and the response carries a `total` count for the paginator UI. Status filter, search, and pagination compose. Each session's human-readable **name** is read from the transcript and kept in sync in real time — an explicit title from `/rename`, `claude -n`, or the picker's `Ctrl+R` (the JSONL `custom-title` line) always wins, otherwise the auto-generated `ai-title` fills in; the dashboard surfaces that name (falling back to the short ID) on cards, the Dashboard, the Activity Feed, and the Run resume picker. |
 | **Session Detail**                 | Per-session real-time overview panel with active-agent banner (current tool + task), six tile counters (events with events/min rate, tool calls, subagents, compactions, errors, ticking duration), top-tool usage bars, subagent type breakdown, stacked token-flow strip, and event-type pill cloud — all live-refreshed on hook events. Below it: agent hierarchy tree, full event timeline with multi-dimension filters (status, event type, tool, agent, text search, date range), Pre/Post grouping by `tool_use_id`, human-readable summary block, tool-aware input/response renderers (terminal for Bash, unified diff for Edit, line-numbered code for Read/Write, match list for Grep, key/value card for MCP tools), and a Conversation tab that renders transcripts with markdown (headings, lists, blockquotes, tables, task lists), syntax-highlighted code blocks (js/ts, python, json, bash, html, css, sql, yaml, diff) with line numbers and copy-to-clipboard, and per-tool styled tool calls (Bash → terminal, Edit → side-by-side old/new, Write → file label, Read → path chip, Grep → pattern card) |
-| **Embedded Terminal (tmux)**       | A **Terminal** tab on Session Detail that attaches a live, interactive [xterm.js](https://xtermjs.org/) terminal to the session's own `tmux` over a dedicated `/terminal/:sessionId` WebSocket — the server spawns `tmux attach-session` through [`node-pty`](https://github.com/microsoft/node-pty) and pipes it both ways (keystrokes up, output down, resize synced via `FitAddon` + `ResizeObserver`). **The tab only appears when the session was started inside tmux.** The `SessionStart` hook runs as a child of `claude`, so it inherits `$TMUX`, resolves the session name in-process, and stamps it onto `session.metadata.tmux_session`; the dashboard render-gates the tab on that field. **Requirements:** `tmux` installed and on `PATH`, and the `claude` process launched from inside a tmux pane (run `tmux new-session -s <name>` then `claude` — a startup notice `📟 tmux "<name>" detectado` confirms detection). `node-pty` ships with the project; a `postinstall` step restores the execute bit on its `spawn-helper` binary (some package managers drop it, which otherwise surfaces as `posix_spawnp failed` at attach time). In production the client is served by the same Express process, so the socket reaches the server directly; the Vite dev server proxies `/terminal` to the backend |
 | **Activity Feed**                  | Real-time streaming event log with pause/resume, multi-dimension filters (same toolbar as Session Detail plus a Session filter), server-driven "Load more" pagination, debounced filter-aware live refresh preserving the loaded page size, grouping toggle, origin prefix showing project › session › subagent, and a "Session →" button per row                                         |
 | **Analytics**                      | Token usage, tool frequency, activity heatmap (centered, day-of-week aligned starting Sunday, day-name tooltips), session trends, live/offline connection indicator. While the analytics payload loads, the chart region (not just the stat tiles) shows **pulsing skeleton placeholders** that mirror the chart layout, so the page never flashes empty/zero charts |
 | **Live Updates**                   | WebSocket push -- no polling, instant UI updates                                                                                                                                                                                                                             |
@@ -450,7 +451,7 @@ The dashboard is then available at `http://localhost:4820`. The server binds `12
 | `agent-monitor-data:/app/data` | Persist the SQLite database across restarts |
 
 > [!IMPORTANT]
-> **Note:** Claude Code hooks must still point to a running hook-handler process on the host. The container itself does not receive hooks — run `npm run install-hooks` on the host to configure hooks that POST to `http://localhost:4820`.
+> **Note:** Claude Code hooks must still point to a running hook-handler process on the host. The container itself does not receive hooks — run `npm run install-hooks` **on the host** to configure hooks that POST to `http://localhost:4820`. Running the installer inside a container is **refused** (issue #193) so it can't write a container-internal handler path into a bind-mounted host `~/.claude`; override with `CCAM_ALLOW_CONTAINER_HOOKS=1` only if you actually run Claude Code inside the same container.
 
 ---
 
@@ -845,17 +846,33 @@ Full details: [mcp/README.md](./mcp/README.md)
 
 All endpoints return JSON. Error responses follow the shape `{ error: { code, message } }`.
 
-### OpenAPI / Swagger
+### OpenAPI / Swagger / ReDoc
 
-| Method | Path                | Description                         |
-| ------ | ------------------- | ----------------------------------- |
-| `GET`  | `/api/openapi.json` | Raw OpenAPI 3.0 spec                |
-| `GET`  | `/api/docs`         | Interactive Swagger UI documentation |
+There are three ways to explore the HTTP API, all driven by a single OpenAPI 3.0.3 spec (default server port `4820`):
 
-The OpenAPI document is generated from `server/openapi.js`, and Swagger UI is served directly by the backend.
+| Method | Path                            | Description                                                                                       |
+| ------ | ------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `GET`  | `/api/openapi.json`             | Raw OpenAPI 3.0.3 JSON spec                                                                        |
+| `GET`  | `/api/docs`                     | Interactive **Swagger UI** — try-it-out request execution                                         |
+| `GET`  | `/api/redoc`                    | **ReDoc** reference — a clean, read-optimized three-panel rendering of the same spec              |
+| `GET`  | `/api/redoc/redoc.standalone.js`| Self-hosted ReDoc bundle (served locally via the `redoc` dependency, never a CDN — works offline) |
+
+The OpenAPI document is generated from `server/openapi.js` (`createOpenApiSpec()`), merged with supplementary fragments under `server/openapi-extra/`. Swagger UI and ReDoc are both served directly by the backend; the ReDoc bundle is served locally (`GET /api/redoc/redoc.standalone.js`) so the reference works fully offline / air-gapped, consistent with the project's no-external-assets policy.
+
+Coverage is comprehensive: every backend route is documented (75 path entries) across these tags — Health, Sessions, Agents, Events, Stats, Analytics, Hooks, Pricing, Workflows, Settings, Updates, Alerts, Webhooks, Push, CcConfig (Claude Code config explorer), Run (dashboard-spawned runs), and Documentation — each with parameters, request/response schemas, field-level descriptions, and realistic examples.
+
+A committed **`openapi.yaml`** at the repo root mirrors the live spec. It is generated from `server/openapi.js` (never hand-edited) — regenerate it after API changes with:
+
+```bash
+npm run openapi:yaml
+```
 
 <p align="center">
   <img src="images/swagger.png" alt="Swagger UI" width="100%">
+</p>
+
+<p align="center">
+  <img src="images/redoc.png" alt="ReDoc UI" width="100%">
 </p>
 
 ### Health

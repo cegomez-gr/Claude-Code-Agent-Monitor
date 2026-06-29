@@ -1,0 +1,13 @@
+C4Context
+title Claude Runtime Platform - Context
+
+Person(user, "Developer", "Uses dashboard to manage Claude sessions")
+System(platform, "Claude-Code-Agent-Monitor", "Runtime platform for Claude sessions")
+System_Ext(claude, "Claude Code", "Interactive CLI agent")
+System_Ext(tmux, "tmux", "Persistent terminal multiplexer")
+System_Ext(os, "macOS launchd", "Background service manager")
+
+Rel(user, platform, "Creates, monitors and attaches to sessions")
+Rel(platform, claude, "Starts and controls")
+Rel(platform, tmux, "Uses for persistent sessions")
+Rel(os, platform, "Starts service")
