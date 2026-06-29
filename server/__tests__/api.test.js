@@ -1806,6 +1806,60 @@ describe("Runtime Sessions API", () => {
       message: "Runtime provider is selected by RuntimeManager.",
     });
   });
+
+  it("DELETE /api/runtime-sessions/:sessionId terminates and returns 204", async () => {
+    let terminated = null;
+    runtimeSessionsRouter.__setRuntimeManagerForTests({
+      terminate(sessionId) {
+        terminated = sessionId;
+      },
+    });
+    try {
+      const res = await fetch("/api/runtime-sessions/session-to-kill", {
+        method: "DELETE",
+      });
+      assert.equal(res.status, 204);
+      assert.equal(terminated, "session-to-kill");
+    } finally {
+      runtimeSessionsRouter.__setRuntimeManagerForTests(null);
+    }
+  });
+
+  it("DELETE /api/runtime-sessions/:sessionId returns 404 when session not found", async () => {
+    const { RuntimeError } = require("../runtime/errors");
+    runtimeSessionsRouter.__setRuntimeManagerForTests({
+      terminate() {
+        throw new RuntimeError("RUNTIME_NOT_FOUND", "session not found");
+      },
+    });
+    try {
+      const res = await fetch("/api/runtime-sessions/ghost-session", {
+        method: "DELETE",
+      });
+      assert.equal(res.status, 404);
+      assert.equal(res.body.error.code, "RUNTIME_NOT_FOUND");
+    } finally {
+      runtimeSessionsRouter.__setRuntimeManagerForTests(null);
+    }
+  });
+
+  it("DELETE /api/runtime-sessions/:sessionId returns 501 for unsupported terminate", async () => {
+    const { RuntimeError } = require("../runtime/errors");
+    runtimeSessionsRouter.__setRuntimeManagerForTests({
+      terminate() {
+        throw new RuntimeError("RUNTIME_UNSUPPORTED_OPERATION", "terminate not supported");
+      },
+    });
+    try {
+      const res = await fetch("/api/runtime-sessions/pty-session", {
+        method: "DELETE",
+      });
+      assert.equal(res.status, 501);
+      assert.equal(res.body.error.code, "RUNTIME_UNSUPPORTED_OPERATION");
+    } finally {
+      runtimeSessionsRouter.__setRuntimeManagerForTests(null);
+    }
+  });
 });
 
 // ============================================================

@@ -1,10 +1,6 @@
 const { Router } = require("express");
 const crypto = require("crypto");
-const {
-  PersistencePolicy,
-  RuntimeStatus,
-  RuntimeErrorCode,
-} = require("../runtime/contracts");
+const { PersistencePolicy, RuntimeStatus, RuntimeErrorCode } = require("../runtime/contracts");
 const { SessionRegistry } = require("../runtime/session-registry");
 const { RuntimeManager } = require("../runtime/runtime-manager");
 const { TmuxRuntime } = require("../runtime/providers/tmux-runtime");
@@ -201,6 +197,20 @@ router.get("/:sessionId", (req, res) => {
     return error(res, 404, RuntimeErrorCode.NOT_FOUND, "Runtime session not found.");
   }
   res.json({ item: summary(record) });
+});
+
+router.delete("/:sessionId", (req, res) => {
+  try {
+    getRuntimeManager().terminate(req.params.sessionId);
+    res.status(204).end();
+  } catch (err) {
+    return error(
+      res,
+      runtimeErrorStatus(err.code),
+      err.code || RuntimeErrorCode.PROVIDER_ERROR,
+      err.message || "Runtime session terminate failed."
+    );
+  }
 });
 
 function __setRuntimeManagerForTests(manager) {
