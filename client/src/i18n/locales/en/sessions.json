@@ -42,6 +42,9 @@
     "unparented": "Unparented Subagents",
     "costBreakdown": "Cost Breakdown",
     "eventTimeline": "Event Timeline",
-    "noEvents": "No events recorded."
+    "noEvents": "No events recorded.",
+    "terminate": "Terminate",
+    "terminateConfirm": "Terminate this session? This action cannot be undone.",
+    "terminateError": "Failed to terminate session"
   }
 }

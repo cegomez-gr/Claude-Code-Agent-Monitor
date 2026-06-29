@@ -22,6 +22,7 @@ import {
   AlertCircle,
   Play,
   ExternalLink,
+  Square,
   TerminalSquare,
   Workflow,
 } from "lucide-react";
@@ -65,6 +66,7 @@ import type {
   CostResult,
   TranscriptInfo,
   WorkflowRun,
+  RuntimeSessionSummary,
 } from "../lib/types";
 import { WorkflowRunsPanel } from "../components/workflows/WorkflowRunsPanel";
 import { TerminalPane } from "../components/TerminalPane";
@@ -108,6 +110,7 @@ export function SessionDetail() {
   useEffect(() => {
     setVisitedTabs((prev) => (prev.has(activeTab) ? prev : new Set(prev).add(activeTab)));
   }, [activeTab]);
+  const [runtimeSession, setRuntimeSession] = useState<RuntimeSessionSummary | null>(null);
   const [transcripts, setTranscripts] = useState<TranscriptInfo[]>([]);
   const [pendingTranscriptId, setPendingTranscriptId] = useState<string | null>(null);
   const [transcriptNotFound, setTranscriptNotFound] = useState(false);
@@ -192,6 +195,10 @@ export function SessionDetail() {
       setWorkflows(data.workflows || []);
       setCost(costData);
       setError(null);
+      api.runtimeSessions
+        .get(id)
+        .then((res) => setRuntimeSession(res.item))
+        .catch(() => setRuntimeSession(null));
     } catch (err) {
       setError(err instanceof Error ? err.message : t("detail.failedLoad"));
     } finally {
@@ -475,6 +482,20 @@ export function SessionDetail() {
     }
   }, [session?.metadata]);
 
+  const canAttach = runtimeSession ? runtimeSession.capabilities.attach : !!tmuxSession;
+  const canTerminate = runtimeSession?.capabilities.terminate ?? false;
+
+  const handleTerminate = useCallback(async () => {
+    if (!id || !canTerminate) return;
+    if (!window.confirm(t("detail.terminateConfirm"))) return;
+    try {
+      await api.runtimeSessions.terminate(id);
+      await load();
+    } catch {
+      alert(t("detail.terminateError"));
+    }
+  }, [id, canTerminate, t, load]);
+
   if (loading) {
     return (
       <div className="animate-fade-in space-y-8" aria-busy="true">
@@ -578,6 +599,15 @@ export function SessionDetail() {
             </>
           )}
         </div>
+        {canTerminate && (
+          <button
+            onClick={handleTerminate}
+            className="btn-ghost text-red-400 hover:text-red-300"
+            title={t("detail.terminate")}
+          >
+            <Square className="w-4 h-4" />
+          </button>
+        )}
         <button onClick={load} className="btn-ghost">
           <RefreshCw className="w-4 h-4" />
         </button>
@@ -651,7 +681,7 @@ export function SessionDetail() {
             <List className="w-4 h-4" />
             Timeline ({events.length}/{eventsTotal})
           </button>
-          {tmuxSession && (
+          {canAttach && (
             <button
               onClick={() => {
                 setActiveTab("terminal");
@@ -1034,11 +1064,10 @@ export function SessionDetail() {
         </div>
       )}
 
-      {tmuxSession && visitedTabs.has("terminal") && (
+      {canAttach && visitedTabs.has("terminal") && (
         <div hidden={activeTab !== "terminal"}>
           <TerminalPane
             sessionId={session.id}
-            tmuxSession={tmuxSession}
             expanded={terminalExpanded}
             onToggleExpanded={() => setTerminalExpanded((v) => !v)}
           />
