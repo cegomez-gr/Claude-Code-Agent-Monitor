@@ -188,6 +188,23 @@ describe("TmuxRuntime provider", () => {
     );
   });
 
+  it("raises CREATE_FAILED when the tmux binary is absent or fails", () => {
+    const runtime = new TmuxRuntime({
+      nodePty: mockNodePty(),
+      idFactory: () => "tmux-missing",
+      execFile() {
+        const err = new Error("tmux: command not found");
+        err.code = "ENOENT";
+        throw err;
+      },
+    });
+
+    assert.throws(
+      () => runtime.create({ persistence: "persistent", cwd: "/tmp/project" }),
+      (err) => err.code === "RUNTIME_CREATE_FAILED"
+    );
+  });
+
   it("keeps future lifecycle operations explicitly unsupported", () => {
     const runtime = new TmuxRuntime({ nodePty: mockNodePty() });
 

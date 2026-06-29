@@ -228,7 +228,8 @@ describe("RuntimeManager attach-only legacy resolution", () => {
 
     assert.throws(
       () => manager.attach("session-1"),
-      (err) => err.code === "RUNTIME_NOT_ATTACHABLE" && err.message === "runtime session is not attachable"
+      (err) =>
+        err.code === "RUNTIME_NOT_ATTACHABLE" && err.message === "runtime session is not attachable"
     );
     assert.equal(tmuxRuntime.attachCalls.length, 0);
   });
@@ -510,6 +511,25 @@ describe("RuntimeManager attach-only legacy resolution", () => {
     assert.equal(tmuxRuntime.createCalls.length, 1);
     assert.equal(tmuxRuntime.createCalls[0].persistence, "persistent");
     assert.equal(registry.get("persistent-1").provider, "tmux");
+  });
+
+  it("attaches a persistent session via registry after create", () => {
+    const tmuxRuntime = createTmuxRuntime();
+    const registry = createRegistry();
+    const manager = new RuntimeManager({
+      tmuxRuntime,
+      registry,
+      getSession: () => null,
+    });
+
+    manager.create({ sessionId: "persistent-1", cwd: "/tmp", persistence: "persistent" });
+    const attachment = manager.attach("persistent-1");
+
+    assert.ok(attachment, "attach returned an attachment");
+    assert.equal(tmuxRuntime.attachCalls.length, 1);
+    assert.equal(tmuxRuntime.attachCalls[0].sessionId, "persistent-1");
+    assert.equal(tmuxRuntime.attachCalls[0].provider, "tmux");
+    assert.equal(tmuxRuntime.attachCalls[0].metadata.tmux.dashboardOwned, true);
   });
 
   it("routes backend PTY attach, write, resize, and terminate through Runtime Manager", () => {
