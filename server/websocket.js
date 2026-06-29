@@ -53,6 +53,15 @@ function initWebSocket(server) {
     clearInterval(interval);
   });
 
+  // Extract sessionId from either legacy path (/terminal/:id) or runtime alias
+  // (/api/runtime-sessions/:id/terminal). Returns empty string when neither matches.
+  function extractRuntimeSessionId(url) {
+    const path = (url || "").split("?")[0];
+    const m = path.match(/^\/api\/runtime-sessions\/([^/]+)\/terminal$/);
+    if (m) return m[1];
+    return path.replace(/^\/terminal\//, "");
+  }
+
   // PTY WebSocket for terminal tab (/terminal/:sessionId)
   let nodePty = null;
   try {
@@ -72,7 +81,7 @@ function initWebSocket(server) {
     });
 
     ptyWss.on("connection", (ws, req) => {
-      const sessionId = (req.url || "").replace(/^\/terminal\//, "").split("?")[0];
+      const sessionId = extractRuntimeSessionId(req.url);
       if (!sessionId) {
         ws.close(4404, "missing sessionId");
         return;
@@ -127,7 +136,9 @@ function initWebSocket(server) {
     const pathname = (req.url || "").split("?")[0];
     const isWsPath = pathname === "/ws";
     const isTermPath = !!ptyWss && pathname.startsWith("/terminal/");
-    if (!isWsPath && !isTermPath) {
+    const isRuntimeTermPath =
+      !!ptyWss && /^\/api\/runtime-sessions\/[^/]+\/terminal$/.test(pathname);
+    if (!isWsPath && !isTermPath && !isRuntimeTermPath) {
       socket.destroy();
       return;
     }

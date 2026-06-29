@@ -249,3 +249,62 @@ describe("terminal websocket tmux attach regression", () => {
     );
   });
 });
+
+describe("runtime terminal alias /api/runtime-sessions/:id/terminal", () => {
+  afterEach(() => {
+    delete process.env.DASHBOARD_TOKEN;
+  });
+
+  it("attaches via alias path using the same RuntimeManager flow", async () => {
+    await withTerminalServer(
+      {
+        rows: {
+          "runtime-session-1": {
+            id: "runtime-session-1",
+            cwd: "/tmp/runtime-project",
+            metadata: JSON.stringify({ tmux_session: "claude-runtime" }),
+          },
+        },
+      },
+      async ({ port, mockPty }) => {
+        const ws = new WebSocket(
+          `ws://127.0.0.1:${port}/api/runtime-sessions/runtime-session-1/terminal`
+        );
+        await once(ws, "open");
+
+        assert.equal(mockPty.spawnCalls.length, 1);
+        const spawnCall = mockPty.spawnCalls[0];
+        assert.equal(spawnCall.command, "tmux");
+        assert.deepEqual(spawnCall.args, ["attach-session", "-t", "claude-runtime"]);
+
+        const proc = spawnCall.proc;
+        ws.send(JSON.stringify({ type: "resize", cols: 100, rows: 40 }));
+        await waitFor(() => proc.resizes.length === 1, "resize via alias path");
+        assert.deepEqual(proc.resizes[0], { cols: 100, rows: 40 });
+
+        ws.close(1000);
+        await waitFor(() => proc.killed, "cleanup on alias path close");
+      }
+    );
+  });
+
+  it("closes with 4404 when session is missing via alias path", async () => {
+    await withTerminalServer({ rows: {} }, async ({ port }) => {
+      const ws = new WebSocket(`ws://127.0.0.1:${port}/api/runtime-sessions/missing-id/terminal`);
+      const [code, reason] = await once(ws, "close");
+
+      assert.equal(code, 4404);
+      assert.equal(reason.toString(), "session not found");
+    });
+  });
+
+  it("rejects paths without /terminal suffix (socket destroyed, not upgraded)", async () => {
+    await withTerminalServer({ rows: {} }, async ({ port }) => {
+      const ws = new WebSocket(`ws://127.0.0.1:${port}/api/runtime-sessions/some-id`);
+      await new Promise((resolve) => {
+        ws.on("close", resolve);
+        ws.on("error", resolve);
+      });
+    });
+  });
+});
