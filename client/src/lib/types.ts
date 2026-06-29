@@ -64,6 +64,12 @@ export interface RuntimeSessionSummary {
   exitedAt?: string;
 }
 
+export interface RuntimeSessionDebug extends RuntimeSessionSummary {
+  provider: string;
+  providerId?: string;
+  metadata?: Record<string, unknown>;
+}
+
 export interface Agent {
   id: string;
   session_id: string;

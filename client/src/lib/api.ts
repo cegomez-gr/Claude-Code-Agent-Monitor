@@ -17,6 +17,7 @@ import type {
   SessionStats,
   Stats,
   RuntimePersistence,
+  RuntimeSessionDebug,
   RuntimeSessionSummary,
   TranscriptListResult,
   TranscriptResult,
@@ -178,6 +179,10 @@ export const api = {
       request<{ ok: true }>(`/runtime-sessions/${encodeURIComponent(sessionId)}`, {
         method: "DELETE",
       }),
+    debug: (sessionId: string) =>
+      request<{ item: RuntimeSessionDebug }>(
+        `/runtime-sessions/${encodeURIComponent(sessionId)}/debug`
+      ),
     terminalUrl: (sessionId: string): string =>
       `${BASE}/runtime-sessions/${encodeURIComponent(sessionId)}/terminal`,
   },

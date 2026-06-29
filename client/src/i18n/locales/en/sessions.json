@@ -45,6 +45,12 @@
     "noEvents": "No events recorded.",
     "terminate": "Terminate",
     "terminateConfirm": "Terminate this session? This action cannot be undone.",
-    "terminateError": "Failed to terminate session"
+    "terminateError": "Failed to terminate session",
+    "showDebug": "Show debug details",
+    "hideDebug": "Hide debug details",
+    "debugDetails": "Debug Details",
+    "debugProvider": "Provider",
+    "debugProviderId": "Provider ID",
+    "debugMetadata": "Metadata"
   }
 }
