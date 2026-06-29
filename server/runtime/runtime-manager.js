@@ -49,11 +49,17 @@ class RuntimeManager {
 
   create(request = {}) {
     if (request.provider) {
-      throw new RuntimeError(RuntimeErrorCode.INVALID_REQUEST, "runtime provider is selected by RuntimeManager");
+      throw new RuntimeError(
+        RuntimeErrorCode.INVALID_REQUEST,
+        "runtime provider is selected by RuntimeManager"
+      );
     }
     if (request.persistence === PersistencePolicy.EPHEMERAL) {
       if (!this.ptyRuntime) {
-        throw new RuntimeError(RuntimeErrorCode.PROVIDER_UNAVAILABLE, "pty runtime provider unavailable");
+        throw new RuntimeError(
+          RuntimeErrorCode.PROVIDER_UNAVAILABLE,
+          "pty runtime provider unavailable"
+        );
       }
       try {
         const ref = this.ptyRuntime.create(request);
@@ -78,14 +84,20 @@ class RuntimeManager {
         });
       }
     }
-    throw new RuntimeError(RuntimeErrorCode.UNSUPPORTED_PERSISTENCE, "unsupported runtime persistence");
+    throw new RuntimeError(
+      RuntimeErrorCode.UNSUPPORTED_PERSISTENCE,
+      "unsupported runtime persistence"
+    );
   }
 
   attach(sessionId) {
     const registryRef = this.registry.get(sessionId);
     if (registryRef) {
       if (["stale", "exited", "error"].includes(registryRef.status)) {
-        throw new RuntimeError(RuntimeErrorCode.NOT_ATTACHABLE, "runtime session is not attachable");
+        throw new RuntimeError(
+          RuntimeErrorCode.NOT_ATTACHABLE,
+          "runtime session is not attachable"
+        );
       }
       return this.attachRef({
         ...registryRef,
@@ -106,24 +118,26 @@ class RuntimeManager {
       throw new RuntimeError(RuntimeErrorCode.NOT_ATTACHABLE, "no tmux session");
     }
 
-    return this.attachRef(createRuntimeRef({
-      sessionId,
-      provider: RuntimeProviderName.TMUX,
-      providerId: tmuxSession,
-      persistence: PersistencePolicy.PERSISTENT,
-      status: RuntimeStatus.RUNNING,
-      capabilities: this.tmuxRuntime.capabilities,
-      metadata: {
-        tmux: {
-          sessionName: tmuxSession,
-          externallyDiscovered: true,
-          dashboardOwned: false,
+    return this.attachRef(
+      createRuntimeRef({
+        sessionId,
+        provider: RuntimeProviderName.TMUX,
+        providerId: tmuxSession,
+        persistence: PersistencePolicy.PERSISTENT,
+        status: RuntimeStatus.RUNNING,
+        capabilities: this.tmuxRuntime.capabilities,
+        metadata: {
+          tmux: {
+            sessionName: tmuxSession,
+            externallyDiscovered: true,
+            dashboardOwned: false,
+          },
         },
-      },
-      // Legacy attach context. Registry-backed refs should replace this in a
-      // later PR; it is not part of the normal frontend/API runtime contract.
-      session: row,
-    }));
+        // Legacy attach context. Registry-backed refs should replace this in a
+        // later PR; it is not part of the normal frontend/API runtime contract.
+        session: row,
+      })
+    );
   }
 
   attachRef(ref) {
@@ -142,17 +156,29 @@ class RuntimeManager {
 
   write(sessionId, data) {
     const ref = this.requireRuntimeRef(sessionId);
-    this.providerFor(ref.provider).write(ref, data);
+    try {
+      this.providerFor(ref.provider).write(ref, data);
+    } catch (err) {
+      throw normalizeRuntimeError(err, { operation: "write", sessionId });
+    }
   }
 
   resize(sessionId, cols, rows) {
     const ref = this.requireRuntimeRef(sessionId);
-    this.providerFor(ref.provider).resize(ref, cols, rows);
+    try {
+      this.providerFor(ref.provider).resize(ref, cols, rows);
+    } catch (err) {
+      throw normalizeRuntimeError(err, { operation: "resize", sessionId });
+    }
   }
 
   terminate(sessionId) {
     const ref = this.requireRuntimeRef(sessionId);
-    this.providerFor(ref.provider).terminate(ref);
+    try {
+      this.providerFor(ref.provider).terminate(ref);
+    } catch (err) {
+      throw normalizeRuntimeError(err, { operation: "terminate", sessionId });
+    }
     this.registry.updateStatus(sessionId, RuntimeStatus.EXITED, {
       exitedAt: new Date().toISOString(),
     });
@@ -239,7 +265,9 @@ class RuntimeManager {
 
     for (const record of ptyRecords) {
       result.pty.checked += 1;
-      if ([RuntimeStatus.EXITED, RuntimeStatus.STALE, RuntimeStatus.ERROR].includes(record.status)) {
+      if (
+        [RuntimeStatus.EXITED, RuntimeStatus.STALE, RuntimeStatus.ERROR].includes(record.status)
+      ) {
         result.pty.skipped += 1;
         continue;
       }
