@@ -20,6 +20,8 @@
   "tableCost": "Cost",
   "tableDirectory": "Directory",
   "defaultName": "Session ",
+  "resume": "Resume in panel",
+  "resumeError": "Failed to resume session",
   "create": {
     "open": "New session",
     "title": "New session",
@@ -51,6 +53,11 @@
     "debugDetails": "Debug Details",
     "debugProvider": "Provider",
     "debugProviderId": "Provider ID",
-    "debugMetadata": "Metadata"
+    "debugMetadata": "Metadata",
+    "resume": "Resume in panel",
+    "resumeError": "Failed to resume session",
+    "delete": "Delete session",
+    "deleteConfirm": "Delete this session and all its data? This cannot be undone.",
+    "deleteError": "Failed to delete session"
   }
 }

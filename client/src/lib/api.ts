@@ -146,6 +146,8 @@ export const api = {
         ext: string;
         kind: "markdown" | "code";
       }>(`/sessions/${encodeURIComponent(id)}/file?path=${encodeURIComponent(filePath)}`),
+    delete: (id: string) =>
+      request<void>(`/sessions/${encodeURIComponent(id)}`, { method: "DELETE" }),
   },
 
   runtimeSessions: {
@@ -164,6 +166,7 @@ export const api = {
         `/runtime-sessions/${encodeURIComponent(sessionId)}`
       ),
     create: (input: {
+      sessionId?: string;
       title?: string;
       cwd?: string;
       command?: string;

@@ -371,6 +371,49 @@ router.patch("/:id", (req, res) => {
   res.json({ session });
 });
 
+// DELETE /:id — Remove a monitored session and all its linked data. If the
+// session has a live runtime (PTY/tmux), terminate it first. Persistent/external
+// tmux runtimes are not terminable (capabilities.terminate=false); in that case
+// the dashboard record is still removed and the external process is left alone.
+router.delete("/:id", (req, res) => {
+  const id = req.params.id;
+  const existing = stmts.getSession.get(id);
+  if (!existing) {
+    return res.status(404).json({ error: { code: "NOT_FOUND", message: "Session not found" } });
+  }
+
+  // Best-effort terminate of an active runtime before removing the record.
+  try {
+    const { getRuntimeManager } = require("../runtime/runtime-instance");
+    const manager = getRuntimeManager();
+    const ref = manager.get(id);
+    if (ref && ref.status === "running") {
+      try {
+        manager.terminate(id);
+      } catch {
+        // Non-terminable (e.g. external tmux) — proceed with record deletion.
+      }
+    }
+  } catch {
+    // Runtime layer unavailable — proceed with record deletion.
+  }
+
+  // Cascade delete in one transaction. FKs declare ON DELETE CASCADE, but we
+  // delete child rows explicitly for portability (mirrors settings.js ops).
+  const purge = db.transaction((sid) => {
+    db.prepare("DELETE FROM events WHERE session_id = ?").run(sid);
+    db.prepare("DELETE FROM agents WHERE session_id = ?").run(sid);
+    db.prepare("DELETE FROM token_usage WHERE session_id = ?").run(sid);
+    db.prepare("DELETE FROM runtime_sessions WHERE session_id = ?").run(sid);
+    db.prepare("DELETE FROM workflows WHERE session_id = ?").run(sid);
+    db.prepare("DELETE FROM sessions WHERE id = ?").run(sid);
+  });
+  purge(id);
+
+  broadcast("session_deleted", { id });
+  res.status(204).end();
+});
+
 // GET /:id/transcripts — List available transcript files for a session (main + sub-agents)
 router.get("/:id/transcripts", async (req, res) => {
   const session = stmts.getSession.get(req.params.id);

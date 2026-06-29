@@ -17,7 +17,6 @@ import "@xterm/xterm/css/xterm.css";
 
 type Props = {
   sessionId: string;
-  tmuxSession?: string;
   /**
    * When true the parent hides the surrounding chrome (session metadata + tabs)
    * so the terminal grows upward to just under the page title. The pane itself
@@ -39,12 +38,7 @@ function getWsUrl(sessionId: string) {
   return `${proto}//${host}/terminal/${sessionId}`;
 }
 
-export function TerminalPane({
-  sessionId,
-  tmuxSession,
-  expanded = false,
-  onToggleExpanded,
-}: Props) {
+export function TerminalPane({ sessionId, expanded = false, onToggleExpanded }: Props) {
   const { t } = useTranslation("common");
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<import("@xterm/xterm").Terminal | null>(null);

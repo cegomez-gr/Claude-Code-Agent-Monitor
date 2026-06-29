@@ -25,6 +25,8 @@ import {
   Square,
   TerminalSquare,
   Workflow,
+  RotateCcw,
+  Trash2,
 } from "lucide-react";
 import { api } from "../lib/api";
 import { eventBus } from "../lib/eventBus";
@@ -504,6 +506,37 @@ export function SessionDetail() {
     }
   }, [id, canTerminate, t, load]);
 
+  // Resume an existing Claude session inside the panel (claude --resume <id>).
+  // Reuses the same sessionId so the dashboard re-links to its history, and
+  // starts ephemeral (PTY) per the chosen UX. RuntimeManager picks the provider.
+  const handleResume = useCallback(async () => {
+    if (!id) return;
+    try {
+      await api.runtimeSessions.create({
+        sessionId: id,
+        cwd: session?.cwd ?? undefined,
+        command: "claude",
+        args: ["--resume", id],
+        persistence: "ephemeral",
+      });
+      await load();
+      setActiveTab("terminal");
+    } catch {
+      alert(t("detail.resumeError"));
+    }
+  }, [id, session?.cwd, t, load]);
+
+  const handleDelete = useCallback(async () => {
+    if (!id) return;
+    if (!window.confirm(t("detail.deleteConfirm"))) return;
+    try {
+      await api.sessions.delete(id);
+      navigate("/sessions");
+    } catch {
+      alert(t("detail.deleteError"));
+    }
+  }, [id, t, navigate]);
+
   if (loading) {
     return (
       <div className="animate-fade-in space-y-8" aria-busy="true">
@@ -607,6 +640,15 @@ export function SessionDetail() {
             </>
           )}
         </div>
+        {!canAttach && (
+          <button
+            onClick={handleResume}
+            className="btn-ghost text-emerald-400 hover:text-emerald-300"
+            title={t("detail.resume")}
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+        )}
         {canTerminate && (
           <button
             onClick={handleTerminate}
@@ -616,6 +658,13 @@ export function SessionDetail() {
             <Square className="w-4 h-4" />
           </button>
         )}
+        <button
+          onClick={handleDelete}
+          className="btn-ghost text-red-400 hover:text-red-300"
+          title={t("detail.delete")}
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
         <button onClick={load} className="btn-ghost">
           <RefreshCw className="w-4 h-4" />
         </button>

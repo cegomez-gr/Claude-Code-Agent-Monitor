@@ -19,6 +19,7 @@ import {
   Plus,
   X,
   Loader2,
+  RotateCcw,
 } from "lucide-react";
 import { api } from "../lib/api";
 import { eventBus } from "../lib/eventBus";
@@ -223,6 +224,23 @@ export function Sessions() {
     }
   };
 
+  // Resume an existing Claude session in the panel (claude --resume <id>),
+  // reusing its id so the dashboard re-links to history. Ephemeral per UX.
+  const handleResumeSession = async (session: Session) => {
+    try {
+      await api.runtimeSessions.create({
+        sessionId: session.id,
+        cwd: session.cwd ?? undefined,
+        command: "claude",
+        args: ["--resume", session.id],
+        persistence: "ephemeral",
+      });
+      navigate(`/sessions/${session.id}`);
+    } catch {
+      alert(t("resumeError"));
+    }
+  };
+
   return (
     <div className="animate-fade-in">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
@@ -331,8 +349,16 @@ export function Sessions() {
               >
                 {t("common:cancel")}
               </button>
-              <button type="submit" disabled={creating} className="btn-primary text-xs disabled:opacity-50">
-                {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              <button
+                type="submit"
+                disabled={creating}
+                className="btn-primary text-xs disabled:opacity-50"
+              >
+                {creating ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Plus className="w-4 h-4" />
+                )}
                 {t("create.submit")}
               </button>
             </div>
@@ -514,7 +540,23 @@ export function Sessions() {
                       {session.cwd ? truncate(session.cwd, 30) : "-"}
                     </td>
                     <td className="px-3 py-4">
-                      <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" />
+                      <div className="flex items-center gap-1">
+                        {session.cwd && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleResumeSession(session);
+                            }}
+                            className="text-gray-500 hover:text-emerald-400 transition-colors"
+                            title={t("resume")}
+                            aria-label={t("resume")}
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
+                        )}
+                        <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" />
+                      </div>
                     </td>
                   </tr>
                 ))}

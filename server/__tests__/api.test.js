@@ -1955,6 +1955,57 @@ describe("Database Integrity", () => {
   });
 });
 
+describe("DELETE /api/sessions/:id", () => {
+  it("deletes a session and cascades to its agents", async () => {
+    stmts.insertSession.run("del-test", "Delete Test", "completed", "/tmp", "m", null);
+    stmts.insertAgent.run(
+      "del-agent",
+      "del-test",
+      "Agent",
+      "main",
+      null,
+      "waiting",
+      null,
+      null,
+      null
+    );
+    assert.ok(stmts.getSession.get("del-test"));
+    assert.ok(stmts.getAgent.get("del-agent"));
+
+    const res = await fetch(`${BASE}/api/sessions/del-test`, { method: "DELETE" });
+    assert.equal(res.status, 204);
+    assert.equal(stmts.getSession.get("del-test"), undefined);
+    assert.equal(stmts.getAgent.get("del-agent"), undefined);
+  });
+
+  it("removes the linked runtime_sessions record", async () => {
+    stmts.insertSession.run("del-rt", "RT Delete", "active", "/tmp", "m", null);
+    const registry = new SessionRegistry({ db });
+    registry.upsert({
+      sessionId: "del-rt",
+      command: "claude",
+      persistence: "ephemeral",
+      provider: "pty",
+      providerId: "pty-del",
+      // Already exited so deletion does not attempt to terminate a live process.
+      status: "exited",
+      capabilities: defineCapabilities({ attach: true, supportsCreate: true }),
+      metadata: {},
+    });
+    assert.ok(registry.get("del-rt"));
+
+    const res = await fetch(`${BASE}/api/sessions/del-rt`, { method: "DELETE" });
+    assert.equal(res.status, 204);
+    assert.equal(registry.get("del-rt"), null);
+    assert.equal(stmts.getSession.get("del-rt"), undefined);
+  });
+
+  it("returns 404 for an unknown session", async () => {
+    const res = await fetch(`${BASE}/api/sessions/does-not-exist-xyz`, { method: "DELETE" });
+    assert.equal(res.status, 404);
+  });
+});
+
 describe("Transcript cache integration", () => {
   it("should extract and cache tokens from transcript file via hook event", async () => {
     const tmpTranscript = path.join(os.tmpdir(), `test-transcript-${Date.now()}.jsonl`);
